@@ -1,0 +1,278 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    background-color: #004F59;
+    color: #fff;
+    padding: 10px 20px;
+}
+
+.menu {
+    background-color: #f4f4f4;
+    padding: 10px 20px;
+}
+
+
+.main-container {
+    display: flex;
+}
+
+.left-panel {
+    flex: 1;
+    padding: 10px;
+}
+
+.right-panel {
+    flex: 2;
+    padding: 10px;
+}
+
+#fileListPanel,
+#contentPanel {
+    width: 47.5%;
+    height: 1200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 5px;
+    float: left;
+}
+
+#fileListPanel {
+    clear: both;
+}
+
+
+#leftPanel,
+#contentPanel {
+    flex-grow: 1;
+    flex-basis: 47.5%;
+    height: 1200px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin: 5px;
+    float: left;
+}
+
+#leftPanel {
+    clear: both;
+}
+
+#map {
+    width: 100%;
+    height: calc(50% - 5px);
+    /* Adjusted height for the map */
+}
+
+#jsonContent {
+    font-size: 10px;
+    width: 100%;
+    height: calc(50% - 5px);
+    /* Adjusted height for the JSON content */
+    white-space: pre-wrap;
+    overflow-y: auto;
+    margin-top: 5px;
+    /* Add margin to separate from the map */
+}
+
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th,
+td {
+    padding: 8px;
+    text-align: left;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.hidden {
+    display: none;
+}
+
+.json-container {
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    border-left: 3px solid #ccc;
+    margin: 5px;
+}
+
+.json-container b {
+    color: darkblue;
+}
+
+.info-message {
+    color: maroon;
+    font-weight: bold;
+}
+
+#toggleDescription {
+    z-index: 100;
+    padding: 5px;
+    background-color: #004F59;
+    color: white;
+    border-radius: 15px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 9pt;
+    width: 350px;
+}
+
+#filterControls {
+    text-align: left;
+}
+
+#filterControls table {
+    width: auto;
+    margin: 0;
+}
+
+#filterControls td {
+    padding: 4px;
+}
+
+#filterControls input[type="number"] {
+    width: 60px;
+}
+
+#applyFilterBtn {
+    display: block;
+    font-size: 10pt;
+    margin-bottom: 10px;
+    width: 150px;
+    background-color: #004F59;
+    color: white;
+    border-radius: 15px;
+}
+
+#clearFilterBtn {
+    display: block;
+    font-size: 10pt;
+    margin-bottom: 10px;
+    width: 150px;
+    background-color: #004F59;
+    color: white;
+    border-radius: 15px;
+}
+
+#variableSelect {
+    color: black;
+    font-size: 10pt;
+    width: 100%;
+}
+
+#filterContainer {
+    display: flex;
+    align-items: flex-start;
+}
+
+#latLonFilters {
+    margin-right: 20px;
+}
+
+#variableFilters {
+    margin-left: 20px;
+}
+
+#depthFilters {
+    margin-bottom: 20px;
+}
+
+#filterActions {
+    margin-left: 20px;
+    margin-top: 100px;
+}
+
+#depthFilters table td {
+    padding-right: 10px;
+}
+
+#filterPanel {
+    display: none;
+    margin-top: 10px;
+    font-size: 10pt;
+    text-align: left;
+}
+
+.filterToggleBtn {
+    display: block;
+    background-color: rgba(0, 79, 89, 0.8);
+    color: white;
+    font-size: 10pt;
+    text-align: left;
+    cursor: pointer;
+    padding: 5px;
+    margin-bottom: 5px;
+}
+
+.filterToggleBtn2 {
+    z-index: 100;
+    padding: 5px;
+    background-color: #004F59;
+    color: white;
+    border-radius: 15px;
+    cursor: pointer;
+    text-align: left;
+    font-size: 9pt;
+    width: 350px;
+}
+
+.modelSelect {
+    appearance: none;
+    width: 300px;
+    font-size: 0.80rem;
+    padding: 0.1em 6em 0.1em 1em;
+    background-color: #fff;
+    border: 1px solid #caced1;
+    border-radius: 0.25rem;
+    color: #000;
+    cursor: pointer;
+}
+
+.clearModelsBtn {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 10pt;
+    width: 300px;
+    background-color: #004F59;
+    color: white;
+    border-radius: 15px;
+    margin-top: 20px;
+}
+
+#filterToggleContainer {
+    margin-left: 0px;
+    margin-top: 10px;
+}
+
+.highlighted-row {
+    background-color: rgba(0, 79, 89, 0.5) !important;
+    /* 50% opacity Apply !important to the background color 
+    to ensure it overrides any other background colors that 
+    might be applied to the row*/
+}
+
+#legend {
+    position: absolute;
+    bottom: 30px;
+    right: 10px;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+#toggleSubductionInterface label {
+    vertical-align: top;
+    margin-right: 10px;
+    /* Optional: Adjust the space between label and select box */
+}

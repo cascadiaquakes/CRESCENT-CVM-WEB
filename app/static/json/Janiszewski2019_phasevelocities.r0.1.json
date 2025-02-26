@@ -1,0 +1,103 @@
+{
+    "model": "Cascadia_OBS+Land_Janiszewskietal2019",
+    "id": "Cascadia_OBS+Land_Janiszewskietal2019",
+    "title": "Shoreline-crossing Rayleigh wave dispersion measurements in Cascadia from ambient noise and earthquakes using Eikonal+Helmholtz tomography",
+    "summary": "See Janiszewski et al., 2019; GJI for details of this model or https://www.marine-geo.org/tools/search/Files.php?data_set_uid=31658#datasets",
+    "reference": "Janiszewski, Gaherty, Abers, Gao, and Eilon (2019)",
+    "reference_pid": "doi:10.1093/gji/ggz051",
+    "data_revision": "r1",
+    "version": "v1",
+    "Conventions": "CF-1.0",
+    "Metadata_Conventions": "Unidata Dataset Discovery v1.0",
+    "author_name": "Helen A. Janiszewski",
+    "author_email": "hajanisz@hawaii.edu",
+    "author_institution": "University of Hawaii - Manoe",
+    "author_url": "https://helenjaniszewski.squarespace.com/",
+    "repository_name": "EMC",
+    "repository_institution": "EarthScope",
+    "repository_pid": "doi:10.60521/331658",
+    "geospatial_lon_min": -131.0,
+    "geospatial_lon_max": -117.2,
+    "geospatial_lon_units": "degrees_east",
+    "geospatial_lon_resolution": 0.3,
+    "geospatial_lat_min": 39.0,
+    "geospatial_lat_max": 49.8,
+    "geospatial_lat_units": "degrees_north",
+    "geospatial_lat_resolution": 0.3,
+    "geospatial_vertical_min": 9.0,
+    "geospatial_vertical_max": 160.0,
+    "geospatial_vertical_units": "period",
+    "geospatial_vertical_positive": "down",
+    "keywords": "seismic,Rayleigh wave dispersion,Cascadia,n",
+    "acknowledgment": "Model was provided by Helen Janiszewski of Department of Earth Sciences at UH-Manoa",
+    "history": "[2024-11-26] Converted to netCDF via CRESCENT data tools.",
+    "comments": "CRESCENT CVM tools development project.",
+    "data_layout": "vertex",
+    "grid_ref": "latitude_longitude",
+    "utm_zone": "10",
+    "ellipsoid": "WGS84",
+    "vars": [
+        "period",
+        "latitude",
+        "longitude",
+        "easting",
+        "northing",
+        "Rayleigh_Phase",
+        "Rayleigh_Phase_Uncertainty"
+    ],
+    "size_kb": 575.05,
+    "data_vars": [
+        "Rayleigh_Phase",
+        "Rayleigh_Phase_Uncertainty"
+    ],
+    "z_var": "period",
+    "variables": {
+        "period": {
+            "variable": "period",
+            "positive": "down",
+            "standard_name": "period",
+            "long_name": "period",
+            "units": "s"
+        },
+        "latitude": {
+            "variable": "latitude",
+            "long_name": "Latitude; positive north",
+            "units": "degrees_north",
+            "standard_name": "latitude"
+        },
+        "longitude": {
+            "variable": "longitude",
+            "standard_name": "longitude",
+            "long_name": "Longitude; positive east",
+            "units": "degrees_east"
+        },
+        "easting": {
+            "variable": "easting",
+            "standard_name": "easting",
+            "long_name": "easting; UTM",
+            "units": "m"
+        },
+        "northing": {
+            "variable": "northing",
+            "long_name": "northing; UTM",
+            "units": "m",
+            "standard_name": "northing"
+        },
+        "Rayleigh_Phase": {
+            "variable": "Rayleigh_Phase",
+            "long_name": "Rayleigh wave phase velocity",
+            "display_name": "Phase velocity (km/s)",
+            "units": "km.s-1",
+            "data_source": "data-derived",
+            "grid_ref": "latitude_longitude"
+        },
+        "Rayleigh_Phase_Uncertainty": {
+            "variable": "Rayleigh_Phase_Uncertainty",
+            "long_name": "Rayleigh wave phase velocity uncertainty",
+            "display_name": "Uncertainty (km/s)",
+            "units": "km.s-1",
+            "data_source": "data-derived",
+            "grid_ref": "latitude_longitude"
+        }
+    }
+}

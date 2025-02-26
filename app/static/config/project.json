@@ -1,0 +1,10 @@
+{
+    "project_west": -130,
+    "project_south": 39,
+    "project_east": -116,
+    "project_north": 52,
+    "initial_fly_to": [-132.76, 39.84, 718005],
+    "initial_heading": 48.65,
+    "initial_pitch": -36.05,
+    "initial_roll": 0.3
+}

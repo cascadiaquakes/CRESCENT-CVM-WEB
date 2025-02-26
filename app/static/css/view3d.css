@@ -1,0 +1,177 @@
+@import url(https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Widgets/widgets.css);
+
+.cesium-selection-wrapper {
+    display: none !important;
+}
+
+#cesiumContainer {
+    width: 100%;
+    height: calc(85vh - 60px);
+    float: left;
+    position: relative;
+}
+
+#distanceControl {
+    position: absolute;
+    bottom: 20px;
+    left: 10px;
+    z-index: 1;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 0px;
+    border-radius: 5px;
+}
+
+#distanceDisplay {
+    margin-bottom: 5px;
+}
+
+#clearButton {
+    margin-right: 10px;
+}
+
+#fileSelection {
+    position: absolute;
+    bottom: 100px;
+    left: 10px;
+    z-index: 1;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 50px;
+}
+
+#logoContainer {
+    position: absolute;
+    bottom: 20px;
+    right: 10px;
+    z-index: 1;
+}
+
+#logoContainer img {
+    width: 200px;
+}
+
+#legendContainer {
+    width: auto;
+    float: left;
+    padding: 00px;
+    position: absolute;
+    bottom: 160px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+}
+
+#auxLegendContainer {
+    width: auto;
+    float: left;
+    padding: 0px;
+    position: absolute;
+    bottom: 80px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 5px;
+}
+
+.legendItem {
+    margin-bottom: 10px;
+    display: inline-block;
+    margin-right: 20px;
+}
+
+.legendColor {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    margin-right: 5px;
+}
+
+.checkboxRow {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.checkboxRow label {
+    margin-right: 10px;
+}
+
+#controlContainer {
+    position: absolute;
+    top: 50px;
+    left: 10px;
+    z-index: 100;
+    padding: 10px;
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    border-radius: 5px;
+    cursor: pointer;
+    display: block;
+}
+
+#toggleButton {
+    position: absolute;
+    font-size: 9;
+    top: 10px;
+    left: 10px;
+    z-index: 100;
+    padding: 5px;
+    background-color: #004F59;
+    color: white;
+    border-radius: 15px;
+    cursor: pointer;
+}
+
+#controlContainer {
+    background-color: rgba(255, 255, 255, 0.7);
+    z-index: 1000;
+}
+
+#toggleGlobeContainer,
+#toggleSubductionInterface,
+#eqcontrols,
+#toggleTerrainOcclusion {
+    margin-bottom: 10px;
+}
+
+#eqcontrols {
+    background-color: transparent;
+}
+
+.sliderContainer {
+    margin-bottom: 10px;
+}
+
+.sliderLabel {
+    margin-right: 10px;
+}
+
+#northArrow {
+    position: absolute;
+    top: 20px;
+    right: 300px;
+    width: 50px;
+    height: 50px;
+    background-image: url('/static/images/north_white.png');
+    background-size: contain;
+    pointer-events: none;
+    z-index: 10000;
+    /* Prevent the arrow from interfering with map interaction */
+}
+
+#legend {
+
+    position: absolute;
+    top: 150px;
+    right: 10px;
+    width: 150px;
+    height: 150px;
+    color: gray;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+}
+
+#toggleSubductionInterface label {
+    vertical-align: top;
+    margin-right: 10px;
+    /* Optional: Adjust the space between label and select box */
+}

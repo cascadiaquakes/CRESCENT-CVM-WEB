@@ -1,0 +1,841 @@
+{% extends 'cvm_page_v1.html' %}
+
+{% block style%}
+<link rel="stylesheet" href="/static/css/repository.css" />
+<link rel="stylesheet" href="/static/css/depth-slice.css" />
+
+{%endblock%}
+{% block description%}
+<!-- Detailed description and instructions for using the Depth-Slice Viewer -->
+<!--
+<div class="info-message">
+    &nbsp;&nbsp;&nbsp;<b>Note</b>: R0, this tool extracts data from the nearest model depth.
+</div>
+-->
+<div id="description" style="display:none;">
+    <h2>Horizontal-Slice Viewer Guide</h2>
+
+    <p>
+        The Horizontal-Slice Viewer tool generates an uninterpolated or interpolated horizontal slice (z-variable slice)
+        through a
+        CVM
+        (Community Velocity Model). The interface includes a 3D map that displays current Community Fault
+        Model (CFM) data such as CRESCENT Cascadia fault traces, fault surfaces, the Cascadia subduction interface, and
+        the
+        seismicity of the area in addition to the selected CVM boundaries. This map is designed to aid in highlighting
+        the CFM features within the CRESCENT study area to assist in subsetting the model to
+        focus on areas of interest with specific CFM features.
+    </p>
+    <p>
+    <p><strong>Model Resolutions:</strong></p>
+    <p>
+        Each model has its own native resolution, which is described by the <i>geospatial</i> global attributes in the
+        netCDF
+        file.
+        You can view the metadata, including resolution details, by clicking the "Metadata" button to learn
+        more about the model.
+    </p>
+    <p>
+        The horizontal resolution is determined by the <i>geospatial_lat_resolution</i> and
+        <i>geospatial_lon_resolution</i>
+        attributes,
+        which specify the spacing between grid points in the latitude and longitude directions, respectively. The
+        vertical
+        resolution is defined by the <i>geospatial_vertical_resolution</i> attribute, indicating the spacing in the
+        depth or
+        height
+        dimension.
+    </p>
+    <p>
+        The geographic extent of the model is outlined by the attributes <i>geospatial_lat_min</i>,
+        <i>geospatial_lat_max</i>,
+        <i>geospatial_lon_min</i>, <i>geospatial_lon_max</i>, as well as <i>geospatial_vertical_min</i> and
+        <i>geospatial_vertical_max</i>.
+        These
+        attributes define the model's boundaries in terms of latitude, longitude, and vertical dimensions.
+    </p>
+    <p>
+        For example, a model with a latitude resolution of 0.5°, a longitude resolution of 0.5°, and a vertical
+        resolution of 10
+        meters would have a grid with a horizontal resolution of 0.5° x 0.5° and a vertical resolution of 10 meters.
+        These
+        attributes ensure that the model's spatial resolution and extent are clearly defined for users.
+    </p>
+    </p>
+    <p>
+        <strong>Key features of the interface map include:</strong>
+    </p>
+    <ul>
+        <li><strong>CRESCENT Study Area:</strong> The boundaries of the CRESCENT study area are outlined in cyan,
+            demarcating the focus area of the study.</li>
+        <li><strong>3D Model Outline:</strong> The 3D outline of the selected CVM model is also displayed in cyan,
+            allowing users to visualize the spatial extent and orientation of the model within the study area.</li>
+        <li><strong>Selected Model Extent:</strong> The selected model extent is shown in blue and can be adjusted using
+            latitude, longitude, and depth sliders (if the z-variable is depth). Additionally, an Opacity Control slider
+            is available to adjust the
+            opacity of the model extent display, where 0 represents full transparency and 1 represents full opacity.
+            This provides flexibility in visualizing underlying features.</li>
+        <li><strong>Earthquakes Visualization:</strong> The yellow dots on the map represent earthquakes with a
+            magnitude
+            greater than 4 that have occurred within the CRESCENT study area since 1970. The size of each yellow dot is
+            proportional to the earthquake's magnitude, with larger dots indicating stronger earthquakes. This
+            earthquake data
+            is sourced from the ANSS Comprehensive Earthquake Catalog (ComCat), which compiles seismic events from
+            various
+            global and regional networks. The data is obtained through the USGS FDSN Event Service, ensuring up-to-date
+            and
+            accurate information on seismic activity. For more details on ComCat, visit
+            <a href="https://earthquake.usgs.gov/data/comcat/">ANSS ComCat</a>, and for querying seismic data, visit the
+            <a href="https://earthquake.usgs.gov/fdsnws/event/1/">USGS FDSN Event Service</a>.
+        </li>
+        <li><strong>Imagery Layer:</strong> The imagery layer option (when checked) displays an imagery layer available
+            through Cesium, offering detailed and reliable backgrounds for the visualization of geological and
+            seismological data. Users may select different imagery layers using the imagery selection tool located at
+            the top right of the interface.</li>
+        <li><strong>Terrain Occlusion Checkbox:</strong> Since imagery layers displayed on the map (when selected) are
+            not transparent, the Terrain Occlusion checkbox is added to unhide the data displayed on the map. Enabling
+            this feature helps to understand the spatial relationships between the terrain and the subsurface models.
+        </li>
+        <li><strong>Feature Toggles:</strong> The interface includes checkboxes that allow users to turn on and off
+            various features displayed on the map. This includes toggling the visibility of fault traces, earthquake
+            data, and other model elements, providing flexibility in data visualization and analysis.</li>
+        <li><strong>Center View Button:</strong> The Center View button allows users to quickly center the map view on
+            the CRESCENT study area or other areas of interest, making navigation easier and more efficient.</li>
+        <li><strong>Home View Button:</strong> The Home View button resets the map view to its initial default settings,
+            providing a convenient way to return to the original perspective and overview of the map.</li>
+        <li><strong>Sync to Form Button:</strong> The sync to form button allows you to transfer your CVM selections to
+            the form on the left. This allows you to set other plot parameters and generate the plot. The <span
+                style="color: maroon;">maroon</span> color on the sync button label indicates unsynced CVM changes on
+            the map.</li>
+        <li><strong>Distance Measuring Tool:</strong> The distance measuring tool, located under the map legend and can
+            be
+            activated by checking the <b>Measure Distance</b> checkbox. This tool allows users to click on the map to
+            select two points and measure the distance between them.
+            When the first point is clicked, a point is placed at that location, and the second click
+            places
+            the second point. After both points are selected, a line is drawn connecting them, and the
+            distance
+            between the points is calculated and displayed. The distance is shown in kilometers in a designated display
+            area. If
+            more points are clicked after the second point, the previous line and markers are cleared, and the process
+            starts over.
+            This tool is designed to provide quick and easy measurement of distances between two locations on the map,
+            with visual
+            feedback through markers and lines. Additionally, the user can reset the tool by using a checkbox, which
+            will clear the
+            markers and distance line for a new measurement.
+        </li>
+    </ul>
+
+    <p>You can start by either directly changing the form parameters or setting the map parameters. To create a
+        Horizontal slice) plot starting from the map's control panel, follow these steps:</p>
+    <p>First, on the map's control panel:</p>
+    <ol>
+        <li><strong>Show/Hide Controls:</strong> Use this button to display or hide the map controls.</li>
+        <li><strong>Select a Model:</strong> Choose a model from the model list on the map's control panel.</li>
+        <li><strong>View Model Metadata:</strong> Click the "Metadata" button to learn more about the model.</li>
+        <li><strong>Set Slice Corner Points:</strong> Adjust the lower-left or upper-right coordinate sliders to
+            set the coordinates for the lower-left and upper-right corners of the horizontal-slice. The outline of the
+            study area and the model's coverage area are shown in cyan for reference, and the selected slice is shown in
+            blue.</li>
+        <li><strong>Choose the Z value:</strong> Select the desired Z value for the slice.</li>
+        <li><strong>Select Model Variable:</strong> Select the model variable to plot. Set the minimum and maximum
+            values for the variable corresponding to the extreme colors on the plot. To override the automated range
+            setting, set the minimum and maximum
+            values for the variable corresponding to the extreme colors on the plot.</li>
+        <li><strong>Sync Selections:</strong>
+            <ul>
+                <li>Use the "Sync to Form" button to transfer your selections to the form on the left. This allows you
+                    to set other plot parameters on the form and generate a plot of the slice.</li>
+                <li>Alternatively, set your parameters directly on the form and then use the "Sync to Map" button to
+                    send the information to the map and observe/adjust the selection coverage.
+                    <br /><strong>Note</strong>: A <span style="color: maroon;">maroon</span> color on the sync button
+                    label
+                    of the map or form indicates unsynced changes to the CVM parameters; sync as needed.
+                </li>
+            </ul>
+        </li>
+    </ol>
+    <p>Next, on the form's control panel:</p>
+    <ol>
+        <li><strong>Set the Plot Parameters:</strong> Choose your preferred interpolation method and other processing
+            parameters.</li>
+        <li><strong>Plot the Slice:</strong> Click the "Plot" button to generate the plot. The plot will appear under
+            the form panel.</li>
+        <li><strong>Save the Slice Plot &amp; Data:</strong> Use the "Download Plot" and "Download Data" buttons under
+            the plot to download the
+            generated plot and corresponding CSV data.</li>
+    </ol>
+
+    <h3>Additional Parameters</h3>
+
+    <p>You can fine-tune the plot using the following parameters on the form:</p>
+
+    <ul>
+        <li><strong>Units:</strong> Select the units for display (km, kg, sec or m, g, sec combinations).</li>
+        <li><strong>Interpolation:</strong> Choose the interpolation method used to plot data (for the depth models
+            only: linear, nearest).</li>
+        <li><strong>N Samples:</strong> Specify the number of samples to use along the X and Y axis for
+            interpolation.</li>
+        <li><strong>Variable Colormap:</strong> Choose from the <a
+                href="https://matplotlib.org/stable/tutorials/colors/colormaps.html" target="_blank">standard matplotlib
+                colormaps</a>.
+        </li>
+        <li><strong>Grid:</strong> Select either latitude-longitude or UTM coordinates for the x and y axes.</li>
+        <li><strong>Plot Size:</strong> Set the plot width and height in inches.</li>
+        <li><strong>Lock Checkbox (&#128274;):</strong> Ensures consistent plot parameters when switching between models
+            to compare the same slices across different models without automatic parameter updates.</li>
+    </ul>
+    <p>
+        Alternatively, you may set your parameters directly on the form and then use the "Sync to Map" button to
+        send the information to the map and observe/adjust the selection coverage.
+    </p>
+</div>
+
+{%endblock%}
+{% block leftpanel%}
+<div id="fileListPanel">
+    <div id="form">
+        <div id="main-container" class="action_side">
+            <div>Horizontal-Slice Viewer</div>
+            <div class="action_inner">
+                <!-- Form for horizontal-slice parameters input -->
+                <form action="/depth-slice-viewer" method="post" id="image-form">
+                    <div style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
+
+                        <label for="data-file" style="font-weight:bold;">Model:</label>
+                        <select id="data-file" name="data_file"></select>
+                    </div>
+                    <div style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
+                        <label for="title" style="font-weight:bold;">Plot title:</label>
+                        <input type="text" id="title" name="title" style="width: 50%;">
+                    </div>
+                    <!-- Input fields for geographic bounds and slicing parameters -->
+                    <div class="form-container">
+                        <div class="form-column">
+                            <div style="font-weight:bold;">Lower Left</div>
+                            <div class="form-input">
+                                <label for="start-lat">&nbsp; latitude:</label>
+                                <input type="text" id="start-lat" name="start_lat">
+                            </div>
+                            <div class="form-input">
+                                <label for="start-lng">&nbsp;longitude:</label>
+                                <input type="text" id="start-lng" name="start_lng">
+                            </div>
+                            <div style="font-weight:bold;">Upper Right</div>
+                            <div class="form-input">
+                                <label for="end-lat">&nbsp; latitude:</label>
+                                <input type="text" id="end-lat" name="end_lat">
+                            </div>
+                            <div class="form-input">
+                                <label for="end-lng">&nbsp; longitude:</label>
+                                <input type="text" id="end-lng" name="end_lng">
+                            </div>
+
+                            <div class="form-input">
+                                <label for="units" style="font-weight:bold;">Units:</label>
+                                <select name="units" id="units">
+                                    <option value="mks">km.kg.sec</option>
+                                    <option value="cgs">m.g.sec</option>
+                                </select>
+                            </div>
+                            <div class="form-input">
+                                <label id="depth-label" for="start-depth" style="font-weight:bold;">Depth:</label>
+                                <input type="text" id="start-depth" name="start_depth">
+                            </div>
+                            <!-- Hidden input field with value "depth" -->
+                            <input type="hidden" id="z-var" name="z_var" value="depth">
+                        </div>
+                        <div class="form-column">
+                            <div class="form-input">
+                                <label for="interpolation-method" style="font-weight:bold;">Interpolation:</label>
+                                <select id="interpolation-method" name="interpolation_method">
+                                    <option value="none" selected>None</option>
+                                    <option value="linear">Linear</option>
+                                    <option value="nearest">Nearest neighbor</option>
+                                    <option value="cubic">Cubic</option>
+
+                                </select>
+                            </div>
+                            <div style="font-weight:bold;">N Samples</div>
+                            <div class="form-input">
+                                <label for="num-points">&nbsp;longitude:</label>
+                                <input type="text" id="lng-points" name="lng_points" value="100">
+                            </div>
+                            <div class="form-input">
+                                <label for="num-points">&nbsp;latitude:</label>
+                                <input type="text" id="lat-points" name="lat_points" value="100">
+                            </div>
+
+
+                            <div class="form-input">
+                                <label for="plot-variable" style="font-weight:bold;">Variable:</label>
+                                <select id="plot-variable" name="plot_variable">
+
+                                </select>
+                            </div>
+
+                            <div class="form-input">
+                                <label for="start-value">Start Value:</label>
+                                <input type="text" id="start-value" name="start_value" value="auto">
+                            </div>
+                            <div class="form-input">
+                                <label for="end-value">End Value:</label>
+                                <input type="text" id="end-value" name="end_value" value="auto">
+                            </div>
+                        </div>
+
+
+                        <div class="form-column">
+                            <div class="form-input">
+                                <label for="colormap">Colormap:</label>
+                                <select id="colormap" name="colormap">
+                                </select>
+
+                            </div>
+                            <div class="form-input">
+                                <label for="plot-grid-ref" style="font-weight:bold;">Grid:</label>
+                                <select id="plot-grid-ref" name="plot_grid_ref">
+                                    <option value="latitude_longitude">latitude_longitude</option>
+                                    <option value="transverse_mercator">transverse_mercator</option>
+                                </select>
+                            </div>
+
+                            <div style="font-weight:bold;">Plot Size (in.)</div>
+                            <div class="form-input">
+                                <label for="image-width">&nbsp; Width:</label>
+                                <input type="text" id="image-width" name="image_width" value="7">
+                                </select>
+
+                            </div>
+                            <div class="form-input">
+                                <label for="image-height">&nbsp; Height:</label>
+                                <input type="text" id="image-height" name="image_height" value="12">
+                                </select>
+                            </div>
+                            <div style="clear: both;">
+                            </div>
+                            <div class="form-input">
+                                <label for="subscribeCheckbox" style="font-weight:bold;">&#128274;
+                                    settings:</label>
+                                <input type="checkbox" id="lock" name="lock">
+                            </div>
+                        </div>
+
+                    </div>
+                    <!-- Submission button -->
+                    <div class="form-input"
+                        style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
+                        <button type="button" id="sync-to-iframe" class="button"
+                            style="width: 100px; width: 20%;border-radius: 15px;">Sync to
+                            map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <button type="button" id="metadata-button" class="button"
+                            style="width: 100px; width: 20%;border-radius: 15px;">Metadata</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        <input type="submit" value="Plot" class="button"
+                            style="width: 100px; width: 20%;border-radius: 15px;">
+                    </div>
+            </div>
+            </form>
+        </div>
+    </div>
+    <!-- Display loading message and results dynamically -->
+    <div id="loadingMessage">Working...</div>
+    <div id="jsonContent"></div>
+    <div id="results-panel" class="action_side" style="width:100%; border:none;">
+        <img id="dynamicPlot" src="" alt="Dynamic Plot" style="display:none;vertical-align: top;">
+        <br>
+        <button id="downloadPlotButton"
+            style="display:none; width:20%;background-color: #004F59;color: white;; border-radius: 15px;font-size: 9pt;">Download
+            Plot</button>
+        <br>
+        <button id="downloadDataButton"
+            style="display:none; width:20%;background-color: #004F59; color: white; border-radius: 15px;font-size: 9pt;">Download
+            Data</button>
+
+    </div>
+</div>
+{%endblock%}
+{%block rightpanel%}
+<div id="contentPanel">
+    <div><span id="cmodelname" style="width:100%"></span> Model coverage &amp; CRESCENT Cascadia fault traces</div>
+
+    <iframe src="/vis/depth-slice-3d" width="99.5%" height="100%" id="3dIframe"></iframe>
+
+</div>
+{%endblock%}
+{%block scripts %}
+<script src="/static/js/shared.js"></script>
+
+<script>
+    async function loadDropdown() {
+        try {
+            const response = await fetch('/models_drop_down');
+            if (response.ok) {
+                const dropdownHTML = await response.text();
+                document.getElementById('data-file').innerHTML = dropdownHTML;
+            } else {
+                console.error('Failed to load dropdown:', response.statusText);
+                document.getElementById('data-file').textContent = 'Failed to load dropdown.';
+            }
+        } catch (error) {
+            console.error('Error fetching dropdown:', error);
+            document.getElementById('data-file').textContent = 'Error loading dropdown.';
+        }
+    }
+
+    // Event listeners for the form
+    document.getElementById('start-lat').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('start-lng').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('end-lat').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('end-lng').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('start-depth').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    // Monitor iframe's selection change 
+    document.addEventListener('DOMContentLoaded', function () {
+        const parentForm = document.getElementById('parent-form');
+        const iframe = document.getElementById('3dIframe');
+
+        // Function to send the current form data to the iframe.
+        // Note that iframe units are in mks We have to convert, if in cgs.
+        function syncToIframe() {
+            const data = {};
+            const sel = document.getElementById('data-file')
+            const selection = sel.options[sel.selectedIndex].text
+            data['data-file'] = selection
+            data['start-lng'] = document.getElementById('start-lng').value;
+            data['end-lng'] = document.getElementById('end-lng').value;
+            data['start-lat'] = document.getElementById('start-lat').value;
+            data['end-lat'] = document.getElementById('end-lat').value;
+            if (document.getElementById('units').value == "cgs") {
+                data['start-depth'] = document.getElementById('start-depth').value / 1000;
+            } else { data['start-depth'] = document.getElementById('start-depth').value; }
+
+            // If there were changes, they are synced to iframe. Change the sync button's text color back.
+            document.getElementById("sync-to-iframe").style.color = "lightgray";
+
+            iframe.contentWindow.postMessage({
+                type: 'syncFromParent',
+                data
+            }, window.location.origin);
+        }
+
+        function selectOptionByText(optionText) {
+            // Get the select element by its name attribute
+            var selectElement = document.getElementById('data-file');
+            // Iterate through the options
+            for (var i = 0; i < selectElement.options.length; i++) {
+                if (selectElement.options[i].text === optionText) {
+                    // Set the selected property of the matching option to true
+                    selectElement.options[i].selected = true;
+                    break;
+                }
+            }
+        }
+
+
+        // Function to handle messages from the iframe
+        window.addEventListener('message', function (event) {
+            if (event.origin !== window.location.origin) {
+                return; // Ignore messages from other origins for security
+            }
+
+            if (event.data.type === 'syncFromIframe') {
+                function copyIframeFormValues() {
+                    const iframe = document.getElementById('3dIframe');
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                    // Read values from the iframe form
+                    // Note that iframe units are in mks We have to convert, if in cgs.
+                    const sel = iframeDoc.getElementById('data-file')
+                    const selection = sel.options[sel.selectedIndex].text
+                    selectOptionByText(selection)
+                    document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
+                    document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
+                    document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
+                    document.getElementById('end-lat').value = iframeDoc.getElementById('maxLatSlider').value;
+                    if (document.getElementById('units').value == "cgs") {
+                        document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value * 1000;
+                    } else { document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value; }
+                    // document.getElementById('end-depth').value = iframeDoc.getElementById('maxDepthSlider').value;
+
+                    // If there were changes, they are updated by iframe. Change the sync button's text color back.
+                    document.getElementById("sync-to-iframe").style.color = "lightgray";
+
+                }
+                copyIframeFormValues();
+
+            }
+        });
+
+        // Sync to iframe button
+        document.getElementById('sync-to-iframe').addEventListener('click', syncToIframe);
+    });
+
+
+
+
+    // Call loadDropdown when the page has finished loading
+    document.addEventListener('DOMContentLoaded', loadDropdown);
+
+    async function loadColormaps() {
+        try {
+            const response = await fetch('/colormaps');
+            if (response.ok) {
+                const dropdownHTML = await response.text();
+                document.getElementById('colormap').innerHTML = dropdownHTML;
+            } else {
+                console.error('Failed to load dropdown:', response.statusText);
+                document.getElementById('colormap').textContent = 'Failed to load dropdown.';
+            }
+        } catch (error) {
+            console.error('Error fetching dropdown:', error);
+            document.getElementById('colormap').textContent = 'Error loading dropdown.';
+        }
+    }
+
+    // Call loadColormaps when the page has finished loading
+    document.addEventListener('DOMContentLoaded', loadColormaps);
+
+    var model = ""
+    var lat_min, lat_max, lon_min, lon_max, current_units;
+
+
+    // Set min/max values
+    document.getElementById('start-value').value = "auto";
+    document.getElementById('end-value').value = "auto";
+
+    // Set initial interpolation method
+    document.getElementById('interpolation-method').value = "none";
+
+    // Function to handle form submission
+    function handleSubmit(event) {
+        const loadingElement = document.getElementById('loadingMessage');
+        loadingElement.style.display = 'block'; // Show the loading message
+        const jsonContent = document.getElementById('jsonContent');
+        jsonContent.style.display = 'none'; // Show the loading message
+
+        event.preventDefault(); // Prevent the default form submission
+        var form = event.target; // Get the form element
+        var url = form.action; // Get the action URL of the form
+        var formData = new FormData(form); // Create FormData object from the form data
+        // Make a POST request to the CGI script
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                const imageUrl = `data:image/png;base64,${data.image}`;
+                const dynamicPlotElement = document.getElementById('dynamicPlot');
+                dynamicPlotElement.src = imageUrl;
+                dynamicPlotElement.style.display = 'block';
+
+                // Scroll to the dynamicPlot div
+                dynamicPlotElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                document.getElementById('downloadPlotButton').addEventListener('click', () => {
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = imageUrl;
+                    downloadLink.download = model + '_depth_slice_plot.png';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                });
+                document.getElementById('downloadPlotButton').style.display = 'inline';
+                // Force reflow
+                document.getElementById('downloadPlotButton').offsetHeight;  // Trigger reflow
+                document.getElementById('downloadDataButton').addEventListener('click', () => {
+                    const csvData = `data:text/csv;base64,${data.csv_data}`;
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = csvData;
+                    downloadLink.download = model + '_depth_slice_data.csv';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                });
+                document.getElementById('downloadDataButton').style.display = 'inline';
+                loadingElement.style.display = 'none';
+            })
+            .catch(error => console.error('Error fetching plot and data:', error));
+
+    }
+
+    // Add event listener to the form for submit event
+    document.getElementById('image-form').addEventListener('submit', handleSubmit);
+
+
+    function isValidLatitude(lat) {
+        return !isNaN(lat) && lat >= -90 && lat <= 90;
+    }
+
+    function isValidLongitude(lng) {
+        return !isNaN(lng) && lng >= -180 && lng <= 180;
+    }
+
+
+    // Copy the form values to iframe.
+    function copyFormValues() {
+        const iframe = document.getElementById('3dIframe');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+        // Read values from the iframe form
+        const sel = iframeDoc.getElementById('data-file')
+        const selection = sel.options[sel.selectedIndex].text
+        selectOptionByText(selection)
+        document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
+        document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
+        document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
+        document.getElementById('end-lat').value = iframeDoc.getElementById('maxLatSlider').value;
+        document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value;
+        document.getElementById('end-depth').value = iframeDoc.getElementById('maxDepthSlider').value;
+
+    }
+
+    // Capitalize First Character of a string.
+    function capitalizeFirstCharacter(str) {
+        if (!str) return str; // Return the original string if it's empty or null
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+
+    // Update the form fields based on recent changes.
+    function updateFormFields(fileName) {
+        const locked = document.getElementById('lock').checked;
+        var vertical_units;
+
+        fetch(fileName)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Assuming the JSON structure matches your form fields' ids
+                for (const [key, value] of Object.entries(data)) {
+                    if (key == "geospatial_lon_min") {
+                        if (!locked) document.getElementById('start-lng').value = value;
+                        lon_min = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lon_max") {
+                        if (!locked) document.getElementById('end-lng').value = value;
+                        lon_max = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lat_min") {
+                        if (!locked) document.getElementById('start-lat').value = value;
+                        lat_min = parseFloat(value);
+                    }
+                    else if (key == "geospatial_vertical_units") {
+                        vertical_units = value;
+                    }
+                    else if (key == "geospatial_lat_max") {
+                        if (!locked) document.getElementById('end-lat').value = value;
+                        lat_max = parseFloat(value);
+                    }
+                    else if (key == "geospatial_vertical_max") {
+                        if (!locked) document.getElementById('start-depth').value = parseFloat(value) / 2.0;
+                    }
+                    else if (key == "model") {
+                        if (!locked) {
+                            document.getElementById('title').value = value;
+                            model = value
+                        }
+                    }
+                    else if (key == "z_var") {
+                        document.getElementById('z-var').value = value;
+                        const label = document.getElementById('depth-label');
+                        label.textContent = capitalizeFirstCharacter(value) + ":";
+                        if (value != "depth") {
+                            var selectElement = document.getElementById("interpolation-method");
+                            var options = selectElement.options;
+
+                            for (var i = 0; i < options.length; i++) {
+                                if (options[i].value !== "none") {
+                                    options[i].disabled = true;
+                                } else {
+                                    options[i].selected = true;  // Ensure "none" is selected
+                                }
+                            }
+                        }
+                        else {
+                            var selectElement = document.getElementById("interpolation-method");
+                            var options = selectElement.options;
+
+                            for (var i = 0; i < options.length; i++) {
+                                options[i].disabled = false;
+                            }
+                        }
+                    }
+                    else if (key == "data_vars") {
+
+                        // Find the select element
+                        var selectElement = document.getElementById('plot-variable');
+                        // Populate the select element with options
+                        selectElement.options.length = 0;
+                        value.forEach(val => {
+                            const option = new Option(val, val);
+                            selectElement.add(option);
+                        });
+
+
+                        var start_label = document.querySelector('label[for="start-value"]');
+                        start_label.textContent = "Min. " + selectElement.value;
+                        var end_label = document.querySelector('label[for="end-value"]');
+                        end_label.textContent = "Max. " + selectElement.value;
+
+                        var cmap_label = document.querySelector('label[for="colormap"]');
+                        cmap_label.textContent = selectElement.value + " Colormap";
+                    }
+
+                }
+                // Adjust the depth based on units.
+                if (!locked) {
+                    const z_var = document.getElementById("z-var").value;
+                    if (z_var == "depth") {
+
+                        if (document.getElementById('units').value == "cgs") {
+
+                            if (vertical_units == "km") {
+                                document.getElementById('start-depth').value = 1000 * parseFloat(document.getElementById('start-depth').value);
+                                //document.getElementById('units').value = "mks"
+                            }
+                        }
+                        else {
+                            if (vertical_units == "m") {
+                                document.getElementById('start-depth').value = parseFloat(document.getElementById('start-depth').value) / 1000;
+
+                                //document.getElementById('units').value = "cgs"
+                            }
+                        }
+                    }
+                }
+                /* MB
+                if (!locked) {
+                    leftMarker.remove();
+                    leftMarker = L.marker([lat_min, lon_min], { draggable: true }).addTo(map);
+                    leftMarker.bindTooltip('LL', { permanent: true, className: 'marker-label', direction: "right" });
+                    rightMarker.remove();
+                    rightMarker = L.marker([lat_max, lon_max], { draggable: true }).addTo(map);
+                    rightMarker.bindTooltip('UR', { permanent: true, className: 'marker-label', direction: "right" });
+                    updateRectangle();
+                    // Event listener for left marker drag event
+                    leftMarker.on('dragend', updateRectangle);
+ 
+                    // Event listener for right marker drag event
+                    rightMarker.on('dragend', updateRectangle);
+                }
+                */
+
+
+            })
+            .catch(error => console.error('Error fetching the JSON file:', error));
+    }
+
+    // Event listener for when the element gains focus
+    document.getElementById('units').onfocus = function () {
+        // Store the current value when the element is focused
+        current_units = document.getElementById('units').value;
+    };
+
+    document.getElementById('units').addEventListener('change', function () {
+        // Adjust the depth based on units.
+        const z_var = document.getElementById("z-var").value;
+        if (z_var == "depth") {
+            const new_units = document.getElementById('units').value;
+            if (new_units == "cgs") {
+
+                if (current_units == "mks") {
+                    current_units = "cgs"
+                    document.getElementById('start-depth').value = 1000 * parseFloat(document.getElementById('start-depth').value);
+                }
+            }
+            else {
+                if (current_units == "cgs") {
+                    current_units = "mks"
+                    document.getElementById('start-depth').value = parseFloat(document.getElementById('start-depth').value) / 1000;
+                }
+            }
+        }
+
+    });
+
+    // Event listener for when a new model is selected.
+    document.getElementById('data-file').addEventListener('change', function () {
+        document.getElementById("jsonContent").style.display = "none"
+
+        const filename = document.getElementById('data-file').value
+        const regex = /.nc/i;
+        var jsonFlename = filename.replace(regex, '.json')
+        // Field is found, execute your function
+        jsonFlename = '../static/json/' + jsonFlename;
+        updateFormFields(jsonFlename)
+        // You can replace the console.log with any code to handle the change
+
+        // There are changes, change the sync button's text color to red.
+        document.getElementById("sync-to-iframe").style.color = "red";
+    });
+
+    // Event listener for plot variable change to set min/max.
+    document.getElementById('plot-variable').addEventListener('change', function () {
+        var selectElement = document.getElementById('plot-variable');
+
+        var start_label = document.querySelector('label[for="start-value"]');
+        start_label.textContent = "Min. " + selectElement.value;
+        var end_label = document.querySelector('label[for="end-value"]');
+        end_label.textContent = "Max. " + selectElement.value;
+
+        var cmap_label = document.querySelector('label[for="colormap"]');
+        cmap_label.textContent = selectElement.value + " colormap";
+
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Define the function to execute when mutations are observed
+        const callback = function (mutationsList, observer) {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    const dynamicField = document.getElementById('data-file');
+
+                    if (dynamicField.value) {
+                        const regex = /.nc/i;
+                        const jsonFlename = dynamicField.value.replace(regex, '.json')
+                        // Field is found, execute your function
+                        updateFormFields('../static/json/' + jsonFlename);
+
+                        // Optionally, disconnect the observer if it's no longer needed
+                        observer.disconnect();
+                        break;
+                    }
+                }
+            }
+        };
+
+        // Create an instance of MutationObserver with the callback
+        const observer = new MutationObserver(callback);
+
+        // Options for the observer (which mutations to observe)
+        const config = { childList: true, subtree: true };
+
+        // Start observing the document body for DOM changes
+        observer.observe(document.body, config);
+    });
+
+    // The initial load requires a sync.
+    // There are changes, change the sync button's text color to red.
+    document.getElementById("sync-to-iframe").style.color = "red";
+
+    // Show metadata button
+    document.getElementById('metadata-button').addEventListener('click', display_metadata);
+    window.addEventListener('load', function () {
+    })
+</script>
+
+{%endblock%}

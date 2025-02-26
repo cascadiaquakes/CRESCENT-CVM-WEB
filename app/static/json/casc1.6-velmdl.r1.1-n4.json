@@ -1,0 +1,116 @@
+{
+    "model": "casc1.6_velmdl",
+    "id": "casc1.6_velmdl",
+    "title": "P- and S-wave Seismic Velocity Models Incorporating the Cascadia Subduction Zone (Decimated with a Factor of 5)",
+    "summary": "P- and S-wave Seismic Velocity Models Incorporating the Cascadia Subduction Zone for 3D Earthquake Ground Motion Simulations (Decimated with a Factor of 5) - Update for Open-File Report 2007-1348",
+    "reference": "Stephenson, Reitman, and Angster (2017)",
+    "reference_pid": "doi:10.3133/ofr20171152",
+    "data_revision": "r1.0",
+    "Version": "v0.0",
+    "Conventions": "CF-1.0",
+    "Metadata_Conventions": "Unidata Dataset Discovery v1.0",
+    "author_name": "William J. Stephenson",
+    "author_email": "manochehr.bahavar@earthscope.org",
+    "author_institution": "USGS",
+    "author_url": "https://pubs.usgs.gov/publication/ofr20171152",
+    "geospatial_lon_min": -130.1,
+    "geospatial_lon_max": -121.0,
+    "geospatial_lon_units": "degrees_east",
+    "geospatial_lon_resolution": 1.0,
+    "geospatial_lat_min": 40.2,
+    "geospatial_lat_max": 50.0,
+    "geospatial_lat_units": "degrees_north",
+    "geospatial_lat_resolution": 1.0,
+    "geospatial_vertical_min": 0.0,
+    "geospatial_vertical_max": 60000.0,
+    "geospatial_vertical_units": "m",
+    "geospatial_vertical_positive": "down",
+    "repository_name": "EMC",
+    "repository_institution": "EarthScope",
+    "repository_pid": "doi:1234.567890",
+    "keywords": "seismic,tomography,shearwave,swave,elasticwaveform,CascadiaSubductionZone",
+    "acknowledgment": "Model from USGS Open-File Report 2007-1348",
+    "history": "[2024-01-18] CRESCENT Format conversion tool",
+    "comments": "model converted to netCDF by CRESCENT CVM",
+    "data_layout": "vertex",
+    "grid_ref": "marcator",
+    "utm_zone": "10",
+    "ellipsoid": "WGS84",
+    "vars": [
+        "x",
+        "y",
+        "depth",
+        "longitude",
+        "latitude",
+        "Vp",
+        "Vs"
+    ],
+    "z_var": "depth",
+    "size_kb": 45774.59,
+    "variables": {
+        "x": {
+            "column": "easting",
+            "variable": "easting",
+            "standard_name": "projection_x_coordinate",
+            "long_name": "easting; UTM",
+            "units": "m",
+            "decimation_factor": 5
+        },
+        "y": {
+            "column": "northing",
+            "variable": "northing",
+            "standard_name": "projection_y_coordinate",
+            "long_name": "northing; UTM",
+            "units": "m",
+            "decimation_factor": 5
+        },
+        "depth": {
+            "column": "depth",
+            "variable": "depth",
+            "standard_name": "depth",
+            "long_name": "depth below sea level",
+            "units": "m",
+            "decimation_factor": 5
+        },
+        "longitude": {
+            "column": "longitude",
+            "variable": "longitude",
+            "standard_name": "longitude",
+            "long_name": "Longitude; positive east",
+            "units": "degrees_east"
+        },
+        "latitude": {
+            "column": "latitude",
+            "variable": "latitude",
+            "long_name": "Latitude; positive north",
+            "units": "degrees_north",
+            "standard_name": "latitude"
+        },
+        "Vp": {
+            "column": "vp",
+            "variable": "Vp",
+            "dimensions": "3",
+            "long_name": "P-wave velocity",
+            "display_name": "P Velocity (m/s)",
+            "units": "m.s-1",
+            "data_source": "data-derived",
+            "grid_ref": "transverse_mercator",
+            "coordinates": "longitude latitude"
+        },
+        "Vs": {
+            "column": "vs",
+            "variable": "Vs",
+            "dimensions": "3",
+            "long_name": "Shear-wave velocity",
+            "display_name": "S Velocity (m/s)",
+            "units": "m.s-1",
+            "data_source": "data-derived",
+            "grid_ref": "transverse_mercator",
+            "coordinates": "longitude latitude"
+        }
+    },
+    "data_vars": [
+        "Vp",
+        "Vs"
+    ]
+}

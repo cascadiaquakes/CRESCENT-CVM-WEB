@@ -1,0 +1,699 @@
+{% extends 'cvm_page_v1.html' %}
+
+{% block style%}
+<link rel="stylesheet" href="/static/css/x-section.css" />
+{%endblock%}
+{% block description%}
+<div>
+    <h3>Cross-Section Tool</h3>
+    <p>
+        The Cross-Section Tool allows for the generation of an interpolated cross-sectional slice through a CVM model.
+    </p>
+    <p>
+        To create a cross-section, start by selecting a model from the form below and observe the coverage area
+        displayed on
+        the map. Use the left (L) and right (R) markers on the map to set the start and end points of your
+        cross-section.
+        You can also enter the coordinates directly into the designated input boxes. After setting the depth range and
+        other
+        necessary parameters, click "Submit" to generate the cross-section.
+    </p>
+    <p>
+        To maintain consistent cross-section parameters across different models, enable the lock checkbox. This prevents
+        automatic parameter updates when switching models. Note that when moving between models with different vertical
+        measurement units (e.g., meters versus kilometers), adjustments to the depth ranges may be required.
+    </p>
+</div>
+{%endblock%}
+{% block leftpanel%}
+<div class="action_container">
+
+    <div id="main-container" class="action_side">
+        <div id="map-panel" class="action_inner">
+            <div>
+                <div>Coverage area, cross-section trace &amp; CRESCENT Cascadia fault traces</div>
+            </div>
+            <div id="map"></div>
+        </div>
+        <div class="action_inner">
+            <form action="/xsection" method="post" id="image-form">
+                <input type="hidden" id="intersection-coords" name="intersection_coords" value="">
+
+                <div style="width: 100%;display: flex;flex-direction: row;justify-content: center;"><label
+                        for="data-file">Model:</label>
+                    <select id="data-file" name="data_file"></select>
+                </div>
+                <div style="width: 100%;display: flex;flex-direction: row;justify-content: center;font-weight: bold">
+                    <label for="title">Plot title:</label>
+                    <input type="text" id="title" name="title" style="width: 50%;">
+                </div>
+                <div class="form-container">
+
+                    <div class="form-column">
+
+                        <div class=" form-input">
+                            <label for="start-lat">L-latitude:</label>
+                            <input type="text" id="start-lat" name="start_lat">
+                        </div>
+                        <div class="form-input">
+                            <label for="start-lng">L-longitude:</label>
+                            <input type="text" id="start-lng" name="start_lng">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-lat">R-latitude:</label>
+                            <input type="text" id="end-lat" name="end_lat">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-lng">R-longitude:</label>
+                            <input type="text" id="end-lng" name="end_lng">
+                        </div>
+                        <div class="form-input">
+                            <label for="units">Units:</label>
+                            <select name="units" id="units">
+                                <option value="mks">km.kg.sec</option>
+                                <option value="cgs">m.g.sec</option>
+                            </select>
+                        </div>
+                        <div class="form-input">
+                            <label for="start-depth">Min. depth:</label>
+                            <input type="text" id="start-depth" name="start_depth">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-depth">Max. depth:</label>
+                            <input type="text" id="end-depth" name="end_depth">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-depth">Vertical&nbsp;exaggeration:</label>
+                            <input type="text" id="vertical-exaggeration" name="vertical_exaggeration" value="2">
+                        </div>
+                        <div class="form-input">
+                            <label for="subscribeCheckbox">Label fault locations:</label>
+                            <input type="checkbox" id="fault-location" checked name="fault_location">
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <div class="form-input">
+                            <label for="interpolation-method">Interpolation:</label>
+                            <select id="interpolation-method" name="interpolation_method">
+                                <option value="linear">Linear</option>
+                                <option value="nearest">Nearest neighbor</option>
+                            </select>
+                        </div>
+                        <div class="form-input">
+                            <label for="num-points">#&nbsp;Surface&nbsp;samples</label>
+                            <input type="text" id="num-points" name="num_points" value="100">
+                        </div>
+                        <div class="form-input">
+                            <label for="plot-variable">Variable: <span id="var-warning"
+                                    style="color:red;"></span></label>
+                            <select id="plot-variable" name="plot_variable">
+
+                            </select>
+                        </div>
+                        <div class="form-input">
+                            <label for="start-value">Min. value:</label>
+                            <input type="text" id="start-value" name="start_value" value="auto">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-value">Max. value:</label>
+                            <input type="text" id="end-value" name="end_value" value="auto">
+                        </div>
+                        <div class="form-input">
+                            <label for="colormap">Colormap:</label><span id="var-warning"></span>
+                            <select id="colormap" name="colormap">
+                            </select>
+                        </div>
+                        <div class="form-input">
+                            <label for="image-width">Plot&nbsp;width&nbsp;(in):</label>
+                            <input type="text" id="image-width" name="image_width" value="7">
+                            </select>
+
+                        </div>
+                        <div class="form-input">
+                            <label for="image-height">Plot&nbsp;height&nbsp;(in):</label>
+                            <input type="text" id="image-height" name="image_height" value="10">
+                            </select>
+                        </div>
+                        <div style="clear: both;">
+                        </div>
+                        <div class="form-input">
+                            <label for="subscribeCheckbox">Lock settings:</label>
+                            <input type="checkbox" id="lock" name="lock">
+                        </div>
+                    </div>
+
+                </div>
+                <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
+                    <input id="submit" type="submit" value="Submit" , class="button">
+                </div>
+        </div>
+        </form>
+    </div>
+    <div id="loadingMessage">Working...</div>
+    <div id="results-panel" class="action_side">
+        <img id="dynamicPlot" src="" alt="Dynamic Plot" style="display:none;">
+        <br>
+        <button id="downloadPlotButton" style="display:none; width:20%;background-color: #004F59;color: white;">Download
+            Plot</button>
+        <br>
+        <button id="downloadDataButton"
+            style="display:none; width:20%;background-color: #004F59; color: white;">Download
+            Data</button>
+    </div>
+    <br>
+
+</div>
+{%endblock%}
+
+{%block scripts %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/@turf/turf"></script>
+
+<script>
+    async function loadDropdown() {
+        try {
+            const response = await fetch('/models_drop_down?required_variable=depth');
+            if (response.ok) {
+                const dropdownHTML = await response.text();
+                document.getElementById('data-file').innerHTML = dropdownHTML;
+            } else {
+                console.error('Failed to load dropdown:', response.statusText);
+                document.getElementById('data-file').textContent = 'Failed to load dropdown.';
+            }
+        } catch (error) {
+            console.error('Error fetching dropdown:', error);
+            document.getElementById('data-file').textContent = 'Error loading dropdown.';
+        }
+    }
+
+    // Call loadDropdown when the page has finished loading
+    document.addEventListener('DOMContentLoaded', loadDropdown);
+
+    async function loadColormaps() {
+        try {
+            const response = await fetch('/colormaps');
+            if (response.ok) {
+                const dropdownHTML = await response.text();
+                document.getElementById('colormap').innerHTML = dropdownHTML;
+            } else {
+                console.error('Failed to load dropdown:', response.statusText);
+                document.getElementById('colormap').textContent = 'Failed to load dropdown.';
+            }
+        } catch (error) {
+            console.error('Error fetching dropdown:', error);
+            document.getElementById('colormap').textContent = 'Error loading dropdown.';
+        }
+    }
+
+    // Call loadColormaps when the page has finished loading
+    document.addEventListener('DOMContentLoaded', loadColormaps);
+
+    const faultTraceUrl = 'https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'
+    var lat_min = 40;
+    var lat_max = 49;
+    var lat_avg = (lat_min + lat_max) / 2.0
+    var lon_min = -124.8;
+    var lon_max = -120;
+    var lon_avg = (lon_min + lon_max) / 2.0
+    var map = L.map('map').setView([lat_avg, lon_avg], 5);
+    var current_units;
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Load GeoJSON data
+    fetch(faultTraceUrl)
+        .then(response => response.json())
+        .then(data => {
+            // Add 3D GeoJSON layer to the map
+            L.geoJSON(data, {
+                renderer: L.canvas(),
+                style: {
+                    color: 'black',
+                    opacity: 1.0,
+                    weight: 0.8,  // Adjust line width here
+                },
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties && feature.properties.popupContent) {
+                        layer.bindPopup(feature.properties.popupContent);
+                    }
+                }
+            }).addTo(map);
+        })
+        .catch(error => console.error('Error loading GeoJSON:', error));
+
+    var boundingBox;
+
+    // Function to update bounding box
+    function updateBoundingBox(lat_min, lon_min, lat_max, lon_max) {
+        if (boundingBox) {
+            // Remove existing bounding box if present
+            map.removeLayer(boundingBox);
+        }
+        // Calculate new bounding box coordinates based on lat and lng
+        var bounds = L.latLngBounds([
+            [lat_min, lon_min],
+            [lat_max, lon_max]
+        ]);
+        // Draw the new bounding box
+        boundingBox = L.rectangle(bounds, { color: "#ff7800", weight: 1 }).addTo(map);
+    }
+
+    // Initialize markers for left and right points
+    var leftMarker = L.marker([lat_avg, lon_min], { draggable: true }).addTo(map);
+    leftMarker.bindTooltip('L', { permanent: true, className: 'marker-label', direction: "right" });
+    var rightMarker = L.marker([lat_avg, lon_max], { draggable: true }).addTo(map);
+    rightMarker.bindTooltip('R', { permanent: true, className: 'marker-label', direction: "right" });
+
+    // Set min/max values
+    document.getElementById('start-value').value = "auto";
+    document.getElementById('end-value').value = "auto";
+
+    // Set initial interpolation method
+    document.getElementById('interpolation-method').value = "linear";
+
+    // Event listener for left marker drag event
+    leftMarker.on('dragend', updatePolyline);
+
+    // Event listener for right marker drag event
+    rightMarker.on('dragend', updatePolyline);
+
+    // Initialize polyline
+    var polyline = L.polyline([leftMarker.getLatLng(), rightMarker.getLatLng()], { color: 'blue' }).addTo(map);
+
+    // Function to extract the variable list from the a string
+    function get_vars_from_name(name) {
+        // Regular expression to match content inside the parentheses
+        var regex = /\(([^)]+)\)/;
+        // Executing the regex on the string
+        var matches = regex.exec(name);
+
+        // Check if there are matches and extract them into an array
+        var result = [];
+        if (matches) {
+            // Split the match found inside the parentheses by ',' and trim spaces and quotes
+            result = matches[1].split(',').map(function (item) {
+                return item.trim().replace(/['"]+/g, '');
+            });
+        }
+        return result
+    }
+
+    // Function to calculate and display intersections
+    function calculateIntersections() {
+        fetch('https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_traces.geojson')
+            .then(response => response.json())
+            .then(data => {
+                if (!window.intersectionMarkers) {
+                    window.intersectionMarkers = [];
+                } else {
+                    window.intersectionMarkers.forEach(marker => map.removeLayer(marker));
+                    window.intersectionMarkers = [];
+                }
+
+                var myLine = {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [leftMarker.getLatLng().lng, leftMarker.getLatLng().lat],
+                            [rightMarker.getLatLng().lng, rightMarker.getLatLng().lat]
+                        ]
+                    }
+                };
+
+                var intersectionsData = []; // Array to store intersection coordinates
+                data.features.forEach(feature => {
+                    if (feature.geometry.type === 'LineString') {
+                        var intersections = turf.lineIntersect(feature, myLine);
+                        intersections.features.forEach(intersect => {
+                            var name = feature.properties.name + " fault|" || "Fault trace|"
+                            if (feature.properties.dip) {
+                                name += "Dip: " + feature.properties.dip + "°"
+                            }
+
+                            if (feature.properties.dip_dir) { name += feature.properties.dip_dir }
+                            if (feature.properties.rake) { name += ", rake: " + feature.properties.rake }
+                            if (feature.properties.lower_depth) { name += ", depth: " + feature.properties.upper_depth + " to " + feature.properties.lower_depth + " km" }
+                            var coords = intersect.geometry.coordinates;
+                            var intersectMarker = L.circleMarker([coords[1], coords[0]], {
+                                radius: 5,
+                                fillColor: "#ff7800",
+                                color: "#000",
+                                weight: 1,
+                                opacity: 1,
+                                fillOpacity: 0.8
+                            }).addTo(map);
+                            window.intersectionMarkers.push(intersectMarker);
+                            // Store the coordinates for each intersection
+                            intersectionsData.push(coords.join(',') + "|" + name);
+                        });
+                    }
+                });
+
+                // Update the hidden input field with the intersection coordinates
+                document.getElementById('intersection-coords').value = intersectionsData.join(';');
+            })
+            .catch(error => console.error('Error processing intersections:', error));
+    }
+
+
+
+
+    // Function to update polyline based on marker positions
+    function updatePolyline() {
+        var leftLat = leftMarker.getLatLng().lat.toFixed(2);
+        var leftLng = leftMarker.getLatLng().lng.toFixed(2);
+        var rightLat = rightMarker.getLatLng().lat.toFixed(2);
+        var rightLng = rightMarker.getLatLng().lng.toFixed(2);
+
+        // Update polyline
+        polyline.setLatLngs([leftMarker.getLatLng(), rightMarker.getLatLng()]);
+
+        // Update form fields
+        document.getElementById('start-lat').value = leftLat;
+        document.getElementById('start-lng').value = leftLng;
+        document.getElementById('end-lat').value = rightLat;
+        document.getElementById('end-lng').value = rightLng;
+
+        // Calculate intersections
+        calculateIntersections();
+    }
+
+    // Function to handle form submission
+    function handleSubmit(event) {
+        const loadingElement = document.getElementById('loadingMessage');
+        loadingElement.style.display = 'block'; // Show the loading message
+
+        event.preventDefault(); // Prevent the default form submission
+        var form = event.target; // Get the form element
+        var url = form.action; // Get the action URL of the form
+        var formData = new FormData(form); // Create FormData object from the form data
+        // Make a POST request to the CGI script
+        fetch(url, {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                const imageUrl = `data:image/png;base64,${data.image}`;
+                document.getElementById('dynamicPlot').src = imageUrl;
+                document.getElementById('dynamicPlot').style.display = 'block';
+                document.getElementById('downloadPlotButton').addEventListener('click', () => {
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = imageUrl;
+                    downloadLink.download = 'plot.png';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                });
+                document.getElementById('downloadPlotButton').style.display = 'inline';
+                document.getElementById('downloadDataButton').addEventListener('click', () => {
+                    const csvData = `data:text/csv;base64,${data.csv_data}`;
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = csvData;
+                    downloadLink.download = 'data.csv';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                });
+                document.getElementById('downloadDataButton').style.display = 'inline';
+                loadingElement.style.display = 'none';
+            })
+            .catch(error => console.error('Error fetching plot and data:', error));
+
+    }
+
+    // Add event listener to the form for submit event
+    document.getElementById('image-form').addEventListener('submit', handleSubmit);
+    // Assuming leftMarker and rightMarker are your Leaflet marker objects
+    // and polyline is your Leaflet polyline object
+
+    function isValidLatitude(lat) {
+        return !isNaN(lat) && lat >= -90 && lat <= 90;
+    }
+
+    function isValidLongitude(lng) {
+        return !isNaN(lng) && lng >= -180 && lng <= 180;
+    }
+
+    function updateMarkersFromForm() {
+        // Get the new positions from the form
+        var newStartLat = parseFloat(document.getElementById('start-lat').value);
+        var newStartLng = parseFloat(document.getElementById('start-lng').value);
+        var newEndLat = parseFloat(document.getElementById('end-lat').value);
+        var newEndLng = parseFloat(document.getElementById('end-lng').value);
+
+        lat_min = newStartLat;
+        lat_max = newEndLat;
+        lat_avg = (lat_min + lat_max) / 2.0
+        lon_min = newStartLng;
+        lon_max = newEndLng;
+        lon_avg = (lon_min + lon_max) / 2.0
+
+        if (!map) {
+            map = L.map('map').setView([lat_avg, lon_avg], 5);
+        }
+
+        // Validate the new positions
+        if (!isValidLatitude(newStartLat) || !isValidLongitude(newStartLng)) {
+            alert("Invalid Start Position");
+            return;
+        }
+        if (!isValidLatitude(newEndLat) || !isValidLongitude(newEndLng)) {
+            alert("Invalid End Position");
+            return;
+        }
+
+        // Update marker positions if valid
+        leftMarker.setLatLng([newStartLat, newStartLng]);
+        rightMarker.setLatLng([newEndLat, newEndLng]);
+
+        // Update the polyline to reflect the new marker positions
+        polyline.setLatLngs([leftMarker.getLatLng(), rightMarker.getLatLng()]);
+    }
+
+    // Attach event listeners to the form fields
+    document.getElementById('start-lat').addEventListener('change', updateMarkersFromForm);
+    document.getElementById('start-lng').addEventListener('change', updateMarkersFromForm);
+    document.getElementById('end-lat').addEventListener('change', updateMarkersFromForm);
+    document.getElementById('end-lng').addEventListener('change', updateMarkersFromForm);
+
+
+    function updateFormFields(fileName) {
+        const locked = document.getElementById('lock').checked;
+        var vertical_units;
+        fetch(fileName)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Assuming the JSON structure matches your form fields' ids
+                for (const [key, value] of Object.entries(data)) {
+                    if (key == "geospatial_lon_min") {
+                        if (!locked) document.getElementById('start-lng').value = value;
+                        lon_min = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lon_max") {
+                        if (!locked) document.getElementById('end-lng').value = value;
+                        lon_max = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lat_min") {
+                        if (!locked) document.getElementById('start-lat').value = value;
+                        lat_min = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lat_max") {
+                        if (!locked) document.getElementById('end-lat').value = value;
+                        lat_max = parseFloat(value);
+                    }
+                    else if (key == "geospatial_vertical_units") {
+                        vertical_units = value;
+                    }
+                    else if (key == "geospatial_vertical_min") {
+                        if (!locked) document.getElementById('start-depth').value = value;
+                    }
+                    else if (key == "model") {
+                        if (!locked) document.getElementById('title').value = value;
+                    }
+                    else if (key == "geospatial_vertical_max") {
+                        if (!locked) document.getElementById('end-depth').value = value;
+                    }
+                    else if (!locked & key == "data_vars") {
+                        // Find the select element
+                        var selectElement = document.getElementById('plot-variable');
+                        // Populate the select element with options
+                        selectElement.options.length = 0;
+                        value.forEach(val => {
+                            const option = new Option(val, val);
+                            selectElement.add(option);
+                        });
+                        var start_label = document.querySelector('label[for="start-value"]');
+                        start_label.textContent = "Min. " + selectElement.value;
+                        var end_label = document.querySelector('label[for="end-value"]');
+                        end_label.textContent = "Max. " + selectElement.value;
+
+                        var cmap_label = document.querySelector('label[for="colormap"]');
+                        cmap_label.textContent = selectElement.value + " colormap";
+
+                    }
+
+                }
+                // Adjust the depth based on units.
+                if (!locked) {
+
+                    if (document.getElementById('units').value == "cgs") {
+
+                        if (vertical_units == "km") {
+                            document.getElementById('start-depth').value = 1000 * parseFloat(document.getElementById('start-depth').value);
+                            document.getElementById('end-depth').value = 1000 * parseFloat(document.getElementById('end-depth').value);
+                            //document.getElementById('units').value = "mks"
+                        }
+                    }
+                    else {
+                        if (vertical_units == "m") {
+                            document.getElementById('start-depth').value = parseFloat(document.getElementById('start-depth').value) / 1000;
+                            document.getElementById('end-depth').value = parseFloat(document.getElementById('end-depth').value) / 1000;
+
+                            //document.getElementById('units').value = "cgs"
+                        }
+                    }
+                }
+
+
+                updateBoundingBox(lat_min, lon_min, lat_max, lon_max)
+                lat_avg = (lat_min + lat_max) / 2;
+                lon_avg = (lon_min + lon_max) / 2;
+                if (!locked) {
+                    leftMarker.remove();
+                    leftMarker = L.marker([lat_avg, lon_min], { draggable: true }).addTo(map);
+                    leftMarker.bindTooltip('L', { permanent: true, className: 'marker-label', direction: "right" });
+                    rightMarker.remove();
+                    rightMarker = L.marker([lat_avg, lon_max], { draggable: true }).addTo(map);
+                    rightMarker.bindTooltip('R', { permanent: true, className: 'marker-label', direction: "right" });
+                    updatePolyline();
+                    // Event listener for left marker drag event
+                    leftMarker.on('dragend', updatePolyline);
+
+                    // Event listener for right marker drag event
+                    rightMarker.on('dragend', updatePolyline);
+                }
+
+
+            })
+            .catch(error => console.error('Error fetching the JSON file:', error));
+    }
+
+    // Event listener for when the element gains focus
+    document.getElementById('units').onfocus = function () {
+        // Store the current value when the element is focused
+        current_units = document.getElementById('units').value;
+    };
+
+    document.getElementById('units').addEventListener('change', function () {
+        // Adjust the depth based on units.
+        const new_units = document.getElementById('units').value;
+        if (new_units == "cgs") {
+            if (current_units == "mks") {
+                current_units == "cgs"
+                document.getElementById('start-depth').value = 1000 * parseFloat(document.getElementById('start-depth').value);
+                document.getElementById('end-depth').value = 1000 * parseFloat(document.getElementById('end-depth').value);
+            }
+        }
+        else {
+            if (current_units == "cgs") {
+                current_units == "mks"
+                document.getElementById('start-depth').value = parseFloat(document.getElementById('start-depth').value) / 1000;
+                document.getElementById('end-depth').value = parseFloat(document.getElementById('end-depth').value) / 1000;
+            }
+        }
+
+    });
+    document.getElementById('plot-variable').addEventListener('change', function () {
+        var selectElement = document.getElementById('plot-variable');
+
+        var start_label = document.querySelector('label[for="start-value"]');
+        start_label.textContent = "Min. " + selectElement.value;
+        var end_label = document.querySelector('label[for="end-value"]');
+        end_label.textContent = "Max. " + selectElement.value;
+
+        var cmap_label = document.querySelector('label[for="colormap"]');
+        cmap_label.textContent = selectElement.value + " colormap";
+
+        const selectModelElement = document.getElementById('data-file')
+        const model = selectModelElement.options[selectElement.selectedIndex].textContent
+        const vars = get_vars_from_name(model)
+        const selectedVar = selectElement.value;
+        const varWarningElement = document.getElementById('var-warning')
+        if (!vars.includes(selectedVar)) {
+            varWarningElement.textContent = "invalid variable " + selectedVar + " for this model"
+        } else {
+            varWarningElement.textContent = ""
+
+        }
+
+    });
+
+
+    document.getElementById('data-file').addEventListener('change', function () {
+        const filename = document.getElementById('data-file').value
+        const regex = /.nc/i;
+        var jsonFlename = filename.replace(regex, '.json')
+        // Field is found, execute your function
+        jsonFlename = '../static/json/' + jsonFlename;
+        const selectElement = document.getElementById('data-file')
+        const model = selectElement.options[selectElement.selectedIndex].textContent
+        const vars = get_vars_from_name(model)
+        const locked = document.getElementById('lock').checked
+        const selectedVar = document.getElementById('plot-variable').value
+        const varWarningElement = document.getElementById('var-warning')
+
+        if (locked & !vars.includes(selectedVar)) {
+            varWarningElement.textContent = "invalid variable " + selectedVar + " for this model"
+        } else {
+            varWarningElement.textContent = ""
+
+        }
+
+        updateFormFields(jsonFlename)
+        // You can replace the console.log with any code to handle the change
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Define the function to execute when mutations are observed
+        const callback = function (mutationsList, observer) {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    const dynamicField = document.getElementById('data-file');
+
+                    if (dynamicField.value) {
+                        const regex = /.nc/i;
+                        const jsonFlename = dynamicField.value.replace(regex, '.json')
+                        // Field is found, execute your function
+                        updateFormFields('../static/json/' + jsonFlename);
+
+                        // Optionally, disconnect the observer if it's no longer needed
+                        observer.disconnect();
+                        break;
+                    }
+                }
+            }
+        };
+
+        // Create an instance of MutationObserver with the callback
+        const observer = new MutationObserver(callback);
+
+        // Options for the observer (which mutations to observe)
+        const config = { childList: true, subtree: true };
+
+        // Start observing the document body for DOM changes
+        observer.observe(document.body, config);
+    });
+
+
+</script>
+
+{%endblock%}

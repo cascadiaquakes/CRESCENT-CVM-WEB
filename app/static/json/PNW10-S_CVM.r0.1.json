@@ -1,0 +1,103 @@
+{
+    "model": "Cascadia_ANT_Porrittetal2011",
+    "id": "Cascadia_ANT_Porrittetal2011",
+    "title": "3D vertical shear-wave velocity model of the Cascadian forearc from the inversion of Rayleigh wave ambient noise dispersion",
+    "summary": "PACNW10-S was created from the iterative linear inversion of ambient noise Rayleigh waves dispersion measurements (see Porritt et al., 2011 for details of model creation).",
+    "reference": "RW Porritt, RM Allen, DC Boyarko, and MR Brudzinski (2011)",
+    "reference_pid": "doi:10.1016/j.epsl.2011.06.026",
+    "data_revision": "r0.1",
+    "version": "v0.0",
+    "Conventions": "CF-1.0",
+    "Metadata_Conventions": "Unidata Dataset Discovery v1.0",
+    "author_name": "Robert Porritt",
+    "author_email": "rwporritt@gmail.com",
+    "author_institution": "Sandia National Laboratories",
+    "author_url": "",
+    "repository_name": "EMC",
+    "repository_institution": "EarthScope",
+    "repository_pid": "",
+    "geospatial_lon_min": -124.2,
+    "geospatial_lon_max": -119.0,
+    "geospatial_lon_units": "degrees_east",
+    "geospatial_lon_resolution": 0.2,
+    "geospatial_lat_min": 38.2,
+    "geospatial_lat_max": 49.0,
+    "geospatial_lat_units": "degrees_north",
+    "geospatial_lat_resolution": 2.5,
+    "geospatial_vertical_min": 0.0,
+    "geospatial_vertical_max": 100.0,
+    "geospatial_vertical_units": "km",
+    "geospatial_vertical_positive": "down",
+    "keywords": "seismic,Rayleigh waves dispersion,shear wave,s wave,Cascadia,ambient noise",
+    "acknowledgment": "Model was provided by Robert Porritt to Jonathan Delph for upload to CRESCENT CVM",
+    "history": "[2024-06-29] Converted to netCDF via CRESCENT data tools.",
+    "comments": "CRESCENT CVM tools development project.",
+    "data_layout": "vertex",
+    "grid_ref": "latitude_longitude",
+    "utm_zone": "10",
+    "ellipsoid": "WGS84",
+    "vars": [
+        "depth",
+        "latitude",
+        "longitude",
+        "easting",
+        "northing",
+        "Vs_perturbation",
+        "Vs"
+    ],
+    "size_kb": 3796.43,
+    "data_vars": [
+        "Vs_perturbation",
+        "Vs"
+    ],
+    "z_var": "depth",
+    "variables": {
+        "depth": {
+            "variable": "depth",
+            "positive": "down",
+            "standard_name": "depth",
+            "long_name": "depth below surface",
+            "units": "km"
+        },
+        "latitude": {
+            "variable": "latitude",
+            "long_name": "Latitude; positive north",
+            "units": "degrees_north",
+            "standard_name": "latitude"
+        },
+        "longitude": {
+            "variable": "longitude",
+            "standard_name": "longitude",
+            "long_name": "Longitude; positive east",
+            "units": "degrees_east"
+        },
+        "easting": {
+            "variable": "easting",
+            "standard_name": "projection_x_coordinate",
+            "long_name": "easting; UTM",
+            "units": "m"
+        },
+        "northing": {
+            "variable": "northing",
+            "long_name": "northing; UTM",
+            "units": "m",
+            "standard_name": "projection_y_coordinate"
+        },
+        "Vs_perturbation": {
+            "variable": "Vs_perturbation",
+            "long_name": "S-velocity perturbation",
+            "display_name": "S-velocity perturbation",
+            "units": "%",
+            "data_source": "data-derived",
+            "grid_ref": "latitude_longitude"
+        },
+        "Vs": {
+            "variable": "Vs",
+            "long_name": "Shear-wave velocity",
+            "display_name": "S Velocity (km/s)",
+            "units": "km.s-1",
+            "data_source": "Inferred Vs using perturbation and PREM values",
+            "grid_ref": "latitude_longitude"
+        }
+    }
+}

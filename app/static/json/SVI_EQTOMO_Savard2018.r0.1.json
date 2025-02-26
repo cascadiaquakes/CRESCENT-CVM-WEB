@@ -1,0 +1,123 @@
+{
+    "model": "SVI_EQTOMO_Savard2018",
+    "id": "SVI_EQTOMO_Savard2018",
+    "title": "Southern Vancouver Island double difference",
+    "summary": "Double difference tomography from inversion of earthquake and low-frequency earthquake travel times on Southern Vancouver Island.",
+    "reference": "Savard, Bostock, and Christensen (2018)",
+    "reference_pid": "doi.org/10.1029/2017GC007417",
+    "data_revision": "",
+    "version": "v0.0",
+    "Conventions": "CF-1.0",
+    "Metadata_Conventions": "Unidata Dataset Discovery v1.0",
+    "author_name": "Michael Bostock",
+    "author_email": "bostock@eos.ubc.ca",
+    "author_institution": "University of British Columbia",
+    "author_url": "https://www.eoas.ubc.ca/people/michaelbostock",
+    "geospatial_lon_min": -126.0,
+    "geospatial_lon_max": -121.1,
+    "geospatial_lon_units": "degrees_east",
+    "geospatial_lon_resolution": 0.1,
+    "geospatial_lat_min": 47.0,
+    "geospatial_lat_max": 50.9,
+    "geospatial_lat_units": "degrees_north",
+    "geospatial_lat_resolution": 0.1,
+    "geospatial_vertical_min": 0.0,
+    "geospatial_vertical_max": 93.0,
+    "geospatial_vertical_units": "km",
+    "geospatial_vertical_positive": "down",
+    "repository_name": "EMC",
+    "repository_institution": "EarthScope",
+    "repository_pid": "",
+    "keywords": "seismic, earhtquake, low-frequency earthquake, shear wave, primary wave",
+    "acknowledgment": "Model was provided by Michael G. Bostock",
+    "history": "",
+    "comments": "CRESCENT CVM tools development project.",
+    "grid_ref": "latitude_longitude",
+    "utm_zone": "10",
+    "ellipsoid": "WGS84",
+    "vars": [
+        "longitude",
+        "latitude",
+        "depth",
+        "easting",
+        "northing",
+        "Vp",
+        "Vs",
+        "Density"
+    ],
+    "z_var": "depth",
+    "size_kb": 1562.44,
+    "variables": {
+        "longitude": {
+            "column": "longitude",
+            "variable": "longitude",
+            "standard_name": "longitude",
+            "long_name": "Longitude; positive east",
+            "units": "degrees_east"
+        },
+        "latitude": {
+            "column": "latitude",
+            "variable": "latitude",
+            "long_name": "Latitude; positive north",
+            "units": "degrees_north",
+            "standard_name": "latitude"
+        },
+        "depth": {
+            "column": "depth",
+            "variable": "depth",
+            "positive": "down",
+            "standard_name": "depth",
+            "long_name": "depth below sea level",
+            "units": "km"
+        },
+        "easting": {
+            "column": "easting",
+            "variable": "easting",
+            "standard_name": "projection_x_coordinate",
+            "long_name": "easting; UTM",
+            "units": "m"
+        },
+        "northing": {
+            "column": "northing",
+            "variable": "northing",
+            "standard_name": "projection_y_coordinate",
+            "long_name": "northing; UTM",
+            "units": "m"
+        },
+        "Vp": {
+            "column": "vp",
+            "variable": "Vp",
+            "dimensions": "3",
+            "long_name": "Primary-wave velocity",
+            "display_name": "P Velocity (km/s)",
+            "units": "km.s-1",
+            "grid_ref": "latitude_longitude",
+            "coordinates": "easting northing"
+        },
+        "Vs": {
+            "column": "vs",
+            "variable": "Vs",
+            "dimensions": "3",
+            "long_name": "Shear-wave velocity",
+            "display_name": "S Velocity (km/s)",
+            "units": "km.s-1",
+            "grid_ref": "latitude_longitude",
+            "coordinates": "easting northing"
+        },
+        "Density": {
+            "column": "rho",
+            "variable": "Density",
+            "dimensions": "3",
+            "long_name": "Density",
+            "display_name": "Density (g/cc)",
+            "units": "grams.centimeter-3",
+            "grid_ref": "latitude_longitude",
+            "coordinates": "easting northing"
+        }
+    },
+    "data_vars": [
+        "Vp",
+        "Vs",
+        "Density"
+    ]
+}

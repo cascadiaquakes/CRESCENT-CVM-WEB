@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="/static/js/shared.js"></script>
+    <title>CVM Web</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/png">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="/static/css/cvm.css" />
+
+    {% block style %}{% endblock %}
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="top-banner">
+
+            <div class="logo-container">
+                <a href="https://cascadiaquakes.org/" target="_blank" style="text-decoration: none;">
+                    <img src="/static/images/CrescentLogosHorizontalWhite.png" alt="Logo" width="150px">
+                </a>
+                <a href="https://cascadiaquakes.org/cvm" target="_blank" style="text-decoration: none;">
+                    <div class="working-group-name">&nbsp;&nbsp;Community Velocity Model (CVM)</div>
+                </a>
+
+            </div>
+
+            <nav class="navbar">
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="/vis/" class="nav-link">Repository</a><!--<span class="chevron">&#9660;</span></a>-->
+                        <!--<ul class="dropdown">
+                            <li><a href="/">CVM models</a></li>
+                            <li><a href="/#">About</a></li>
+                        </ul>-->
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">Visualization<span class="chevron">&#9660;</span></a>
+                        <ul class="dropdown">
+                            <li><a href="/vis/x-section-viewer">Cross-Section</a></li>
+                            <!-- <li><a href="/vis/depth-slice-viewer">Depth-Slice</a></li>-->
+                            <li><a href="/vis/horizontal-slice-viewer">Horizontal-Slice</a></li>
+                            <li><a href="/vis/depth-profile-viewer">Depth-Profile</a></li>
+
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">Data<span class="chevron">&#9660;</span></a>
+                        <ul class="dropdown">
+                            <li><a href="/data/volume-data">Volume Extraction</a></li>
+                            <li><a href="/data/x-section-data">Cross-Section</a></li>
+                            <li><a href="/data/depth-slice-data">Depth Slice</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link" onclick='toggleDescription("Guide")'>
+                            <span style="font-size: 0.8em; margin-right: -4px;">&#9660;&#9651;</span> Guide
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" class="nav-link">More<span class="chevron">&#9660;</span></a>
+                        <ul class="dropdown">
+
+                            <li><a href="/news">CVM-Web News</a></li>
+                            <li><a href="https://cascadiaquakes.github.io/cvm-tools-book/index.html"
+                                    target="_blank">CVM-Tools User
+                                    Guide</a></li>
+                            <li><a href="/request">Contact Us</a></li>
+                            <li class="nav-item">
+                                <a href="#" class="nav-link">About<span class="chevron">&#9660;</span></a>
+                                <ul class="dropdown">
+                                    <li><a href="https://cascadiaquakes.org/about-crescent/"
+                                            target="_blank">CRESCENT</a></li>
+                                    <li><a href="https://cascadiaquakes.org/cvm/" target="_blank">CVM</a></li>
+                                    <li><a href="https://cascadiaquakes.org/cfm/" target="_blank">CFM</a></li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="https://cascadiaquakes.github.io/cvm-tools-book/contribution_guidelines.html"
+                            class="nav-link" target="_blank">Contribution</a>
+                    </li>
+
+                </ul>
+            </nav>
+
+        </div>
+        <div class="description">
+            {% block description %}{% endblock %}
+        </div>
+        <div class="filter">
+            {% block filter %}{% endblock %}
+        </div>
+        <div class="left-right">
+            {% block leftpanel%}{% endblock %} {% block rightpanel%}{% endblock %} </div>
+        <div class="footer">
+            <!-- Footer content -->
+        </div>
+        {% block scripts %}{% endblock %}
+    </div>
+
+</body>
+
+</html>

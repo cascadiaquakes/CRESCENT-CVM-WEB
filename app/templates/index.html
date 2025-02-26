@@ -1,0 +1,1198 @@
+{% extends 'cvm_page_v1.html' %}
+
+{% block style%}
+<link rel="stylesheet" href="/static/css/repository.css" />
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Cesium.js"></script>
+
+<script src="/static/config/project.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
+<script src="/static/config/repository_config.js"></script>
+<style>
+    @import url(https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Widgets/widgets.css);
+</style>
+
+{% endblock %}
+{% block description %}
+<div class="info-message">
+</div>
+<div id="description" style="display:none;">
+    <h3>CVM Repository Interface Guide</h3>
+    <p>
+        Welcome to the repository for the CRESCENT Community Velocity Model (CVM). This platform facilitates access to a
+        wide array of velocity models developed as part of the CRESCENT project. The CVM-Web interface offers advanced
+        visualization tools for model previews and tools for extracting model data. These models are compatible with the
+        Python 3 tools available from the
+        <a href="https://cascadiaquakes.github.io/cvm-tools-book/index.html" target="_blank"
+            style="color: #004F59;">CVM-Tools repository</a>.
+    </p>
+
+    <p>
+        To explore the models in the repository, click on any model listed below. Detailed metadata for that model will
+        be displayed, and the 3D map will show the model's boundaries along with current Community Fault Model (CFM)
+        data,
+        such as CRESCENT Cascadia fault traces, fault surfaces, the Cascadia subduction interface, and area seismicity.
+    </p>
+    <p> Use the <u>download</u> link in the model <b>Summary</b> to download the model's netCDF file. </p>
+    <p>
+        Click on <b>Show/Hide Filter & Model Coverage Comparison Controls</b> to:
+    <ul>
+        <li>display filters that allow you to narrow down the models based on
+            the area, depth, and parameters of interest. </li>
+        <li>select up to five models for comparison. The selected models will display their area of
+            coverage boundaries on the map, allowing you to visually compare the extent and overlap of each model. This
+            tool helps
+            in analyzing how different models represent geographical areas and their boundaries.</li>
+    </ul>
+    </p>
+    <p>
+        Click on <b>Show/Hide 2D Models</b> to:
+    <ul>
+        <li>display a list of the available 2D models. </li>
+        <li>click on any model to view metadata for that model
+            and display its surface on the 3D map.</li>
+    </ul>
+    </p>
+    <p>
+    <p><strong>Model Resolutions:</strong></p>
+    <p>
+        Each model has its own native resolution, which is described by the `geospatial` global attributes in the netCDF
+        file.
+        You can view the metadata, including resolution details, by clicking on any model listed below.
+    </p>
+    <p>
+        The horizontal resolution is determined by the <i>geospatial_lat_resolution</i> and
+        <i>geospatial_lon_resolution</i>
+        attributes,
+        which specify the spacing between grid points in the latitude and longitude directions, respectively. The
+        vertical
+        resolution is defined by the <i>geospatial_vertical_resolution</i> attribute, indicating the spacing in the
+        depth or
+        height
+        dimension.
+    </p>
+    <p>
+        The geographic extent of the model is outlined by the attributes <i>geospatial_lat_min</i>,
+        <i>geospatial_lat_max</i>,
+        <i>geospatial_lon_min</i>, <i>geospatial_lon_max</i>, as well as <i>geospatial_vertical_min</i> and
+        <i>geospatial_vertical_max</i>.
+        These
+        attributes define the model's boundaries in terms of latitude, longitude, and vertical dimensions.
+    </p>
+    <p>
+        For example, a model with a latitude resolution of 0.5°, a longitude resolution of 0.5°, and a vertical
+        resolution of 10
+        meters would have a grid with a horizontal resolution of 0.5° x 0.5° and a vertical resolution of 10 meters.
+        These
+        attributes ensure that the model's spatial resolution and extent are clearly defined for users.
+    </p>
+    </p>
+
+    </p>
+    <p><strong>Visualization Tools:</strong></p>
+    <ul>
+        <li><a href="/vis/x-section-viewer" style="color: #004F59;">Cross-Section Viewer:</a> View and analyze vertical
+            cross-sections of the velocity models.</li>
+        <li><a href="/vis/depth-slice-viewer" style="color: #004F59;">Horizontal-Slice Viewer:</a> Generate horizontal
+            slices
+            of
+            the models.</li>
+        <li><a href="/vis/depth-profile-viewer" style="color: #004F59;">Depth-Profile Viewer:</a> Generate depth profile
+            plot at a given point from a model.</li>
+    </ul>
+    <p><strong>Data Extraction Tools:</strong></p>
+    <ul>
+        <li><a href="/data/volume-data" style="color: #004F59;">Volume Data:</a> Extract and download 3D volume data
+            from
+            the velocity models.</li>
+        <li><a href="/data/x-section-data" style="color: #004F59;">Cross-Section Data:</a> Retrieve data for specific
+            vertical cross-sections.</li>
+        <li><a href="/data/depth-slice-data" style="color: #004F59;">Depth Slice Data:</a> Access data for horizontal
+            slices
+            at varying depths.</li>
+    </ul>
+    <p>
+        <strong>Key features of the interface map include:</strong>
+    </p>
+    <ul>
+        <li><strong>Show/Hide Controls:</strong> Use this button to display or hide the map controls.</li>
+        <li><strong>CRESCENT Study Area:</strong> The boundaries of the CRESCENT study area are outlined in cyan,
+            demarcating the focus area of the study.</li>
+        <li><strong>3D Model Outline:</strong> The 3D outline of the selected CVM model is displayed in cyan, allowing
+            users
+            to visualize the spatial extent and orientation of the model within the study area.</li>
+        <li><strong>Selected Model Extent:</strong> The selected model extent is shown in blue and can be adjusted using
+            latitude, longitude, and depth (if available) sliders. Additionally, an Opacity Control slider is available
+            to adjust the
+            opacity of the model extent display, where 0 represents full transparency and 1 represents full opacity.
+            This
+            provides flexibility in visualizing underlying features.</li>
+        <li><strong>Earthquakes Visualization:</strong> The yellow dots on the map represent earthquakes with a
+            magnitude
+            greater than 4 that have occurred within the CRESCENT study area since 1970. The size of each yellow dot is
+            proportional to the earthquake's magnitude, with larger dots indicating stronger earthquakes. This
+            earthquake data
+            is sourced from the ANSS Comprehensive Earthquake Catalog (ComCat), which compiles seismic events from
+            various
+            global and regional networks. The data is obtained through the USGS FDSN Event Service, ensuring up-to-date
+            and
+            accurate information on seismic activity. For more details on ComCat, visit
+            <a href="https://earthquake.usgs.gov/data/comcat/">ANSS ComCat</a>, and for querying seismic data, visit the
+            <a href="https://earthquake.usgs.gov/fdsnws/event/1/">USGS FDSN Event Service</a>.
+        </li>
+        <li><strong>Imagery Layer:</strong> The imagery layer option (when checked) displays an imagery layer available
+            through Cesium, offering detailed and reliable backgrounds for the visualization of geological and
+            seismological
+            data. Users may select different imagery layers using the imagery selection tool located at the top right of
+            the
+            interface.</li>
+        <li><strong>Terrain Occlusion Checkbox:</strong> Since imagery layers displayed on the map (when selected) are
+            not
+            transparent, the Terrain Occlusion checkbox helps unhide the data displayed on the map. Enabling this
+            feature
+            helps to understand the spatial relationships between the terrain and the subsurface models.</li>
+        <li><strong>Feature Toggles:</strong> The interface includes checkboxes that allow users to turn on and off
+            various
+            features displayed on the map. This includes toggling the visibility of fault traces, earthquake data, and
+            other
+            model elements, providing flexibility in data visualization and analysis.</li>
+        <li><strong>Center View Button:</strong> The Center View button allows users to quickly center the map view on
+            the
+            CRESCENT study area or other areas of interest, making navigation easier and more efficient.</li>
+        <li><strong>Home View Button:</strong> The Home View button resets the map view to its initial default settings,
+            providing a convenient way to return to the original perspective and overview of the map.</li>
+        <li><strong>Distance Measuring Tool:</strong> The distance measuring tool, located under the map legend and can
+            be
+            activated by checking the <b>Measure Distance</b> checkbox. This tool allows users to click on the map to
+            select two points and measure the distance between them.
+            When the first point is clicked, a point is placed at that location, and the second click
+            places
+            the second point. After both points are selected, a line is drawn connecting them, and the
+            distance
+            between the points is calculated and displayed. The distance is shown in kilometers in a designated display
+            area. If
+            more points are clicked after the second point, the previous line and markers are cleared, and the process
+            starts over.
+            This tool is designed to provide quick and easy measurement of distances between two locations on the map,
+            with visual
+            feedback through markers and lines. Additionally, the user can reset the tool by using a checkbox, which
+            will clear the
+            markers and distance line for a new measurement.
+        </li>
+    </ul>
+</div>
+{% endblock %}
+{% block filter %}
+
+<div id="filterPanel" style="display:none;">
+    <div id="filterContainer">
+        <div id="latLonFilters">
+            <h3>Filter Area (shown by &#9644;&nbsp;&#9644; on the map)</h3>
+            <table cellspacing="4" style="text-align: center; overflow: hidden; margin: 0;">
+                <tbody>
+                    <tr>
+                        <td style="text-align: center;background-color: white;">Max Lat.</td>
+                    </tr>
+                    <tr style="text-align: center;background-color: white;">
+                        <td><input id="lat_max" name="lat_max" type="number" step="0.01"
+                                style="display:block;margin:0 auto;width: 100px;"
+                                title="Northernmost latitude of selection rectangle. Min: -90, Max: 90"
+                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <table cellspacing="0" style="text-align: center; margin: auto;">
+                                <tbody>
+                                    <tr>
+                                        <td>Min Lon.</td>
+                                        <td><input id="lon_min" name="lon_min" type="number" step="0.01"
+                                                style="width: 100px;"
+                                                title="Westernmost longitude of selection rectangle. Min: -180, Max: 180"
+                                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" />
+                                        </td>
+                                        <td><input id="lon_max" name="lon_max" type="number" step="0.01"
+                                                style="width: 100px;"
+                                                title="Easternmost longitude of selection rectangle. Min: -180, Max: 180"
+                                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" />
+                                        </td>
+                                        <td>Max Lon.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                    <tr style="text-align: center;background-color: white;">
+                        <td><input id="lat_min" name="lat_min" type="number" step="0.01"
+                                style="display:block;margin:0 auto;width: 100px;"
+                                title="Southernmost latitude of selection rectangle. Min: -90, Max: 90"
+                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" /></td>
+                    </tr>
+                    <td style="text-align: center;background-color: white;">Min Lat:</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="variableFilters">
+            <div id="depthFilters">
+                <h3>Filter Depth (km)</h3>
+                <table cellspacing="4" style="text-align: center; overflow: hidden; margin: 0;">
+                    <tbody>
+                        <tr style="background-color: white;">
+                            <td style="text-align: right;background-color: white;">Min Depth:</td>
+                            <td><input id="depth_min" name="depth_min" type="number" step="0.01"
+                                    style="display:block;margin:0 auto;width:100px;"
+                                    title="Minimum depth of selection in kilometers."
+                                    class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" /></td>
+                        </tr>
+                        <tr style="background-color: white;">
+                            <td style="text-align: right;background-color: white;">Max Depth:</td>
+                            <td><input id="depth_max" name="depth_max" type="number" step="0.01"
+                                    style="display:block;margin:0 auto;width: 100px;"
+                                    title="Maximum depth of selection in kilometers."
+                                    class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" /></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <h3>Filter Model Variable(s)</h3>
+            <select id="variableSelect" multiple="multiple" style="width:300px;">
+                <!-- Variables will be populated here -->
+            </select>
+        </div>
+        <div id="filterActions">
+            <button id="applyFilterBtn" type="button" onclick="filterTable()">Apply Filter</button>
+            <button id="clearFilterBtn" type="button" onclick="clearFilters()">Clear Filters</button>
+        </div>
+
+        <!-- New section for selection boxes -->
+        <div id="modelSelectionPanel" style="padding: 20px;">
+            <h4>Model Coverage Comparison (shown by &#9632;&nbsp;&#9632; on the map)</h4>
+            <div id="modelSelectionBoxes">
+                <!-- 6 selection boxes identified by corresponding colors -->
+                <select id="modelSelect1" class="modelSelect" style="background-color: red;">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect2" class="modelSelect" style="background-color: green;">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect3" class="modelSelect" style="background-color: blue;">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect4" class="modelSelect" style="background-color: yellow;">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect5" class="modelSelect" style="background-color: white">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect6" class="modelSelect" style="background-color: brown">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect7" class="modelSelect" style="background-color: purple">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <select id="modelSelect8" class="modelSelect" style="background-color: pink">
+                    <option value="">Select a model</option>
+                    <!-- Other options here -->
+                </select>
+                <button id="clearModelsBtn" class="clearModelsBtn">Clear Selected Models</button>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+{% block leftpanel %}
+<div id="fileListPanel">
+    <div id="toggleFilterPanel" onclick="toggleFilterPanel()" class="filterToggleBtn">
+        <span style="color: red;">&#9654;&nbsp;</span>Show/Hide 3D Models Filters & Coverage Comparison Controls
+    </div>
+    <div id="fileTable"></div>
+    <div>&nbsp;</div>
+    <div id="auxTableContainer"></div>
+    <hr />
+    <div><br /><span id="mmodelname"></span>
+        <pre id="jsonContent">
+<h2 id="h2" style="color: maroon; display:none;">Click on a <strong>Model</strong> to view its metadata</h2>
+</pre>
+    </div>
+</div>
+
+
+{% endblock %}
+{% block rightpanel %}
+<div id="contentPanel">
+    <span id="cmodelname" style="display:none;"></span>Model coverage &amp; CRESCENT Cascadia fault traces
+    <div id="results-panel" class="action_side" style="flex:0 0 67.5%;">
+        <iframe src="/data/3d" width="99.5%" height="1200px" id="3dIframe"></iframe>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script src="/static/config/project.js"></script>
+<script>
+
+    // Ensure Cesium is Loaded Before Execution
+    window.onload = function () {
+        const viewer = new Cesium.Viewer('cesiumContainer');
+        console.log("Cesium viewer initialized.");
+    };
+
+    // Populate latitude and longitude input boxes initially
+    function populateLatLonInputs() {
+        document.getElementById('lat_min').value = south;
+        document.getElementById('lat_max').value = north;
+        document.getElementById('lon_min').value = west;
+        document.getElementById('lon_max').value = east;
+    }
+
+    // Call the loadConfig function on page load
+    window.addEventListener('load', () => populateLatLonInputs());
+
+
+    /**
+     * Generates HTML content from a given JSON object, handling nested structures recursively.
+     * 
+     * @param {Object} jsonData - The JSON object to be converted into HTML.
+     * @returns {string} - The generated HTML content as a string.
+     */
+    function createHtmlFromJson(jsonData) {
+        /**
+         * Recursively processes JSON data to generate HTML content.
+         * 
+         * @param {Object} jsonData - The current level of the JSON object to be processed.
+         * @returns {string} - The HTML content for the current level of the JSON object.
+         */
+        function processJson(jsonData) {
+            let htmlContent = '<div class="json-container">';
+            for (let key in jsonData) {
+                if (typeof jsonData[key] === 'object' && jsonData[key] !== null) {
+                    htmlContent += `<div><b>${key}:</b>${processJson(jsonData[key])}</div>`;
+                } else {
+                    htmlContent += `<div><b>${key}:</b> ${jsonData[key]}</div>`;
+                }
+            }
+            htmlContent += '</div>';
+            return htmlContent;
+        }
+
+        return processJson(jsonData);
+    }
+
+    // Toggle filter panel.
+    function toggleFilterPanel() {
+        var filterPanel = document.getElementById("filterPanel");
+        var button = document.getElementById("toggleFilterPanel");
+        if (filterPanel.style.display === "none") {
+            filterPanel.style.display = "block";
+            button.innerHTML = "<span style='color: red;''>&#9650;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Up arrow
+        } else {
+            filterPanel.style.display = "none";
+            button.innerHTML = "<span style='color: red;''>&#9654;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Down arrow
+        }
+    }
+    // Extract unique variables from the 9th column of the table and populate the select dropdown
+    async function extractAndPopulateVariables() {
+        const rows = document.querySelectorAll('#fileTable tr');
+        const variableSet = new Set();
+
+        // Fetch JSON file
+        let variablesList = [];
+        try {
+            const response = await fetch('../static/config/variables.json');
+            variablesList = await response.json();
+        } catch (error) {
+            console.error('Error fetching variables JSON:', error);
+        }
+        // Extract all unique variables from the 9th column of the table
+        rows.forEach((row, index) => {
+            if (index === 0) return; // Skip the header row
+
+            const lastColumnText = row.cells[8]?.textContent?.trim() || ''; // Safely access and trim content
+            const variables = lastColumnText
+                .split('f(')[0] // Take text before 'f('
+                .split(',') // Split by commas
+                .map(v => v.trim()); // Normalize by trimming 
+
+            // Add each variable to the set
+            variables.forEach(variable => {
+                if (variable) variableSet.add(variable); // Exclude empty strings
+            });
+        });
+
+        // Filter JSON keys to retain only those with matching variables in the table
+        // Convert variableSet to an array for easier manipulation
+        const variableSetArray = Array.from(variableSet);
+
+        // Step 1: Filter variablesList to remove any variables not in variableSet
+        const filteredVariablesList = variablesList.filter(variable => variableSet.has(variable));
+
+        // Step 2: Append missing variables from variableSet that are not in filteredVariablesList
+        variableSetArray.forEach(variable => {
+            if (!filteredVariablesList.includes(variable)) {
+                filteredVariablesList.push(variable); // Append missing variables to the end
+            }
+        });
+
+        // The finalVariablesList retains the order of variablesList and appends new items at the end
+        const finalVariablesList = filteredVariablesList;
+
+        // Optionally log or display the final list
+        //console.log("Final Variables List:", finalVariablesList);
+        //alert("Final Variables List: " + JSON.stringify(finalVariablesList));
+
+        const variableSelect = document.getElementById('variableSelect');
+        variableSelect.innerHTML = ''; // Clear existing options
+
+        // Use finalVariablesList to populate the select dropdown
+        finalVariablesList.forEach(variable => {
+            const option = document.createElement('option');
+            option.value = variable;
+            option.textContent = variable;
+            variableSelect.appendChild(option);
+        });
+
+        // Initialize Select2 for the variable select dropdown
+        $(variableSelect).select2();
+
+    }
+
+
+
+    async function filterTable() {
+        const iframe = document.getElementById('3dIframe');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const lat_min = parseFloat(document.getElementById('lat_min').value);
+        const lat_max = parseFloat(document.getElementById('lat_max').value);
+        const lon_min = parseFloat(document.getElementById('lon_min').value);
+        const lon_max = parseFloat(document.getElementById('lon_max').value);
+        const depth_min = parseFloat(document.getElementById('depth_min').value);
+        const depth_max = parseFloat(document.getElementById('depth_max').value);
+        const selectedVariables = $('#variableSelect').val() || [];
+
+        // Fetch JSON file
+        let variableMapping = {};
+        try {
+            const response = await fetch('../static/config/variables.json');
+            variableMapping = await response.json();
+        } catch (error) {
+            console.error('Error fetching variable mapping JSON:', error);
+        }
+
+        // Plot the area filter outline on the iframe's map
+        const wholeAreaCondition = false; // Set to true if the whole area is selected
+        if (!wholeAreaCondition) {
+            if (iframeDoc) {
+                const iframeWindow = iframe.contentWindow;
+                iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 2, "studyAreaOutline", 0);
+            }
+        } else {
+            if (iframeDoc) {
+                const iframeWindow = iframe.contentWindow;
+                iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 0, "studyAreaOutline", 0);
+            }
+        }
+
+        const rows = document.querySelectorAll('#fileTable tr');
+
+        // Start the loop from the second row (index 1) to skip the header
+        rows.forEach((row, index) => {
+            if (index === 0) return; // Skip the first row (header)
+
+            const latMinVal = parseFloat(row.cells[3].textContent);
+            const latMaxVal = parseFloat(row.cells[4].textContent);
+            const lonMinVal = parseFloat(row.cells[5].textContent);
+            const lonMaxVal = parseFloat(row.cells[6].textContent);
+            const rowVariables = row.cells[8].textContent.split('f(')[0].split(',').map(v => v.trim()); // 9th column
+
+            const minDepthVal = parseFloat(row.cells[9].textContent);  // 10th column
+            const maxDepthVal = parseFloat(row.cells[10].textContent); // 11th column
+
+            const latLonCondition = isNaN(lat_min) || isNaN(lat_max) || isNaN(lon_min) || isNaN(lon_max) ||
+                (latMinVal <= lat_max && latMaxVal >= lat_min && lonMinVal <= lon_max && lonMaxVal >= lon_min);
+
+            const depthCondition = isNaN(depth_min) || isNaN(depth_max) ||
+                (minDepthVal <= depth_max && maxDepthVal >= depth_min);
+
+            const variableCondition = selectedVariables.length === 0 || selectedVariables.some(selectedVar => {
+                const mappedValues = (variableMapping[selectedVar] || []).map(v => v.trim());
+                const rowVariablesLowerCase = rowVariables.map(rv => rv.trim());
+                return rowVariablesLowerCase.includes(selectedVar.trim()) ||
+                    rowVariablesLowerCase.some(rv => mappedValues.includes(rv));
+            });
+
+            if (latLonCondition && depthCondition && variableCondition) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+
+
+    // Clear filters and reset to default values
+    function clearFilters() {
+        document.getElementById('lat_min').value = south;
+        document.getElementById('lat_max').value = north;
+        document.getElementById('lon_min').value = west;
+        document.getElementById('lon_max').value = east;
+        document.getElementById('depth_min').value = '';
+        document.getElementById('depth_max').value = '';
+        $('#variableSelect').val(null).trigger('change');
+
+        filterTable();
+    }
+
+    // Change form's selection
+    function selectOptionInForm(model) {
+        const select = document.getElementById('data-file');
+        let optionFound = false;
+
+        if (select) {
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text.trim() === model) {
+                    select.selectedIndex = i;
+                    optionFound = true;
+                    // Trigger the change event
+                    const event = new Event('change');
+                    select.dispatchEvent(event);
+                    break;
+                }
+            }
+
+            if (!optionFound) {
+                alert('Error: Option not found');
+            }
+        } else {
+            alert('Error: Select element not found in form: ' + model);
+        }
+    }
+
+    // Monitor iframes selection change 
+    function monitorIframeSelection() {
+        const iframe = document.getElementById('3dIframe');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        let previousValue = '';
+
+        if (iframeDoc) {
+            const select = iframeDoc.getElementById('data-file');
+            if (select) {
+                setInterval(() => {
+                    const currentValue = select.options[select.selectedIndex].text;
+                    if (currentValue !== previousValue) {
+
+                        previousValue = currentValue;
+                        //selectOptionInForm(currentValue);
+                        // Handle the selection change as needed
+                        //loadFileListAndJSON(currentValue)
+                        const event = new Event("change");
+                        select.dispatchEvent(event);
+
+                    }
+                }, 1000); // Check every second (adjust the interval as needed)
+            } else {
+                console.error('Select element not found in iframe');
+            }
+        } else {
+            console.error('Iframe document not accessible');
+        }
+    }
+
+    window.onload = function () {
+        monitorIframeSelection();
+        populateLatLonInputs();
+    }
+
+    // Function to fetch the CGI script output and inject it into the <div>
+    function loadFileListAndJSON(model) {
+
+        var count = 0;
+        let lat_min = south;
+        let lat_max = north;
+        let lon_min = west;
+        let lon_max = east;
+
+        let summary = "-";
+        let filename = "-";
+
+        function hideAllRadioButtonsExceptChecked() {
+            const radios = fileTable.querySelectorAll('input[type="radio"]');
+            radios.forEach(radio => {
+                if (radio.checked) {
+                    radio.disabled = false; // Make sure it's enabled
+                    radio.parentNode.style.opacity = 1; // Full opacity for checked
+                    radio.parentNode.style.backgroundColor = ''; // Reset background if needed
+                } else {
+                    radio.disabled = true; // Disable the radio
+                    radio.parentNode.style.opacity = 0.5; // Lower opacity for unchecked
+                    radio.parentNode.style.backgroundColor = 'white'; // Apply a background color
+                }
+            });
+        }
+
+        // Change the iframe's selection
+        function selectOptionInIframe(model) {
+            const iframe = document.getElementById('3dIframe');
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const select = iframeDoc.getElementById('data-file');
+            let optionFound = false;
+
+            if (select) {
+                for (let i = 0; i < select.options.length; i++) {
+                    if (select.options[i].text === model) {
+                        select.selectedIndex = i;
+                        optionFound = true;
+                        // Trigger the change event
+                        const event = new Event('click');
+                        select.dispatchEvent(event);
+                        break;
+                    }
+                }
+
+                if (!optionFound) {
+                    alert('Error: Option not found');
+                }
+            } else {
+                alert('Error: Select element not found in iframe');
+            }
+        }
+
+        // Display file metadata.
+        function display_metadata(model, filePath) {
+            fetch(filePath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(jsonData => {
+                    // Display JSON content in the panel
+                    document.getElementById("mmodelname").innerHTML = model + " Metadata";
+                    document.getElementById("jsonContent").innerHTML = createHtmlFromJson(jsonData);
+                })
+                .catch(error => {
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        }
+
+        fetch('/list_json_files/' + model) // Replace with the URL to your CGI script
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text(); // Assuming CGI script returns HTML
+            })
+            .then(html => {
+
+                // Inject the received HTML into the fileTable div
+                fileTable.innerHTML = html;
+                extractAndPopulateVariables(); // Extract and populate variables into the select dropdown
+                var firstFileName = fileTable.querySelector('tr:nth-child(2) td:nth-child(8)').textContent.trim();
+                var firstFilePath = '../static/json/' + firstFileName + '.json';
+                var radio = fileTable.querySelector('input[type="radio"]');
+                radio.checked = true;
+                hideAllRadioButtonsExceptChecked();
+                var model = fileTable.querySelector('tr:nth-child(2) td:nth-child(2)').textContent.trim();
+                var summary = fileTable.querySelector('tr:nth-child(2) td:nth-child(3)').textContent.trim();
+                var lat_min = fileTable.querySelector('tr:nth-child(2) td:nth-child(4)').textContent.trim();
+                var lat_max = fileTable.querySelector('tr:nth-child(2) td:nth-child(5)').textContent.trim();
+                var lon_min = fileTable.querySelector('tr:nth-child(2) td:nth-child(6)').textContent.trim();
+                var lon_max = fileTable.querySelector('tr:nth-child(2) td:nth-child(7)').textContent.trim();
+                var filename = fileTable.querySelector('tr:nth-child(2) td:nth-child(8)').textContent.trim();
+                const cmodelname = document.getElementById('cmodelname');
+                cmodelname.innerHTML = model;
+
+                // Display initial metadata
+                //display_metadata(model, firstFilePath);
+
+                // Attach event listener to table rows
+
+                fileTable.addEventListener('click', function (event) {
+                    const iframe = document.getElementById('3dIframe');
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    var target = event.target;
+                    if (target.tagName === 'TD' && target.parentNode.cells[1] === target) {
+                        // Remove highlight from all rows
+                        var rows = fileTable.querySelectorAll('tr');
+                        rows.forEach(row => row.classList.remove('highlighted-row'));
+
+                        // Highlight the clicked row
+                        target.parentNode.classList.add('highlighted-row');
+                        model = target.parentNode.cells[1].textContent;
+                        summary = target.parentNode.cells[2].textContent;
+                        lat_min = target.parentNode.cells[3].textContent;
+                        lat_max = target.parentNode.cells[4].textContent;
+                        lon_min = target.parentNode.cells[5].textContent;
+                        lon_max = target.parentNode.cells[6].textContent;
+                        filename = target.parentNode.cells[7].textContent;
+                        var fileName = target.textContent.trim();
+                        selectOptionInIframe(model)
+                        var filePath = '../static/json/' + filename + '.json';
+                        var radio = target.parentNode.cells[0].querySelector('input[type="radio"]');
+                        radio.checked = true;
+                        hideAllRadioButtonsExceptChecked();
+                        cmodelname.innerHTML = model;
+                        display_metadata(model, filePath);
+                    }
+                });
+
+                // Apply the current filter after loading the table
+                filterTable();
+
+            })
+            .catch(error => console.error('Error fetching file list:', error));
+    }
+
+    // Function to populate the selection boxes with models from the table
+    function populateModelSelectionBoxes() {
+        const rows = document.querySelectorAll('#fileTable tr');
+        const modelOptions = [];
+
+        // Skip the first row (header)
+        rows.forEach((row, index) => {
+            if (index === 0) return; // Skip the header
+
+            const modelName = row.cells[1].textContent.trim(); // Assuming the model name is in the 2nd column
+            if (modelName) {
+                modelOptions.push(modelName);
+            }
+        });
+
+        const modelSelects = document.querySelectorAll('.modelSelect');
+        modelSelects.forEach((select, index) => {
+            // Clear existing options
+            select.innerHTML = '';
+
+            // Add a default option
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select a model';
+            select.appendChild(defaultOption);
+
+            // Populate with model options
+            modelOptions.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model;
+                option.textContent = model;
+                select.appendChild(option);
+            });
+
+            // Initialize the data-previous-value attribute
+            select.setAttribute('data-previous-value', '');
+
+            // Add event listener to each selection box
+            select.addEventListener('change', function () {
+                handleModelSelection(this, index + 1);
+            });
+        });
+    }
+
+    // Function to handle model selection change
+    function handleModelSelection(select, modelIndex) {
+        const selectedModel = select.value;
+        const previouslySelectedModel = select.getAttribute('data-previous-value');
+
+        if (selectedModel) {
+            if (isModelAlreadySelected(selectedModel, select)) {
+                alert(`The model "${selectedModel}" has already been selected. Please choose another model.`);
+                select.value = previouslySelectedModel; // Revert to the previously selected model
+            } else {
+                if (previouslySelectedModel) {
+                    enableModelOption(previouslySelectedModel); // Re-enable the previously selected model
+                }
+                findModelCoordinates(selectedModel, modelIndex); // Pass the modelIndex (1-based index)
+                select.setAttribute('data-previous-value', selectedModel); // Update the data attribute
+                disableSelectedModels(); // Disable already selected models in other dropdowns
+            }
+        } else {
+            // If "Select a model" is chosen again, pass the previous model and modelIndex -1
+            if (previouslySelectedModel) {
+                findModelCoordinates(previouslySelectedModel, -1);
+                enableModelOption(previouslySelectedModel); // Re-enable the previously selected model
+                select.setAttribute('data-previous-value', ''); // Clear the data attribute
+            }
+        }
+    }
+
+    // Function to check if a model is already selected in another dropdown
+    function isModelAlreadySelected(model, currentSelect) {
+        const modelSelects = document.querySelectorAll('.modelSelect');
+        for (let select of modelSelects) {
+            if (select !== currentSelect && select.value === model) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Function to disable already selected models in other dropdowns
+    function disableSelectedModels() {
+        const modelSelects = document.querySelectorAll('.modelSelect');
+        const selectedModels = Array.from(modelSelects).map(select => select.value);
+
+        modelSelects.forEach(select => {
+            const options = select.options;
+            for (let i = 0; i < options.length; i++) {
+                if (selectedModels.includes(options[i].value) && options[i].value !== '') {
+                    options[i].disabled = true;
+                } else {
+                    options[i].disabled = false;
+                }
+            }
+        });
+    }
+
+    // Function to enable a model option in all dropdowns
+    function enableModelOption(model) {
+        const modelSelects = document.querySelectorAll('.modelSelect');
+        modelSelects.forEach(select => {
+            const options = select.options;
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === model) {
+                    options[i].disabled = false;
+                }
+            }
+        });
+    }
+
+    // Function to find the coordinates of the selected model from the table
+    function findModelCoordinates(modelName, modelIndex) {
+        const rows = document.querySelectorAll('#fileTable tr');
+
+        rows.forEach((row, index) => {
+            if (index === 0) return; // Skip the header
+
+            const currentModelName = row.cells[1].textContent.trim();
+            if (currentModelName === modelName) {
+                const latMinVal = parseFloat(row.cells[3].textContent);
+                const latMaxVal = parseFloat(row.cells[4].textContent);
+                const lonMinVal = parseFloat(row.cells[5].textContent);
+                const lonMaxVal = parseFloat(row.cells[6].textContent);
+
+                // Pass the coordinates and model name to the function to call filterOutline
+                displayCoordinates(latMinVal, latMaxVal, lonMinVal, lonMaxVal, modelName, modelIndex);
+            }
+        });
+    }
+
+    // Function to pass coordinates and model name to the filterOutline method
+    function displayCoordinates(latMin, latMax, lonMin, lonMax, modelName, modelIndex) {
+        const iframe = document.getElementById('3dIframe');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        if (iframeDoc) {
+            // Access the content window of the iframe
+            const iframeWindow = iframe.contentWindow;
+            iframeWindow.filterOutline(latMax, latMin, lonMax, lonMin, 8, modelName, modelIndex);
+        }
+    }
+
+    // Function to clear all models and trigger change event
+    function clearAllModels() {
+        const modelSelects = document.querySelectorAll('.modelSelect');
+        modelSelects.forEach(select => {
+            const previouslySelectedModel = select.getAttribute('data-previous-value');
+
+            // If a model was previously selected, pass it with index -1 and enable it
+            if (previouslySelectedModel) {
+                findModelCoordinates(previouslySelectedModel, -1);
+                enableModelOption(previouslySelectedModel);
+            }
+
+            select.value = ''; // Set to "Select a model"
+            select.setAttribute('data-previous-value', ''); // Clear previous value
+            select.dispatchEvent(new Event('change')); // Trigger change event
+        });
+    }
+
+    // Function to load the file list and then populate the selection boxes
+    function loadFileListAndPopulateSelections(model) {
+        fetch('/list_json_files/' + model) // Replace with the URL to your CGI script
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.text(); // Assuming CGI script returns HTML
+            })
+            .then(html => {
+                // Inject the received HTML into the fileTable div
+                document.getElementById('fileTable').innerHTML = html;
+
+                // Extract and populate variables into the select dropdown
+                extractAndPopulateVariables();
+
+                // Populate the model selection boxes
+                populateModelSelectionBoxes();
+
+                // Attach event listener to table rows (as in your original code)
+                // ...
+            })
+            .catch(error => console.error('Error fetching file list:', error));
+    }
+
+    // Call loadFileListAndPopulateSelections function on page load
+    window.addEventListener('load', () => {
+        loadFileListAndPopulateSelections("-");
+
+        // Attach event listener to Clear Models button
+        document.getElementById('clearModelsBtn').addEventListener('click', clearAllModels);
+    });
+
+
+    // Call the function when the page loads
+    window.addEventListener('load', () => loadFileListAndJSON("-"));
+    window.addEventListener('load', () => document.getElementById("h2").style.display = "block");
+
+    // Summarize the json file content
+    async function summarizeGeoJSON(url, label, title, reference, decimation) {
+        try {
+            // Fetch the GeoJSON file
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            const data = await response.json();
+
+            // Ensure the file is a valid GeoJSON
+            if (!data || !data.type || data.type !== "FeatureCollection") {
+                throw new Error("Invalid GeoJSON file.");
+            }
+
+            const featureCount = data.features.length;
+            const geometryTypes = new Set();
+            const propertiesSet = new Set();
+
+            // Iterate through features to extract information
+            data.features.forEach(feature => {
+                if (feature.geometry) {
+                    geometryTypes.add(feature.geometry.type);
+                }
+                if (feature.properties) {
+                    Object.keys(feature.properties).forEach(prop => propertiesSet.add(prop));
+                }
+            });
+
+            // Create the summary
+            const summary = `
+            <strong>2D Model File Name:</strong> ${url}<br>
+            <strong>Label:</strong> ${label}<br>
+            <strong>Title:</strong> ${title}<br>
+            <strong>Reference:</strong> <a href="${reference}" target="_blank">${reference}</a><br>
+            <strong>Decimation:</strong> ${decimation}<br>
+            <strong>Features:</strong> ${featureCount}<br>
+            <strong>Geometry Types:</strong> ${Array.from(geometryTypes).join(', ')}<br>
+            <strong>Properties:</strong> ${Array.from(propertiesSet).join(', ')}
+        `;
+
+            return summary; // Return the summary for further use
+        } catch (error) {
+            console.error("Error reading GeoJSON file:", error);
+            return `<span style="color: red;">Error: ${error.message}</span>`; // Return error message
+        }
+    }
+
+
+
+    // Function to create the auxiliary table.
+    function createAuxTable() {
+        const container = document.getElementById('auxTableContainer');
+
+        // Create a toggle button for the auxiliary table.
+        const toggleButton = document.createElement('div');
+        toggleButton.id = '2DModelToggle';
+        toggleButton.style = `
+        background-color: rgba(0, 79, 89, 0.8);
+        color: white;
+        font-size: 10pt;
+        text-align: left;
+        cursor: pointer;
+        padding: 5px;
+        margin-bottom: 5px;
+    `;
+        toggleButton.innerHTML = `<span style="color: red;">&#9660;&nbsp;</span>Show/Hide 2D Models`;
+
+        // Create a wrapper for the table.
+        const auxTableWrapper = document.createElement('div');
+        auxTableWrapper.id = 'auxTableWrapper';
+        auxTableWrapper.style = `
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        margin-top: 5px;
+        display: block; /* Initially visible */
+    `;
+
+        // Create the auxiliary table.
+        const auxTable = document.createElement('table');
+        auxTable.id = 'auxDataTable';
+        auxTable.style = `
+        font-size: 10pt;
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed; /* Consistent column widths */
+    `;
+
+        // Create table header.
+        const header = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        const headers = ['2D Model', 'Title', 'Reference'];
+        headers.forEach(headerText => {
+            const th = document.createElement('th');
+            th.textContent = headerText;
+            th.style = `
+            background-color: rgba(0, 79, 89, 0.8);
+            color: white;
+            font-size: 10pt;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        `;
+            headerRow.appendChild(th);
+        });
+        header.appendChild(headerRow);
+        auxTable.appendChild(header);
+
+        // Function to fetch the file size.
+        async function fetchFileSize(url) {
+            try {
+                const response = await fetch(url, { method: 'HEAD' }); // Perform a HEAD request.
+                const size = response.headers.get('Content-Length'); // Get the 'Content-Length' header.
+                if (size) {
+                    return (size / 1024).toFixed(1); // Convert to KB and return.
+                }
+                return "Unknown"; // Fallback if size is not available.
+            } catch (error) {
+                console.error(`Error fetching file size for ${url}:`, error);
+                return "Unknown"; // Fallback on error.
+            }
+        }
+
+        // Create table body.
+        const body = document.createElement('tbody');
+        auxLabel.forEach((label, index) => {
+            const row = document.createElement('tr');
+
+            // Model column.
+            const modelCell = document.createElement('td');
+            modelCell.style.textDecoration = 'underline';
+            modelCell.style.cursor = 'pointer';
+            modelCell.onclick = async () => {
+                // Remove the previous highlights.
+                var rows = auxTable.querySelectorAll('tr');
+                rows.forEach(_row => _row.classList.remove('highlighted-row'));
+
+                // Highlight the clicked row
+                row.classList.add('highlighted-row');
+                const url = auxData[index];
+                const title = auxTitle[index];
+                const reference = auxCitation[index][1];
+                const decimation = auxDecimation[index];
+                const summary = await summarizeGeoJSON(url, label, title, reference, decimation);
+                document.getElementById("jsonContent").innerHTML = summary;
+
+
+                // Select the corresponding option in the iframe's dropdown.
+                const iframe = document.getElementById('3dIframe');
+                if (iframe && iframe.contentWindow) {
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    const selectDropdown = iframeDoc.getElementById('select2dSurface');
+                    if (selectDropdown) {
+                        const optionToSelect = Array.from(selectDropdown.options).find(option => option.value == index);
+                        if (optionToSelect) {
+                            selectDropdown.value = optionToSelect.value;
+
+                            // Trigger the change event for the dropdown.
+                            const changeEvent = new Event('change', { bubbles: true });
+                            selectDropdown.dispatchEvent(changeEvent);
+                        } else {
+                            console.warn(`Option with value ${index} not found in iframe dropdown.`);
+                        }
+                    } else {
+                        console.error("Dropdown with ID 'select2dSurface' not found in iframe.");
+                    }
+                } else {
+                    console.error("Iframe with ID '3dIframe' not accessible.");
+                }
+
+            };
+            modelCell.textContent = label;
+            row.appendChild(modelCell);
+
+            // Title column.
+            const titleCell = document.createElement('td');
+
+            // Add the title text.
+            const titleText = document.createTextNode(auxTitle[index] + " ");
+            titleCell.appendChild(titleText);
+
+            // Create a download link for the GeoJSON file.
+            const downloadLink = document.createElement('a');
+            downloadLink.href = auxData[index]; // URL or path to the GeoJSON file.
+            downloadLink.textContent = "Download the GeoJSON file";
+            downloadLink.download = auxData[index]; // Suggest the file name for download.
+            downloadLink.style.textDecoration = 'underline'; // Optional styling for link appearance.
+            downloadLink.style.marginLeft = '5px';
+
+            // Append the link to the title cell.
+            titleCell.appendChild(downloadLink);
+
+            // Placeholder for the file size.
+            const fileSizeText = document.createTextNode(" (Estimating size...)");
+            titleCell.appendChild(fileSizeText);
+
+            // Estimate and update the file size.
+            fetchFileSize(auxData[index]).then(size => {
+                fileSizeText.textContent = ` (${size} KB)`; // Update with the estimated size.
+            });
+
+            row.appendChild(titleCell);
+
+
+            // Reference column with hyperlink.
+            const referenceCell = document.createElement('td');
+            const link = document.createElement('a');
+            link.href = auxCitation[index][1];
+            link.textContent = auxCitation[index][0];
+            link.target = '_blank';
+            referenceCell.appendChild(link);
+            row.appendChild(referenceCell);
+
+            body.appendChild(row);
+        });
+
+        auxTable.appendChild(body);
+        auxTableWrapper.appendChild(auxTable);
+
+        // Append the toggle button and table wrapper to the container.
+        container.appendChild(toggleButton);
+        container.appendChild(auxTableWrapper);
+
+        // Add toggle functionality.
+        toggleButton.addEventListener('click', () => {
+            const isVisible = auxTableWrapper.style.display === 'block';
+            auxTableWrapper.style.display = isVisible ? 'none' : 'block';
+            toggleButton.innerHTML = isVisible
+                ? `<span style="color: red;">&#9654;&nbsp;</span>Show/Hide 2D Models`
+                : `<span style="color: red;">&#9660;&nbsp;</span>Show/Hide 2D Models`;
+        });
+    }
+
+    // Initialize the auxiliary table.
+    createAuxTable();
+
+
+</script>
+{% endblock %}

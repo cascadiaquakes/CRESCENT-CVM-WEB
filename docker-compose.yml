@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  my_fastapi_app:
+    build: .
+    ports:
+      - "8000:80"
+    volumes:
+      - ./app:/app 
+

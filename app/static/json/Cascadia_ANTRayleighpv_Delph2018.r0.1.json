@@ -1,0 +1,99 @@
+{
+    "model": "Cascadia_ANTRayleighpv_Delph2018",
+    "id": "Cascadia_ANTRayleighpv_Delph2018",
+    "title": "Ambient-noise derived Rayleigh wave phase velocities in the northwestern US",
+    "summary": "Ambient noise Rayleigh waves dispersion measurements (8-50 seconds) after the tomographic inversion of Barmin et al 2001. Ambient noise follows workflow of Benson et al 2007. See Delph et al 2018 supplementary material for more information.",
+    "reference": "Delph, Levander, and Niu (2018)",
+    "reference_pid": "doi:10.1029/2018gl079518",
+    "data_revision": "r0.1",
+    "version": "v0.0",
+    "Conventions": "CF-1.0",
+    "Metadata_Conventions": "Unidata Dataset Discovery v1.0",
+    "author_name": "Jonathan R. Delph",
+    "author_email": "jdelph@purdue.edu",
+    "author_institution": "Purdue University",
+    "author_url": "https://www.eaps.purdue.edu/delph/",
+    "geospatial_lon_min": -124.8,
+    "geospatial_lon_max": -112.0,
+    "geospatial_lon_units": "degrees_east",
+    "geospatial_lon_resolution": 0.2,
+    "geospatial_lat_min": 36.0,
+    "geospatial_lat_max": 49.4,
+    "geospatial_lat_units": "degrees_north",
+    "geospatial_lat_resolution": 1.0,
+    "geospatial_vertical_min": 0.0,
+    "geospatial_vertical_max": 0.0,
+    "geospatial_vertical_units": "m",
+    "geospatial_vertical_positive": "down",
+    "repository_name": "EMC",
+    "repository_institution": "EarthScope",
+    "repository_pid": "doi:",
+    "keywords": "seismic,Rayleigh waves dispersion,shear wave,s wave,Cascadian forearc,ambient noise dispersion,receiver functions",
+    "acknowledgment": "Model was provided by Jonathan R. Delph of Department of Earth, Environmental and Planetary Sciences, Rice University",
+    "history": "[2024-01-03] Converted to netCDF via CRESCENT data tools.",
+    "comments": "CRESCENT CVM tools development project.",
+    "data_layout": "vertex",
+    "grid_ref": "latitude_longitude",
+    "utm_zone": "10",
+    "ellipsoid": "WGS84",
+    "vars": [
+        "longitude",
+        "latitude",
+        "period",
+        "easting",
+        "northing",
+        "Rayleigh_Phase"
+    ],
+    "z_var": "period",
+    "size_kb": 542.33,
+    "variables": {
+        "longitude": {
+            "column": "longitude",
+            "variable": "longitude",
+            "standard_name": "longitude",
+            "long_name": "Longitude; positive east",
+            "units": "degrees_east"
+        },
+        "latitude": {
+            "column": "latitude",
+            "variable": "latitude",
+            "long_name": "Latitude; positive north",
+            "units": "degrees_north",
+            "standard_name": "latitude"
+        },
+        "period": {
+            "column": "period",
+            "variable": "period",
+            "positive": "down",
+            "long_name": "Period",
+            "units": "s"
+        },
+        "easting": {
+            "column": "easting",
+            "variable": "easting",
+            "standard_name": "projection_x_coordinate",
+            "long_name": "easting; UTM",
+            "units": "m"
+        },
+        "northing": {
+            "column": "northing",
+            "variable": "northing",
+            "long_name": "northing; UTM",
+            "units": "m",
+            "standard_name": "projection_y_coordinate"
+        },
+        "Rayleigh_Phase": {
+            "column": "R_PV",
+            "variable": "Rayleigh_Phase",
+            "dimensions": "3",
+            "long_name": "Rayleigh wave phase velocity",
+            "display_name": "Phase Velocity (km/s)",
+            "grid_ref": "latitude_longitude",
+            "units": "km.s-1",
+            "coordinates": "easting northing"
+        }
+    },
+    "data_vars": [
+        "Rayleigh_Phase"
+    ]
+}

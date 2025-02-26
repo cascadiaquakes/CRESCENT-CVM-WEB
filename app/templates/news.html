@@ -1,0 +1,52 @@
+{% extends 'cvm_page_v1.html' %}
+
+{% block style%}
+<link rel="stylesheet" href="/static/css/news.css" />
+
+
+{%endblock%}
+{% block description%}
+<!--
+<div class="info-message">
+    &nbsp;&nbsp;&nbsp;<b>Note</b>: R0, Page content is for testing only.
+</div>
+-->
+<div class="history-container">
+    <h1>CVM-Web News</h1>
+    <div id="history" style="align-content:left"><b>2024-09-02</b>&nbsp;&mdash;&nbsp;r0.5 online
+    </div>
+</div>
+
+
+{%endblock%}
+{%block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        fetch('../static/config/news.json')
+            .then(response => response.json())
+            .then(data => {
+                const historyContainer = document.getElementById('history');
+                data.forEach(entry => {
+                    const entryDiv = document.createElement('div');
+                    entryDiv.className = 'history-entry';
+
+                    const title = document.createElement('h2');
+                    title.innerHTML = `<b>${entry.title}</b>`;
+
+                    const date = document.createElement('p');
+                    date.className = 'history-date';
+                    date.textContent = entry.date;
+
+                    const content = document.createElement('div');
+                    content.innerHTML = entry.content;
+
+                    entryDiv.appendChild(date);
+                    entryDiv.appendChild(title);
+                    entryDiv.appendChild(content);
+                    historyContainer.appendChild(entryDiv);
+                });
+            })
+            .catch(error => console.error('Error loading edit history:', error));
+    });
+</script>
+{%endblock%}

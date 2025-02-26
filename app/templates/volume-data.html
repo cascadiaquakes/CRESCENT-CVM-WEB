@@ -1,0 +1,854 @@
+{% extends 'cvm_page_v1.html' %}
+
+{% block style%}
+<link rel="stylesheet" href="/static/css/repository.css" />
+<link rel="stylesheet" href="/static/css/x-section.css" />
+{%endblock%}
+{% block description%}
+<!--
+<div class="info-message">
+    &nbsp;&nbsp;&nbsp;<b>Note</b>: R0, this tool extracts data from the nearest model sub-volume.
+</div>
+-->
+
+
+
+<div id="description" style="display:none;">
+    <h2>Volume Data Extraction Tool Guide</h2>
+
+    <p>The Volume Data Extraction Tool provides customized access to CVM (Community Velocity Model) datasets. This
+        interface allows
+        you to specify geographic parameters to retrieve the needed subset of data.
+        The interface includes a 3D map that displays current Community Fault
+        Model data such as CRESCENT Cascadia fault traces, fault surfaces, the Cascadia subduction interface, and the
+        seismicity of the area in addition to the selected CVM boundaries. This map is designed to aid in highlighting
+        the Community Fault Model (CFM) features within the CRESCENT study area to assist in subsetting the model to
+        focus on areas of interest with specific CFM features.
+    </p>
+    <p>
+    <p><strong>Model Resolutions:</strong></p>
+    <p>
+        Each model has its own native resolution, which is described by the <i>geospatial</i> global attributes in the
+        and GeoCSV
+        files.
+        <!--You can view the metadata, including resolution details, by clicking the "Metadata" button to learn
+        more about the model.-->
+    </p>
+    <p>
+        The horizontal resolution is determined by the <i>geospatial_lat_resolution</i> and
+        <i>geospatial_lon_resolution</i>
+        attributes,
+        which specify the spacing between grid points in the latitude and longitude directions, respectively. The
+        vertical
+        resolution is defined by the <i>geospatial_vertical_resolution</i> attribute, indicating the spacing in the
+        depth or
+        height
+        dimension.
+    </p>
+    <p>
+        The geographic extent of the model is outlined by the attributes <i>geospatial_lat_min</i>,
+        <i>geospatial_lat_max</i>,
+        <i>geospatial_lon_min</i>, <i>geospatial_lon_max</i>, as well as <i>geospatial_vertical_min</i> and
+        <i>geospatial_vertical_max</i>.
+        These
+        attributes define the model's boundaries in terms of latitude, longitude, and vertical dimensions.
+    </p>
+    <p>
+        For example, a model with a latitude resolution of 0.5°, a longitude resolution of 0.5°, and a vertical
+        resolution of 10
+        meters would have a grid with a horizontal resolution of 0.5° x 0.5° and a vertical resolution of 10 meters.
+        These
+        attributes ensure that the model's spatial resolution and extent are clearly defined for users.
+    </p>
+    </p>
+    <p>
+        <strong>Key features of the interface map include:</strong>
+    </p>
+    <ul>
+        <li><strong>CRESCENT Study Area:</strong> The boundaries of the CRESCENT study area are outlined in cyan,
+            demarcating the focus area of the study.</li>
+        <li><strong>3D Model Outline:</strong> The 3D outline of the selected CVM model is also displayed in cyan,
+            allowing users to visualize the spatial extent and orientation of the model within the study area.</li>
+        <li><strong>Selected Model Extent:</strong> The selected model extent is shown in blue and can be adjusted using
+            latitude, longitude, and depth sliders. Additionally, an Opacity Control slider is available to adjust the
+            opacity of the model extent display, where 0 represents full transparency and 1 represents full opacity.
+            This provides flexibility in visualizing underlying features.</li>
+        <li><strong>Earthquakes Visualization:</strong> The yellow dots on the map represent earthquakes with a
+            magnitude
+            greater than 4 that have occurred within the CRESCENT study area since 1970. The size of each yellow dot is
+            proportional to the earthquake's magnitude, with larger dots indicating stronger earthquakes. This
+            earthquake data
+            is sourced from the ANSS Comprehensive Earthquake Catalog (ComCat), which compiles seismic events from
+            various
+            global and regional networks. The data is obtained through the USGS FDSN Event Service, ensuring up-to-date
+            and
+            accurate information on seismic activity. For more details on ComCat, visit
+            <a href="https://earthquake.usgs.gov/data/comcat/">ANSS ComCat</a>, and for querying seismic data, visit the
+            <a href="https://earthquake.usgs.gov/fdsnws/event/1/">USGS FDSN Event Service</a>.
+        </li>
+        <li><strong>Imagery Layer:</strong> The imagery layer option (when checked) displays an imagery layer available
+            through Cesium, offering detailed and reliable backgrounds for the visualization of geological and
+            seismological data. Users may select different imagery layers using the imagery selection tool located at
+            the top right of the interface.</li>
+        <li><strong>Terrain Occlusion Checkbox:</strong> Since imagery layers displayed on the map (when selected) are
+            not transparent, the Terrain Occlusion checkbox is added to unhide the data displayed on the map. Enabling
+            this feature helps to understand the spatial relationships between the terrain and the subsurface models.
+        </li>
+        <li><strong>Feature Toggles:</strong> The interface includes checkboxes that allow users to turn on and off
+            various features displayed on the map. This includes toggling the visibility of fault traces, earthquake
+            data, and other model elements, providing flexibility in data visualization and analysis.</li>
+        <li><strong>Center View Button:</strong> The Center View button allows users to quickly center the map view on
+            the CRESCENT study area or other areas of interest, making navigation easier and more efficient.</li>
+        <li><strong>Home View Button:</strong> The Home View button resets the map view to its initial default settings,
+            providing a convenient way to return to the original perspective and overview of the map.</li>
+        <li><strong>Sync to Form Button:</strong> The sync to form button allows you to transfer your CVM selections to
+            the form on the left. This allows you to set other data extraction parameters and extract the data. The
+            <span style="color: maroon;">maroon</span> color on the sync button label indicates unsynced CVM changes on
+            the map.
+        </li>
+        <li><strong>Distance Measuring Tool:</strong> The distance measuring tool, located under the map legend and can
+            be
+            activated by checking the <b>Measure Distance</b> checkbox. This tool allows users to click on the map to
+            select two points and measure the distance between them.
+            When the first point is clicked, a point is placed at that location, and the second click
+            places
+            the second point. After both points are selected, a line is drawn connecting them, and the
+            distance
+            between the points is calculated and displayed. The distance is shown in kilometers in a designated display
+            area. If
+            more points are clicked after the second point, the previous line and markers are cleared, and the process
+            starts over.
+            This tool is designed to provide quick and easy measurement of distances between two locations on the map,
+            with visual
+            feedback through markers and lines. Additionally, the user can reset the tool by using a checkbox, which
+            will clear the
+            markers and distance line for a new measurement.
+        </li>
+    </ul>
+
+    <p>You can start by either directly changing the form parameters or setting the map parameters. To extract a
+        sub-volume of a CVM, starting from the map's control panel, follow these steps:</p>
+    <p>First, on the map's control panel:</p>
+    <ol>
+        <li><strong>Show/Hide Controls:</strong> Use this button to display or hide the map controls.</li>
+        <li><strong>Select a Model:</strong> Choose a model from the model list on the map's control panel.</li>
+        <!-- <li><strong>View Model Metadata:</strong> Click the "Metadata" button to learn more about the model.</li>-->
+        <li><strong>Set the Volume Edges:</strong> Adjust the latitude and longitude coordinate sliders and the depth
+            sliders to set
+            edges of the desired sub-volume. The outline of the study area and the
+            model's coverage area are shown in cyan for reference, and the selected sub-volume is shown in blue.</li>
+        <li><strong>Select Model Variable(s):</strong> Select the model variable(s) to extract.</li>
+        <li><strong>Sync Selections:</strong> Use the "Sync to Form" button to transfer your selections to the form on
+            the left. This allows you to set other extraction parameters on the form and extract the data.</li>
+    </ol>
+    <p>Next, on the form's control panel:</p>
+    <ol>
+        <li><strong>Download the model's netCDF file</strong> Use the <u>download</u> link under the <b>🔒 settings:</b>
+            checkbox to download
+            the model's netCDF file. </p>
+        </li>
+        <li><strong>Set the Data Parameters:</strong> Choose your preferred interpolation method and other processing
+            parameters.</li>
+        <li><strong>Select the Output Format:</strong> Select the output format from the <a
+                href="https://cascadiaquakes.github.io/cvm-tools-book/standards_and_conventions.html#supported-formats-for-data-extraction"
+                target="_blank">supported formats for data extraction</a>.</li>
+        <li><strong>Download the Data:</strong> Click the "Download" button to download the extracted data.</li>
+    </ol>
+
+    <h3>Additional Parameters</h3>
+
+    <p>Alternatively, you may set your parameters directly on the form and then use the "Sync to Map" button to
+        send the information to the map and observe/adjust the selection coverage.</p>
+
+
+</div>
+
+{%endblock%}
+{% block leftpanel%}
+<div id="fileListPanel">
+    <div id="form"></div>
+    <div id="main-container" class="action_side">
+        <div>Sub-Volume Data Extractor</div>
+        <div class="action_inner">
+            <!-- Form for volume parameters input -->
+            <!--<form action="/data/extract-volume-data" method="post" id="image-form">-->
+            <form action="/data/extract-volume-data-s3" oninput="updateURL()" id="dynamicForm"><!-- image-form-->
+
+                <div style="width: 100%;display: flex;flex-direction: row;justify-content: center; font-weight: bold">
+                    <label for="data-file">Depth Model:</label>
+                    <select id="data-file" name="data_file"></select>
+                </div>
+                <div class="form-container">
+
+                    <div class="form-column">
+                        <div style="font-weight: bold">Latitude:</div>
+
+                        <div class=" form-input">
+                            <label for="start-lat">&nbsp; Min.:</label>
+                            <input type="text" id="start-lat" name="start_lat">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-lat">&nbsp; Max.:</label>
+                            <input type="text" id="end-lat" name="end_lat">
+                        </div>
+
+                        <div style="font-weight: bold;">Longitude:</div>
+                        <div class="form-input">
+                            <label for="start-lng">&nbsp; Min.:</label>
+                            <input type="text" id="start-lng" name="start_lng">
+                        </div>
+
+                        <div class="form-input">
+                            <label for="end-lng">&nbsp; Max.:</label>
+                            <input type="text" id="end-lng" name="end_lng">
+                        </div>
+
+                    </div>
+                    <div class="form-column">
+                        <div style="font-weight: bold">Depth (km)</div>
+                        <div class="form-input">
+                            <label for="start-depth">&nbsp; Min.:</label>
+                            <input type="text" id="start-depth" name="start_depth">
+                        </div>
+                        <div class="form-input">
+                            <label for="end-depth">&nbsp; Max.:</label>
+                            <input type="text" id="end-depth" name="end_depth">
+                        </div>
+                        <div class="form-input">
+                            <label for="subscribeCheckbox">&#128274; settings:</label>
+                            <input type="checkbox" id="lock" name="lock">
+                        </div>
+                        <div class="form-input">
+                            <div id="notes"></div>
+                        </div>
+                    </div>
+                    <div class="form-column">
+                        <div class="form-input">
+                            <label for="variables">Variable(s):</label>
+                            <select id="variables" name="variables" multiple required>
+
+                            </select>
+
+                            <input type="hidden" id="variables_hidden" name="variables_hidden">
+
+                        </div>
+                        <div class="form-input"><!--</div> style="display:none;">-->
+                            <label for="units">Output units:</label>
+                            <select name="units" id="units">
+                                <option value="mks" selected>km.kg.sec</option>
+                                <option value="cgs">m.g.sec</option>
+                            </select>
+                        </div>
+                        <div class="form-input">
+                            <label for="output-format">Output format:</label>
+                            <select id="output-format" name="output_format">
+                                <option value="csv">CSV</option>
+                                <option value="geocsv">GeoCSV</option>
+                                <option value="netcdf" selected>netCDF</option>
+                                <option value="hdf5">HDF5</option>
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Submission button -->
+                <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
+                    <button type="button" id="sync-to-iframe" class="button"
+                        style="width: 100px; width: 20%;border-radius: 15px;">Sync
+                        to
+                        map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <button type="button" id="metadata-button" class="button"
+                        style="width: 100px; width: 20%;border-radius: 15px; display: none;">Metadata</button><!--&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <input type="submit" value="Download" class="button"
+                        style="width: 100px; width: 20%;border-radius: 15px;">-->
+                </div>
+                <!-- Display loading message and results dynamically -->
+                <hr />
+                <label for="requestUrl">Submit Data Request (click to send, edit form to modify URL):</label>
+                <div id="generatedUrl" style="width:100%;font-size: 8pt; height: auto;">
+                    <a id="dynamicLink" href="" target="_blank"
+                        style="word-break: break-word; white-space: normal;"></a>
+                </div>
+                <!--<label for="requestUrl">Direct request URL:</label>
+                <div id="requestUrl" style="width:100%;"></div><br /><br />
+                <div id="dataLoadingMessage" style="display: none;">...requesting</div>-->
+        </div>
+        </form>
+    </div>
+    <!-- Display loading message and results dynamically -->
+    <!--<div id="loadingMessage">Working...</div>
+    <div id="error-message" style="color: red;"></div>-->
+    <div id="jsonContent"></div>
+
+
+</div>
+{%endblock%}
+{%block rightpanel%}
+<div id="contentPanel">
+    <div><span id="cmodelname" style="width:100%"></span> Model coverage &amp; CRESCENT Cascadia fault traces</div>
+
+    <iframe src="/vis/volume-3d" width="99.5%" height="100%" id="3dIframe"></iframe>
+
+</div>
+{%endblock%}
+{%block scripts %}
+<!--<script src="https://unpkg.com/@turf/turf"></script>-->
+<script src="/static/js/shared.js"></script>
+
+
+<script>
+    async function loadDropdown() {
+        try {
+            const response = await fetch('/data/models_drop_down_s3?required_variable=depth');
+            if (response.ok) {
+                const dropdownHTML = await response.text();
+                document.getElementById('data-file').innerHTML = dropdownHTML;
+            } else {
+                console.error('Failed to load dropdown:', response.statusText);
+                document.getElementById('data-file').textContent = 'Failed to load dropdown.';
+            }
+        } catch (error) {
+            console.error('Error fetching dropdown:', error);
+            document.getElementById('data-file').textContent = 'Error loading dropdown.';
+        }
+    }
+
+    // The first time the page is loaded, we need a sync with the map.
+    document.getElementById("sync-to-iframe").style.color = "red";
+
+    // Monitor iframes selection change 
+    document.addEventListener('DOMContentLoaded', function () {
+        const parentForm = document.getElementById('parent-form');
+        const iframe = document.getElementById('3dIframe');
+
+        // Function to send the current form data to the iframe
+        function syncToIframe() {
+            const data = {};
+            const sel = document.getElementById('data-file')
+            const selection = sel.options[sel.selectedIndex].text
+            data['data-file'] = selection
+            data['start-lng'] = document.getElementById('start-lng').value;
+            data['end-lng'] = document.getElementById('end-lng').value;
+            data['start-lat'] = document.getElementById('start-lat').value;
+            data['end-lat'] = document.getElementById('end-lat').value;
+
+            // By default, depth values are km.
+            if (document.getElementById('units').value == "cgs") {
+                data['start-depth'] = document.getElementById('start-depth').value; // / 1000;
+                data['end-depth'] = document.getElementById('end-depth').value; // / 1000.0;
+            } else {
+                data['start-depth'] = document.getElementById('start-depth').value;
+                data['end-depth'] = document.getElementById('end-depth').value;
+            }
+
+
+            iframe.contentWindow.postMessage({
+                type: 'syncFromParent',
+                data
+            }, window.location.origin);
+
+            // Sync to iframe, can return the sync button color to normal
+            document.getElementById("sync-to-iframe").style.color = "lightgray";
+        }
+
+        function updateFormVariablesList(fileName) {
+            const locked = document.getElementById('lock').checked;
+            var vertical_units;
+            //const requestUrlDiv = document.getElementById('requestUrl');
+            //requestUrlDiv.style.display = 'none';
+
+            // Construct the API URL
+            const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+
+            fetch(apiUrl)
+
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Assuming the JSON structure matches your form fields' ids
+                    for (const [key, value] of Object.entries(data)) {
+                        if (key == "data_vars") {
+
+                            // Find the select element
+                            var selectElement = document.getElementById('variables');
+                            // Populate the select element with options
+                            selectElement.options.length = 0;
+                            value.forEach((val, index) => {
+                                const option = new Option(val, val);
+                                selectElement.add(option);
+
+                                if (index === 0) {
+                                    option.selected = true; // Select the first option
+                                    document.getElementById("variables_hidden").value = val
+                                }
+
+                            });
+                        }
+
+                    }
+                    // Update the request URL
+                    updateURL()
+
+                    // Sync to iframe, can return the sync button color to normal
+                    document.getElementById("sync-to-iframe").style.color = "lightgray";
+
+
+                })
+                .catch(error => console.error('Error fetching the JSON file:', error));
+        }
+
+        //  listen for changes on the <select> element and then updating the variables_hidden input field with the selected values as a comma-separated list.
+        document.getElementById('variables').addEventListener('change', function () {
+            const selectedOptions = Array.from(this.selectedOptions).map(option => option.value);
+            document.getElementById('variables_hidden').value = selectedOptions.join(',');
+        });
+
+        function selectOptionByText(optionText) {
+            // Get the select element by its name attribute
+            var selectElement = document.getElementById('data-file');
+            // Iterate through the options
+            for (var i = 0; i < selectElement.options.length; i++) {
+                if (selectElement.options[i].text === optionText) {
+                    // Set the selected property of the matching option to true
+                    selectElement.options[i].selected = true;
+                    const filename = selectElement.value
+                    const regex = /.nc/i;
+                    var jsonFlename = filename.replace(regex, '.json')
+                    updateFormVariablesList(jsonFlename)
+                    // Trigger the change event
+                    //selectElement.dispatchEvent(new Event('change'));
+                    break;
+                }
+            }
+        }
+
+        // Function to handle messages from the iframe
+        window.addEventListener('message', function (event) {
+            if (event.origin !== window.location.origin) {
+                return; // Ignore messages from other origins for security
+            }
+
+            if (event.data.type === 'syncFromIframe') {
+                function copyIframeFormValues() {
+                    const iframe = document.getElementById('3dIframe');
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+                    // Read values from the iframe form
+                    const sel = iframeDoc.getElementById('data-file')
+                    const selection = sel.options[sel.selectedIndex].text
+                    selectOptionByText(selection)
+                    document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
+                    document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
+                    document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
+                    document.getElementById('end-lat').value = iframeDoc.getElementById('maxLatSlider').value;
+                    document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value;
+                    document.getElementById('end-depth').value = iframeDoc.getElementById('maxDepthSlider').value;
+
+                }
+                copyIframeFormValues();
+
+            }
+        });
+
+        // Sync to iframe button
+        document.getElementById('sync-to-iframe').addEventListener('click', syncToIframe);
+    });
+
+
+
+
+    // Call loadDropdown when the page has finished loading
+    document.addEventListener('DOMContentLoaded', loadDropdown);
+
+    // Event listeners for the form
+    document.getElementById('start-lat').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('start-lng').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('end-lat').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('end-lng').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    document.getElementById('start-depth').addEventListener('input', function () {
+        document.getElementById('sync-to-iframe').style.color = "red";
+    });
+    //document.getElementById('end-depth').addEventListener('input', function () {
+    //    document.getElementById('sync-to-iframe').style.color = "red";
+    //});
+    // Function to handle form submission
+    function updateURL() {
+        const form = document.getElementById("dynamicForm");
+        const baseUrl = form.action;
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+
+        let variablesArray = [];
+
+        for (const [key, value] of formData.entries()) {
+            if (key === "variables_hidden") {
+                continue; // Ignore this field
+            }
+
+            if (key === "variables") {
+                variablesArray.push(value); // Collect "variables" values
+            }
+
+            if (value) {
+                params.append(key, value); // Include all fields except variables_hidden
+            }
+        }
+
+        // Add "variables_hidden" as the joined "variables" values
+        if (variablesArray.length > 0) {
+            params.append("variables_hidden", variablesArray.join(","));
+        }
+
+        const newUrl = baseUrl + "?" + params.toString();
+        document.getElementById("dynamicLink").textContent = newUrl;
+        document.getElementById("dynamicLink").href = newUrl;
+    }
+
+    /*
+        // Function to handle form submission
+        document.getElementById('image-form').addEventListener('submit', handleSubmit);
+    
+        function handleSubmit(event) {
+            event.preventDefault(); // Prevent the default form submission
+    
+            const loadingElement = document.getElementById('dataLoadingMessage');
+            loadingElement.style.display = 'block'; // Show the loading message
+    
+            const jsonContent = document.getElementById('jsonContent');
+            jsonContent.style.display = 'none'; // Show the loading message
+            document.getElementById('error-message').innerHTML = ""
+    
+            const form = event.target;
+            const url = new URL(form.action);
+            const formData = new FormData(form);
+    
+            // Convert form data to URL query parameters
+            formData.forEach((value, key) => {
+                url.searchParams.append(key, value);
+            });
+    
+            const requestUrl = `${url}`;
+    
+            const requestUrlDiv = document.getElementById('requestUrl');
+            requestUrlDiv.style.display = 'block';
+            const maxChar = 100;
+            const truncatedText = requestUrl.length > maxChar ? requestUrl.substring(0, maxChar) + '...' : requestUrl;
+    
+            requestUrlDiv.innerHTML = `<a href="${requestUrl}" target="_blank">${truncatedText}</a>`;
+    
+            fetch(url, {
+                method: 'GET'
+            })
+                .then(response => {
+                    if (response.status === 413) {
+                        // Handle 413 Payload Too Large error
+                        return response.text().then(errorHtml => {
+                            // Display the HTML error message on the page
+                            document.getElementById('error-message').innerHTML = errorHtml;
+                            throw new Error(errorHtml); // Stop further processing
+                        });
+                    } else if (!response.ok) {
+                        // Handle other errors
+                        throw new Error('Network response was not ok');
+                    }
+    
+                    const disposition = response.headers.get('Content-Disposition');
+                    const contentType = response.headers.get('Content-Type');
+                    let filename = 'downloaded_file';
+    
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        // Try multiple patterns to extract filename
+                        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, ''); // Remove quotes if any
+                        }
+                    } else {
+                        // Fallback: derive filename from Content-Type
+                        const extension = mimeToExtension(contentType);
+                        filename += extension ? `.${extension}` : '';
+                    }
+    
+                    return response.blob().then(blob => ({ blob, filename }));
+                })
+                .then(({ blob, filename }) => {
+                    loadingElement.style.display = 'none'; // Hide the loading message
+    
+                    // Create a link element to trigger the download
+                    const link = document.createElement('a');
+                    const url = window.URL.createObjectURL(blob);
+                    link.href = url;
+                    link.download = filename; // Use the extracted filename
+                    document.body.appendChild(link);
+                    link.click();
+                    setTimeout(() => {
+                        document.body.removeChild(link);
+                        window.URL.revokeObjectURL(url);
+                    }, 0);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('error-message').innerHTML = 'An error occurred: ' + error.message;
+                    loadingElement.style.display = 'none'; // Hide the loading message in case of error
+                });
+    
+        }
+    */
+    function mimeToExtension(mimeType) {
+        const mimeTypes = {
+            'text/csv': 'csv',
+            'application/json': 'json',
+            'application/vnd.ms-excel': 'xls',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+            'application/netcdf': 'nc',
+            'application/geo+csv': 'geocsv',
+            // Add more mappings as needed
+        };
+
+        return mimeTypes[mimeType] || '';
+    }
+
+    // Add event listener to the form for submit event
+    //document.getElementById('image-form').addEventListener('submit', handleSubmit);
+    // and polyline is your Leaflet polyline object
+
+    function isValidLatitude(lat) {
+        return !isNaN(lat) && lat >= -90 && lat <= 90;
+    }
+
+    function isValidLongitude(lng) {
+        return !isNaN(lng) && lng >= -180 && lng <= 180;
+    }
+
+
+    // Copy the form values to iframe.
+    function copyFormValues() {
+        const iframe = document.getElementById('3dIframe');
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+        // Read values from the iframe form
+        const sel = iframeDoc.getElementById('data-file')
+        const selection = sel.options[sel.selectedIndex].text
+        selectOptionByText(selection)
+        document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
+        document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
+        document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
+        document.getElementById('end-lat').value = iframeDoc.getElementById('maxLatSlider').value;
+        document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value;
+        document.getElementById('end-depth').value = iframeDoc.getElementById('maxDepthSlider').value;
+
+    }
+
+    function updateFormFields(fileName) {
+        const locked = document.getElementById('lock').checked;
+
+        // Construct the API URL
+        const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+
+        fetch(apiUrl)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Note on the file size.
+                const encodedFilename = encodeURIComponent(fileName);
+
+                if (data.hasOwnProperty("size_kb")) {
+                    size_kb = parseFloat(data["size_kb"]);
+                    if (size_kb >= 10000.0) { document.getElementById('notes').innerHTML = "<b style='color:red;font-size: 9px;'>Warning: Large File Extraction" }
+
+                }
+                // Not using at this time.
+                if (data.hasOwnProperty("output_formats?")) {
+                    // Get the select element
+                    const selectElement = document.getElementById('output-format');
+
+                    // Loop through the options and update their state
+                    Array.from(selectElement.options).forEach(option => {
+                        if (data["output_formats"].includes(option.value)) {
+                            option.disabled = false; // Activate the option if it's in the list
+                        } else {
+                            option.disabled = false;  // Deactivate the option if it's not in the list
+                        }
+                    });
+
+                    // Set the selected option to the first active one in the list
+                    const firstValidOption = data["output_formats"][0];
+                    selectElement.value = firstValidOption;
+                }
+                else {
+                    // Get the select element
+                    const selectElement = document.getElementById('output-format');
+                    // Loop through the options and update their state
+                    Array.from(selectElement.options).forEach(option => {
+                        option.disabled = false; // Activate the option if it's in the list
+                    });
+                    selectElement.value = "netcdf";
+                }
+                // Assuming the JSON structure matches your form fields' ids
+                for (const [key, value] of Object.entries(data)) {
+                    if (key == "geospatial_lon_min") {
+                        if (!locked) document.getElementById('start-lng').value = value;
+                        lon_min = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lon_max") {
+                        if (!locked) document.getElementById('end-lng').value = value;
+                        lon_max = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lat_min") {
+                        if (!locked) document.getElementById('start-lat').value = value;
+                        lat_min = parseFloat(value);
+                    }
+                    else if (key == "geospatial_lat_max") {
+                        if (!locked) document.getElementById('end-lat').value = value;
+                        lat_max = parseFloat(value);
+                    }
+                    else if (key == "geospatial_vertical_min") {
+                        unitsKey = "geospatial_vertical_units"
+                        let depthFactor = 1.0
+                        // Depth on the form is in km. 
+
+                        if (data.hasOwnProperty(unitsKey)) {
+                            if (data[unitsKey].toLowerCase() == "km") { depthFactor = 1.0 }
+                            else if (data[unitsKey].toLowerCase() == "m") { depthFactor = 0.001 }
+                        }
+
+                        if (!locked) document.getElementById('start-depth').value = parseFloat(value) * depthFactor;
+                    }
+                    else if (key == "geospatial_vertical_max") {
+                        unitsKey = "geospatial_vertical_units"
+                        let depthFactor = 1.0
+                        // Depth on the form is in km. 
+
+                        if (data.hasOwnProperty(unitsKey)) {
+                            if (data[unitsKey].toLowerCase() == "km") { depthFactor = 1.0 }
+                            else if (data[unitsKey].toLowerCase() == "m") { depthFactor = 0.001 }
+                        }
+
+                        if (!locked) document.getElementById('end-depth').value = parseFloat(value) * depthFactor;
+                    }
+                    else if (key == "data_vars") {
+
+                        // Find the select element
+                        var selectElement = document.getElementById('variables');
+                        // Populate the select element with options
+                        selectElement.options.length = 0;
+                        value.forEach((val, index) => {
+                            const option = new Option(val, val);
+                            selectElement.add(option);
+
+                            if (index === 0) {
+                                option.selected = true; // Select the first option
+                                document.getElementById("variables_hidden").value = val
+                            }
+
+                        });
+                    }
+
+
+
+                }
+                if (!locked) {
+                    document.getElementById('start-depth').value = parseFloat(document.getElementById('start-depth').value);
+                    document.getElementById('end-depth').value = parseFloat(document.getElementById('end-depth').value);
+                }
+                updateURL();
+                /* MB
+                if (!locked) {
+                    leftMarker.remove();
+                    leftMarker = L.marker([lat_min, lon_min], { draggable: true }).addTo(map);
+                    leftMarker.bindTooltip('LL', { permanent: true, className: 'marker-label', direction: "right" });
+                    rightMarker.remove();
+                    rightMarker = L.marker([lat_max, lon_max], { draggable: true }).addTo(map);
+                    rightMarker.bindTooltip('UR', { permanent: true, className: 'marker-label', direction: "right" });
+                    updateRectangle();
+                    // Event listener for left marker drag event
+                    leftMarker.on('dragend', updateRectangle);
+ 
+                    // Event listener for right marker drag event
+                    rightMarker.on('dragend', updateRectangle);
+                }
+                */
+
+
+            })
+            .catch(error => console.error('Error fetching the JSON file:', error));
+    }
+
+    document.getElementById('data-file').addEventListener('change', function () {
+        const filename = document.getElementById('data-file').value
+        document.getElementById("jsonContent").style.display = "none"
+
+        const regex = /.nc/i;
+        var jsonFlename = filename.replace(regex, '.json')
+        // Field is found, execute your function
+        updateFormFields(jsonFlename)
+        // You can replace the console.log with any code to handle the change
+
+        // The first time the page is loaded, we need a sync with the map.
+        document.getElementById("sync-to-iframe").style.color = "red";
+    });
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Define the function to execute when mutations are observed
+        const callback = function (mutationsList, observer) {
+            for (const mutation of mutationsList) {
+                if (mutation.type === 'childList') {
+                    const dynamicField = document.getElementById('data-file');
+
+                    if (dynamicField.value) {
+                        const regex = /.nc/i;
+                        const jsonFlename = dynamicField.value.replace(regex, '.json')
+                        // Field is found, execute your function
+                        updateFormFields(jsonFlename);
+
+                        // Optionally, disconnect the observer if it's no longer needed
+                        observer.disconnect();
+                        break;
+                    }
+                }
+            }
+        };
+
+        // Create an instance of MutationObserver with the callback
+        const observer = new MutationObserver(callback);
+
+        // Options for the observer (which mutations to observe)
+        const config = { childList: true, subtree: true };
+
+        // Start observing the document body for DOM changes
+        observer.observe(document.body, config);
+    });
+
+    // Show metadata button
+    document.getElementById('metadata-button').addEventListener('click', display_metadata);
+    window.addEventListener('load', function () {
+    })
+
+    // The first time request URL creation.
+    window.onload = function () {
+        setTimeout(() => {
+            updateURL();
+        }, 1000); // Delay ensures dropdowns & JS updates complete
+    };
+</script>
+
+{%endblock%}
