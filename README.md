@@ -1,13 +1,35 @@
 # CRESCENT CVM-Web
 
+CVM working group: https://cascadiaquakes.org/cvm/   
+Web viewer: https://cvm.cascadiaquakes.org/vis/ 
+
 ## Introduction
+The CRESCENT Community Velocity Model (CVM) Viewer is a web-based platform for visualizing and exploring 3D models of seismic wave velocities and densities in the Earth. The viewer contains multiple published models of seismic wave velocities and will in future contain accompanying density models, relevant metadata, and supports filtering models by latitude, longitude, and depth.  The viewer also contains interactive tools that allow the user to make model cross sections, depth profiles, and horizontal slices.  The viewer displays the 3D spatial extent of the chosen velocity model, 2D surfaces such as subduction zone interface geometries, other regional crustal faults, terrain, geographic information, and seismicity providing spatial context for model analysis.  The platform ensures seamless data integration by adhering to netCDF and HDF5 standards, with tools for data extraction, format conversion, and compliance checks. Users can download model data in multiple formats including CSV, geoCSV, netCDF, and HDF5.
 
+## Data Storage, Extraction, and Visualization Framework for the CVM Earth Models
+We have developed a framework for the storage, extraction, and visualization of the Community Velocity Model (CVM) data. This framework integrates Python-based desktop tools for data conversion and visualization with a web-based platform that facilitates dynamic, real-time interaction with model datasets. By adhering to well-established formatting and metadata conventions, the system ensures that data remains consistent, interoperable, and ready for further analysis, format conversion, or visualization.
 
+## Data Storage and Formats
+Our platform and tools prioritize data storage in formats that  ensure compatibility with a wide range of geospatial tools and frameworks. All datasets are stored in netCDF or HDF5 formats that are well suited for multidimensional scientific data. The tools follow the Climate and Forecast (CF) Metadata Conventions and Earth Model Collaboration (EMC) standards, ensuring robust metadata structures that enable seamless cross-tool and cross-platform integration.
+Data Format: The primary storage formats used are netCDF-4 Classic and HDF5, both of which efficiently store multidimensional arrays of geospatial data. HDF5 supports hierarchical groupings, allowing the organization of 3D data within the 'MODEL' group and 2D surface data within the 'SURFACES' group. The platform also facilitates conversions between CSV, GeoCSV, HDF5, and netCDF, ensuring seamless interoperability across different data sources and systems.
+Standards and Conventions: By adhering to CF and EMC standards, the stored datasets include the necessary metadata for accurate interpretation by downstream tools. Special attention is given to supporting both geographic coordinate systems (latitude and longitude) and UTM projections, allowing for seamless access to data across each coordinate frameworks.
+Data Integrity and Compliance Checks: The platform includes a compliance check feature that verifies the structure and attributes of all netCDF files before storage. This ensures that all datasets are CF- and EMC-compliant, promoting ease of use and integration with various geospatial software systems.
 
-## Getting Started
+## Data Extraction and Conversion Tools
+In addition to data storage, the platform provides comprehensive tools for data extraction and conversion, allowing users to extract geospatial data from netCDF files and convert it to other formats.
+CSV to netCDF Conversion: A key feature of the toolset is the ability to convert user-provided CSV files into CF-compliant netCDF format. This feature is particularly useful for users working with tabular data who require storage in a multidimensional format. The conversion tool ensures rigorous standards compliance, and that the resulting netCDF files are correctly structured and include all necessary metadata for further analysis or visualization.
+Data Format Conversion: The platform supports conversions from netCDF to GeoCSV format. This functionality is particularly useful for applications requiring simpler, text-based geospatial data formats. Our tools ensure seamless transitions between formats while maintaining the integrity of the embedded geospatial metadata.
 
+## Data Visualization Platform
+We developed a web-based geospatial data visualization platform using Python, FastAPI, and CesiumJS, enabling real-time exploration of Earth models. This platform complements our desktop tools for data visualization and extraction, offering a dynamic 3D map interface that allows users to interact with geospatial and earthquake data and toggle various features.
+Backend: Python and FastAPI: The backend is implemented using FastAPI, which efficiently handles asynchronous processing of user requests. Earth model data, stored in netCDF format, is processed using Python libraries such as xarray and h5py. The backend serves filtered data based on user inputs, including latitude, longitude, and depth ranges, while ensuring all outputs conform to CF and EMC standards.
+Frontend: CesiumJS Integration: The frontend uses CesiumJS to render 3D geospatial visualizations, offering users an interactive map that displays earthquake data, geospatial boundaries, and model outlines. The interface includes both 2D and 3D renderings of the latest Community Fault Model (CFM) data, providing comprehensive visual representations of geospatial features.
+Real-Time Interaction: Users can rotate, zoom, and pan through the 3D map while dynamically enabling or disabling features such as earthquake data, terrain occlusion, and model outlines. The platform allows filtering by latitude, longitude, and depth, with the selected bounds instantly reflected on the map.
+Feature Controls: The interface includes checkboxes and dropdown menus for toggling features. These controls are integrated with the backend, ensuring real-time updates without requiring page reloads.
+Visualizations: The visualization tools include horizontal (depth) slices, vertical cross-sections, and depth profiles. Users can adjust plot parameters and explore the 3D map to visualize various geospatial features from the models.
 
+## Data Extraction and Filtering
+The platform also offers robust data extraction capabilities, allowing users to filter datasets based on geographic and depth parameters. The data extraction interface provides an intuitive, interactive experience similar to the visualization tools. Users can download horizontal (depth) slices, vertical cross-sections, and subvolumes from the models in any supported format. 
 
-### Prerequisites
-
-
+## Deployment and Scalability
+The platform is deployed using AWS Fargate, a scalable, serverless infrastructure. Fargate's flexibility ensures that the platform can efficiently handle multiple user requests and large datasets simultaneously. The serverless architecture dynamically allocates resources, offering a robust and flexible solution for geospatial data visualization, storage, and extraction.
