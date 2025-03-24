@@ -232,11 +232,18 @@ def project_feature(
     return horizontal_position_start, horizontal_position_end, upper_depth, lower_depth
 
 
-def extract_values(dataset, lat, lon, depth_range, interpolation_method='linear', grid_ref="latitude_longitude",
+def extract_values(
+    dataset,
+    lat,
+    lon,
+    depth_range,
+    interpolation_method="linear",
+    grid_ref="latitude_longitude",
     utm_zone=None,
-    ellipsoid=None,):
+    ellipsoid=None,
+):
     """
-    Extract values from an xarray dataset for a given latitude, longitude, and depth range 
+    Extract values from an xarray dataset for a given latitude, longitude, and depth range
     using the specified interpolation method.
 
     Parameters:
@@ -246,7 +253,7 @@ def extract_values(dataset, lat, lon, depth_range, interpolation_method='linear'
     - depth_range: Tuple (min_depth, max_depth) specifying the depth range.
     - interpolation_method: Method of interpolation (e.g., 'linear', 'nearest', 'cubic').
                             Default is 'linear'.
-    
+
     Returns:
     - interpolated_values: Extracted and interpolated values at the specified lat/lon and within the depth range.
     """
@@ -257,27 +264,22 @@ def extract_values(dataset, lat, lon, depth_range, interpolation_method='linear'
     # Interpolate values at the given lat and lon with the chosen interpolation method
     if grid_ref == "latitude_longitude":
         interpolated_values = sliced_dataset.interp(
-            latitude=lat,
-            longitude=lon,
-            method=interpolation_method
+            latitude=lat, longitude=lon, method=interpolation_method
         )
         logger.debug(f"\n\n\n{grid_ref}>>>>>>>>>{interpolated_values}")
     else:
         if None in (utm_zone, ellipsoid):
             message = f"[ERR] for grid_ref: {grid_ref}, utm_zone and ellipsoid are required. Current values: {utm_zone}, {ellipsoid}!"
             logger.error(message)
-            raise
+            return None
 
-        x, y = project_lonlat_utm(
-            lon, lat, utm_zone, ellipsoid=ellipsoid
-        )
+        x, y = project_lonlat_utm(lon, lat, utm_zone, ellipsoid=ellipsoid)
 
         # Define a path dataset for interpolation
         interpolated_values = dataset.interp(x=x, y=y, method=interpolation_method)
         logger.debug(f"\n\n\n{grid_ref}>>>>>>>>>{interpolated_values}")
 
     return interpolated_values
-
 
 
 def interpolate_path(
@@ -570,6 +572,7 @@ def models_drop_down(required_variable: Optional[str] = None):
     logger.debug(f"dropdown_html {dropdown_html}")
     return dropdown_html
 
+
 @router.get("/get-token")
 async def get_cesium_key(request: Request):
     """This must be secured lated to avoid external"""
@@ -582,6 +585,7 @@ async def get_cesium_key(request: Request):
         CESIUM_KEYS = json.loads(os.getenv("CESIUM_KEYS"))
         access_token = CESIUM_KEYS["cesium_access_token"]
         return {"token": access_token}
+
 
 # Route to display the table of JSON files with auxiliary information hidden and filtering options.
 @router.get("/list_filtered_json_files/{selected_model}", response_class=HTMLResponse)
@@ -649,12 +653,8 @@ async def list_table(request: Request, selected_model: str):
 # Route to display the table of JSON files with some data hidden.
 @router.get("/list_json_files/{selected_model}", response_class=HTMLResponse)
 def list_table(request: Request, selected_model: str):
-    header_style = (
-        "background-color: rgba(0, 79, 89, 0.8); color:white;font-size:10pt;"
-    )
-    checkbox_style = (
-        "background-color: rgba(0, 79, 89, 0.8); color:white; font-size:10pt; border: none; padding: 5px;"
-    )
+    header_style = "background-color: rgba(0, 79, 89, 0.8); color:white;font-size:10pt;"
+    checkbox_style = "background-color: rgba(0, 79, 89, 0.8); color:white; font-size:10pt; border: none; padding: 5px;"
 
     # Add a checkbox for toggling visibility.
     html_content = f"""
@@ -750,9 +750,7 @@ def list_table(request: Request, selected_model: str):
 
     html_content += "</table></div>"
 
-
     return html_content
-
 
 
 def project_lonlat_utm(
@@ -810,7 +808,20 @@ def get_colormap_names():
 @router.get("/colors", response_class=HTMLResponse)
 async def color_dropdown():
     default = "red"
-    colors = sorted(["red", "green", "blue", "yellow", "orange","cyan", "magenta", "purple", "brown", "black"])
+    colors = sorted(
+        [
+            "red",
+            "green",
+            "blue",
+            "yellow",
+            "orange",
+            "cyan",
+            "magenta",
+            "purple",
+            "brown",
+            "black",
+        ]
+    )
     options_html = ""
 
     # Add continuous colors
@@ -823,6 +834,7 @@ async def color_dropdown():
             {options_html}
         </select>"""
     return html_content
+
 
 @router.get("/colormaps", response_class=HTMLResponse)
 async def colormap_dropdown():
@@ -885,7 +897,7 @@ async def depth_profiles(request: Request):
         logger.debug(
             f"converting the depth units {plot_data['depth']},\nunits: {plot_data['depth'].attrs['units']}"
         )
-        
+
         # Validate depth unit conversion
         depth_unit_standard, depth_factor = unit_conversion_factor(
             plot_data["depth"].attrs["units"], units
@@ -893,7 +905,9 @@ async def depth_profiles(request: Request):
         if depth_factor is None:
             logger.error(f"Invalid depth conversion factor: {depth_factor}")
             return Response(
-                content=create_error_image(f"Invalid depth conversion factor for units {units}"),
+                content=create_error_image(
+                    f"Invalid depth conversion factor for units {units}"
+                ),
                 media_type="image/png",
             )
 
@@ -904,26 +918,36 @@ async def depth_profiles(request: Request):
         if var_factor is None:
             logger.error(f"Invalid variable conversion factor: {var_factor}")
             return Response(
-                content=create_error_image(f"Invalid variable conversion factor for units {units}"),
+                content=create_error_image(
+                    f"Invalid variable conversion factor for units {units}"
+                ),
                 media_type="image/png",
             )
-        
+
         logger.debug(
             f"depth units: {plot_data['depth'].attrs['units']},  {depth_factor}"
         )
         plot_data["depth"].attrs["units"] = depth_unit_standard
+        down_factor = -1
+        if "positive" in plot_data["depth"].attrs:
+            if plot_data["depth"].attrs["positive"] == "up":
+                down_factor = 1
         plot_data[plot_var].attrs["units"] = var_unit_standard
-        
+
         x_label = f"{plot_data[plot_var].attrs['long_name']} ({var_unit_standard})"
         y_label = f"{plot_data['depth'].attrs['long_name']} ({depth_unit_standard})"
 
         plot_data["depth"] = plot_data["depth"] * depth_factor
         plot_data["depth"].attrs["units"] = units
 
-        plot_data = plot_data.where(
-            (plot_data.depth >= float(depth[0])) & (plot_data.depth <= float(depth[1])),
-            drop=True,
-        ) * var_factor
+        plot_data = (
+            plot_data.where(
+                (plot_data.depth >= float(depth[0]))
+                & (plot_data.depth <= float(depth[1])),
+                drop=True,
+            )
+            * var_factor
+        )
     except Exception as ex:
         logger.error(f"[ERR] {ex}", exc_info=True)
         return Response(
@@ -957,7 +981,7 @@ async def depth_profiles(request: Request):
             start[0],
             start[1],
             depth,
-            grid_ref = grid_ref,
+            grid_ref=grid_ref,
             interpolation_method=interp_type,
             utm_zone=meta["utm_zone"],
             ellipsoid=meta["ellipsoid"],
@@ -967,23 +991,29 @@ async def depth_profiles(request: Request):
         logger.error(message)
         return Response(content=create_error_image(message), media_type="image/png")
 
-    logger.debug(f"plot_data after cross_section: plot_data:{plot_data[plot_var].attrs}")
-    logger.debug(f"plot_data values of {plot_var} after cross_section: plot_data:{plot_data[plot_var].values}")
+    logger.debug(
+        f"plot_data after cross_section: plot_data:{plot_data[plot_var].attrs}"
+    )
+    logger.debug(
+        f"plot_data values of {plot_var} after cross_section: plot_data:{plot_data[plot_var].values}"
+    )
 
     data_to_plot = plot_data[plot_var]
 
     logger.info(f"[INFO] Cross-section input: {items_dict}")
-    data_to_plot["depth"] = data_to_plot["depth"] * -1
+    data_to_plot["depth"] = data_to_plot["depth"] * down_factor
     logger.debug(f"data_to_plot:{data_to_plot}")
-    
+
     try:
         # Extract the x-axis (distance) and y-axis (depth) values
         x_values = data_to_plot.values
-        y_values = data_to_plot['depth'].values
+        y_values = data_to_plot["depth"].values
         logger.debug(f"x_values: {x_values}")
         logger.debug(f"y_values: {y_values}")
 
-        data_values = data_to_plot.values  # Assuming data_to_plot is a 2D array-like structure
+        data_values = (
+            data_to_plot.values
+        )  # Assuming data_to_plot is a 2D array-like structure
 
         plt.plot(x_values, y_values, linestyle="--", marker="o", color=color)
         # Invert the y-axis (depth increasing downward)
@@ -1004,8 +1034,10 @@ async def depth_profiles(request: Request):
             content=create_error_image(f"Invalid depth range: {depth}"),
             media_type="image/png",
         )
-        
-    plt.ylim(-depth[1], -depth[0])
+    if down_factor == -1:
+        plt.ylim(down_factor * depth[1], down_factor * depth[0])
+    else:
+        plt.ylim(depth[0], depth[1])
 
     # Handle custom y-axis labels
     labels = [item.get_text() for item in plt.gca().get_yticklabels()]
@@ -1015,7 +1047,9 @@ async def depth_profiles(request: Request):
     new_labels = []
     for label in labels:
         try:
-            new_labels.append(custom_formatter(-1.0 * float(label.replace("−", "-"))))
+            new_labels.append(
+                custom_formatter(down_factor * float(label.replace("−", "-")))
+            )
         except ValueError:
             new_labels.append(label)  # If not numeric, keep the label as-is
 
@@ -1051,6 +1085,7 @@ async def depth_profiles(request: Request):
 
     # Return both the plot and data as Base64-encoded strings
     return JSONResponse(content=content)
+
 
 # Plot an interpolated cross-section.
 @router.route("/xsection3d", methods=["POST"])
@@ -1217,8 +1252,14 @@ async def xsection(request: Request):
         data_to_plot.attrs["units"] = unit_standard
 
         logger.info(f"[INFO] Cross-section input: {items_dict}")
+
+        down_factor = -1
+        if "positive" in plot_data["depth"].attrs:
+            if plot_data["depth"].attrs["positive"] == "up":
+                down_factor = 1
         # logger.info(f"[INFO] Cross-section input: {items_dict['data_file']}, start: {start}, end: {end}, step: {steps}, interp_type: {interp_type}, plot_var: {plot_var}")
-        data_to_plot["depth"] = data_to_plot["depth"] * -1
+        data_to_plot["depth"] = data_to_plot["depth"] * down_factor
+
         logger.debug(f"data_to_plot:{data_to_plot}")
         try:
             if vmin and vmax:
@@ -1254,7 +1295,10 @@ async def xsection(request: Request):
 
         # Set the depth limits for display.
         logger.warning(f"Depth limits:{depth}")
-        plt.ylim(-depth[1], -depth[0])
+        if down_factor == -1:
+            plt.ylim(-depth[1], -depth[0])
+        else:
+            plt.ylim(depth[0], depth[1])
 
         # plt.gca().invert_yaxis()  # Invert the y-axis to show depth increasing downwards
         # Getting current y-axis tick labels
@@ -1264,7 +1308,11 @@ async def xsection(request: Request):
         # Assuming the labels are numeric, convert them to float, multiply by -1, and set them back.
         # If labels are not set or are custom, you might need to adjust this part.
         new_labels = [
-            custom_formatter(-1.0 * float(label.replace("−", "-"))) if label else 0.0
+            (
+                custom_formatter(down_factor * float(label.replace("−", "-")))
+                if label
+                else 0.0
+            )
             for label in labels
         ]  # Handles empty labels as well
 
@@ -1466,7 +1514,7 @@ async def depthslice(request: Request):
             else:
                 new_depth.attrs["long_name"] = (
                     f"{new_depth.attrs['variable']} [{unit_standard}]"
-                )                
+                )
 
             # Replace the old 'depth' coordinate with the new one
             plot_data = plot_data.assign_coords(depth=new_depth)
@@ -1795,9 +1843,7 @@ async def depthslice(request: Request):
             return Response(content=create_error_image(message), media_type="image/png")
     # Interpolation.
     else:
-        logger.info(
-            f"[INFO] grid_ref: {grid_ref}, plot_grid_ref: {plot_grid_ref}"
-        )
+        logger.info(f"[INFO] grid_ref: {grid_ref}, plot_grid_ref: {plot_grid_ref}")
 
         # If you're working with longitude and latitude
         if grid_ref == "latitude_longitude":
@@ -1839,19 +1885,11 @@ async def depthslice(request: Request):
         logger.info(f"[INFO] vmin, vmax (1): ", vmin, vmax)
 
         if grid_ref == plot_grid_ref:
-            x_label = plot_data[grid_ref_dict[plot_grid_ref]["x"]].attrs[
-                "long_name"
-            ]
-            y_label = plot_data[grid_ref_dict[plot_grid_ref]["y"]].attrs[
-                "long_name"
-            ]
+            x_label = plot_data[grid_ref_dict[plot_grid_ref]["x"]].attrs["long_name"]
+            y_label = plot_data[grid_ref_dict[plot_grid_ref]["y"]].attrs["long_name"]
         else:
-            x_label = plot_data[grid_ref_dict[plot_grid_ref]["x2"]].attrs[
-                "long_name"
-            ]
-            y_label = plot_data[grid_ref_dict[plot_grid_ref]["y2"]].attrs[
-                "long_name"
-            ]
+            x_label = plot_data[grid_ref_dict[plot_grid_ref]["x2"]].attrs["long_name"]
+            y_label = plot_data[grid_ref_dict[plot_grid_ref]["y2"]].attrs["long_name"]
         # Geographic or projected coordinates?
         if plot_grid_ref == "latitude_longitude":
             # Calculate the correct aspect ratio

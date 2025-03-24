@@ -13,37 +13,97 @@
 </div>
 -->
 <div class="container">
-
-    <h3>How to Submit a Model or Request Help</h3>
+    <h2>How to Submit a Model or Request Help</h2>
+    This documentation provides step-by-step guidance for:
     <ul>
-        <li>For information on how to contribute your Cascadia Earth model to CRESCENT, visit our <a
-                href="https://cascadiaquakes.github.io/cvm-tools-book/contribution_guidelines.html"
-                target="_blank">Model Contribution Guidelines</a> page.</li>
-        <br />
-        <li>To ask questions regarding CVM web/tools, follow the steps outlined below:
-            <ol>
-                <li><strong>Go to the CRESCENT-CVM GitHub Issue Page</strong> &mdash;
-                    <a href="https://github.com/cascadiaquakes/CRESCENT-CVM/issues" class="button" target="_blank">Click
-                        here</a> to be
-                    taken directly to our GitHub issue tracker.
-                </li>
-                <li><strong>Create a New Issue</strong> &mdash;
-                    Once on the page, click on the "New Issue" button to create a new submission or help request.
-                </li>
-                <li><strong>Provide Details</strong> &mdash;
+        <li><strong>Requesting support or reporting issues</strong> related to CVM tool usage,
+            installation, or troubleshooting.</li>
+        <li><strong>Submitting a velocity model</strong> to the CRESCENT-CVM repository.</li>
+    </ul>
+    <br />
+    <div class="container">
+        <h3>1. Requesting General Help or Reporting Issues</h3>
+        <div>
+            If you encounter issues not related to velocity model submissions (e.g.,
+            questions about tool usage or installation), please follow these steps:
+            <h4>Step 1: Check Existing Documentation</h4>
+            <ul>
+                <li><strong>CVM Tools Book</strong>: Review the <a
+                        href="https://cascadiaquakes.github.io/cvm-tools-book/" target="_blank">CVM Tools Book</a> for
+                    comprehensive
+                    guidance.</li>
+                <li><strong>GitHub Issues</strong>: Search through previously closed issues on GitHub to
+                    see if your question has already been addressed.</li>
+                <a href="https://github.com/cascadiaquakes/CRESCENT-CVM/issues?q=is%3Aissue%20state%3Aclosed"
+                    target="_blank">View Closed Issues</a>
+            </ul>
+            <h4>Step 2: Create a Help Request on GitHub</h4>
+            <ul>
+                <li><strong>Navigate to the Issue Page</strong>: Visit the <a
+                        href="https://github.com/CascadiaQuakes/CRESCENT-CVM/issues" target="_blank">CRESCENT-CVM GitHub
+                        Issue
+                        Page</a>.</li>
+                <li><strong>Open a New Issue</strong>: Use a descriptive title (e.g., “Installation Error:
+                    CVM Tool”) and include:
                     <ul>
-                        <li>Include a brief description of your question or issue.</li>
-                        <li>Attach or link any relevant files, if applicable.</li>
+                        <li>Detailed error messages</li>
+                        <li>System setup information</li>
+                        <li>Steps you’ve already taken</li>
                     </ul>
                 </li>
-                <li><strong>Submit</strong> &mdash;
-                    After providing the necessary details, submit the issue. Our team will review your request and
-                    respond as soon as possible.
+            </ul>
+            <h4>Step 3: Engage with the Community</h4>
+            <ul>
+                <li>For more general or exploratory questions, consider starting a
+                    discussion in the GitHub Discussions section to gain broader input
+                    from the community.</li>
+            </ul>
+        </div>
+        <br />
+        <h3>2. Submitting a Velocity Model</h3>
+        <div>
+            Researchers looking to contribute a velocity model to the repository should
+            follow this process:
+            <h4>Step 1: Review Guidelines</h4>
+            <ul>
+                <li><strong>Review Guidelines</strong>: Visit the <a
+                        href="https://cascadiaquakes.github.io/cvm-tools-book/contribution_guidelines.html"
+                        target="_blank">CVM Model Contribution Guidelines</a> for
+                    detailed instructions.</li>
+                <li><strong>Prepare Your Model</strong>:</li>
+                <ul>
+                    <li>Convert your model from CSV to <strong>netCDF4</strong> or <strong>HDF5</strong> format.</li>
+                    <li>Refer to the sample model files in the sample-files folder of the
+                        cvm-tools GitHub repository to understand the required CSV
+                        format.</li>
+                    <li>Validate your model file using cvm-tools prior to submission.</li>
+                </ul>
+            </ul>
+            <h4>Step 2: Create a Submission Request on GitHub</h4>
+            <ul>
+                <li><strong>Open a New Issue:</strong>: Go to the <a
+                        href="https://github.com/CascadiaQuakes/CRESCENT-CVM/issues" target="_blank">CRESCENT-CVM GitHub
+                        Issue
+                        Page</a>.</li>
+                <li><strong>Title Your Issue</strong>: Use the format “Velocity Model Submission: [<i>Your
+                        Model Name</i>]”.
                 </li>
-            </ol>
-        </li>
-    </ul>
-    <p>We look forward to your submissions and are happy to assist with any questions!</p>
-
-</div>
-{%endblock%}
+                <li><strong>Describe Your Model</strong>: Provide a brief description of your model
+                    along with its intended use. Refer to the sample-files folder in the
+                    cvm-tools repository for examples of metadata descriptions.</li>
+            </ul>
+            <h4>Step 3: Provide a Download Link</h4>
+            <ul>
+                <li><strong>Public Access Requirement</strong>: Include a publicly accessible download
+                    link (e.g., Zenodo, Google Drive, or another repository).</li>
+                <li><strong>File Attachments</strong>: Do not attach model files directly to the GitHub
+                    issue.</li>
+            </ul>
+            <br />
+            <h2>Need Further Assistance?</h2>
+            <div>If you are unsure about where to direct your question or need additional
+                help, feel free to start a GitHub issue. Our team will guide you to the correct
+                resources or community discussions.</div>
+        </div>
+    </div>
+    {%endblock%}
