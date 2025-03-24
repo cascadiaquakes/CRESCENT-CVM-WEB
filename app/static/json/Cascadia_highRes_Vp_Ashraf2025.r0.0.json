@@ -1,0 +1,93 @@
+{
+    "model": "Cascadia_highRes_Vp_Ashraf2025",
+    "id": "Cascadia_highRes_Vp_Ashraf2025",
+    "title": "3D high-resolution P-wave velocity model",
+    "summary": "The study develops a high-resolution 3D P-wave velocity model of the south-central Cascadia subduction zone using wide-angle seismic refraction data from shipborne active-source seismic shots recorded on ocean-bottom seismometers and onshore seismic stations. A tomographic inversion approach incorporating travel-time data of multiple seismic phases (Pg, Pn, PmP) was used to resolve crustal and subducting slab structures, with iterative modeling to refine velocity distributions and slab topography.",
+    "reference": "Ashraf et al. (2025)",
+    "reference_pid": "doi:10.1029/2024JB029525",
+    "data_revision": "r0.1",
+    "version": "v0.0",
+    "Conventions": "CF-1.0",
+    "Metadata_Conventions": "Unidata Dataset Discovery v1.0",
+    "author_name": "Asif Ashraf",
+    "author_email": "aashraf@uoregon.edu",
+    "author_institution": "University of Oregon",
+    "author_url": "https://sites.google.com/view/geophyasif",
+    "repository_name": "EMC",
+    "repository_institution": "EarthScope",
+    "repository_pid": "doi:10.1029/2024JB029525",
+    "geospatial_lon_min": -126.25,
+    "geospatial_lon_max": -123.25,
+    "geospatial_lon_units": "degrees_east",
+    "geospatial_lon_resolution": 0.00015,
+    "geospatial_lat_min": 42.5,
+    "geospatial_lat_max": 44.09,
+    "geospatial_lat_units": "degrees_north",
+    "geospatial_lat_resolution": 0.0045,
+    "geospatial_vertical_min": -4.8,
+    "geospatial_vertical_max": 39.8,
+    "geospatial_vertical_units": "km",
+    "geospatial_vertical_positive": "down",
+    "keywords": "seismic,P-waves,tomography,Cascadia,subduction zone",
+    "acknowledgment": "Model was provided by Asif Ashraf of Department of Earth Sciences, University of Oregon",
+    "history": "[2024-01-03] Converted to netCDF via CRESCENT data tools.",
+    "comments": "CRESCENT CVM tools development project",
+    "data_layout": "vertex",
+    "grid_ref": "latitude_longitude",
+    "utm_zone": "10",
+    "ellipsoid": "WGS84",
+    "vars": [
+        "depth",
+        "latitude",
+        "longitude",
+        "easting",
+        "northing",
+        "Vp"
+    ],
+    "size_kb": 47773.95,
+    "data_vars": [
+        "Vp"
+    ],
+    "z_var": "depth",
+    "variables": {
+        "depth": {
+            "variable": "depth",
+            "positive": "down",
+            "standard_name": "depth",
+            "long_name": "depth below sea level",
+            "units": "km"
+        },
+        "latitude": {
+            "variable": "latitude",
+            "long_name": "Latitude; positive north",
+            "units": "degrees_north",
+            "standard_name": "latitude"
+        },
+        "longitude": {
+            "variable": "longitude",
+            "standard_name": "longitude",
+            "long_name": "Longitude; positive east",
+            "units": "degrees_east"
+        },
+        "easting": {
+            "variable": "easting",
+            "standard_name": "easting",
+            "long_name": "easting; UTM",
+            "units": "m"
+        },
+        "northing": {
+            "variable": "northing",
+            "long_name": "northing; UTM",
+            "units": "m",
+            "standard_name": "northing"
+        },
+        "Vp": {
+            "variable": "Vp",
+            "long_name": "P-wave velocity",
+            "display_name": "P-wave velocity (km/s)",
+            "grid_ref": "latitude_longitude",
+            "units": "km/s",
+            "data_source": "data-derived"
+        }
+    }
+}
