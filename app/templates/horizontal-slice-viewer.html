@@ -200,7 +200,7 @@
             <div>Horizontal-Slice Viewer</div>
             <div class="action_inner">
                 <!-- Form for horizontal-slice parameters input -->
-                <form action="/depth-slice-viewer" method="post" id="image-form">
+                <form action="/visualize-depth-slice-s3" method="post" id="image-form">
                     <div style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
 
                         <label for="data-file" style="font-weight:bold;">Model:</label>
@@ -210,6 +210,7 @@
                         <label for="title" style="font-weight:bold;">Plot title:</label>
                         <input type="text" id="title" name="title" style="width: 50%;">
                     </div>
+                    <input type="text" id="grid-ref" name="grid_ref" style="display:none" value="latitude_longitude">
                     <!-- Input fields for geographic bounds and slicing parameters -->
                     <div class="form-container">
                         <div class="form-column">
@@ -253,7 +254,6 @@
                                     <option value="none" selected>None</option>
                                     <option value="linear">Linear</option>
                                     <option value="nearest">Nearest neighbor</option>
-                                    <option value="cubic">Cubic</option>
 
                                 </select>
                             </div>
@@ -320,6 +320,13 @@
                                     settings:</label>
                                 <input type="checkbox" id="lock" name="lock">
                             </div>
+                            <div class="form-input">
+                                <div id="notes"></div>
+                            </div>
+                            <div class="form-input" style="display:none;">
+                                <label for="chunk-string">&nbsp; Chunks:</label>
+                                <input type="text" id="chunk-string" name="chunk_string" value="-">
+                            </div>
                         </div>
 
                     </div>
@@ -327,7 +334,7 @@
                     <div class="form-input"
                         style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
                         <button type="button" id="sync-to-iframe" class="button"
-                            style="width: 100px; width: 20%;border-radius: 15px;">Sync to
+                            style="width: 100px; width: 20%;border-radius: 15px;">Sync slice to
                             map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                         <button type="button" id="metadata-button" class="button"
                             style="width: 100px; width: 20%;border-radius: 15px;">Metadata</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -369,7 +376,7 @@
 <script>
     async function loadDropdown() {
         try {
-            const response = await fetch('/models_drop_down');
+            const response = await fetch('/data/models_drop_down_s3');
             if (response.ok) {
                 const dropdownHTML = await response.text();
                 document.getElementById('data-file').innerHTML = dropdownHTML;
@@ -455,9 +462,9 @@
 
                     // Read values from the iframe form
                     // Note that iframe units are in mks We have to convert, if in cgs.
-                    const sel = iframeDoc.getElementById('data-file')
-                    const selection = sel.options[sel.selectedIndex].text
-                    selectOptionByText(selection)
+                    //const sel = iframeDoc.getElementById('data-file')
+                    //const selection = sel.options[sel.selectedIndex].text
+                    //selectOptionByText(selection)
                     document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
                     document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
                     document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
@@ -610,8 +617,10 @@
     function updateFormFields(fileName) {
         const locked = document.getElementById('lock').checked;
         var vertical_units;
+        // Construct the API URL
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
 
-        fetch(fileName)
+        fetch(apiUrl)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -619,6 +628,16 @@
                 return response.json();
             })
             .then(data => {
+                if (!data.hasOwnProperty('size_kb')) {
+                    throw new Error("Missing required key: size_kb");
+                    return response.json();
+                }
+
+                showLoadingMessage({
+                    size_kb: data.size_kb,
+                    action: "creating visualization"
+                });
+
                 // Assuming the JSON structure matches your form fields' ids
                 for (const [key, value] of Object.entries(data)) {
                     if (key == "geospatial_lon_min") {
@@ -649,11 +668,40 @@
                             model = value
                         }
                     }
+                    else if (key == "grid_ref") {
+                        document.getElementById('grid-ref').value = value;
+                    }
+                    else if (key == "vars") {
+
+                        if (value.includes("latitude") && (value.includes("easting") || value.includes("y"))) {
+                            document.querySelector('#plot-grid-ref option[value="transverse_mercator"]').disabled = false;
+                            document.querySelector('#plot-grid-ref option[value="latitude_longitude"]').disabled = false;
+
+                        }
+                        else if (value.includes("latitude")) {
+                            document.querySelector('#plot-grid-ref option[value="transverse_mercator"]').disabled = true;
+                            document.querySelector('#plot-grid-ref option[value="latitude_longitude"]').disabled = false;
+                        }
+                        else if (value.includes("easting") || value.includes("y")) {
+                            document.querySelector('#plot-grid-ref option[value="latitude_longitude"]').disabled = true;
+                            document.querySelector('#plot-grid-ref option[value="transverse_mercator"]').disabled = false;
+                        }
+
+                        // Automatically select the first enabled option
+                        const select = document.getElementById("plot-grid-ref");
+                        for (let option of select.options) {
+                            if (!option.disabled) {
+                                select.value = option.value;
+                                break;
+                            }
+                        }
+                    }
                     else if (key == "z_var") {
                         document.getElementById('z-var').value = value;
                         const label = document.getElementById('depth-label');
                         label.textContent = capitalizeFirstCharacter(value) + ":";
-                        if (value != "depth") {
+                        // Interpolation allowed only for models with the z-axis as depth and not very large.
+                        if (value != "depth" || data.size_kb > 50000) {
                             var selectElement = document.getElementById("interpolation-method");
                             var options = selectElement.options;
 
@@ -775,7 +823,7 @@
         const regex = /.nc/i;
         var jsonFlename = filename.replace(regex, '.json')
         // Field is found, execute your function
-        jsonFlename = '../static/json/' + jsonFlename;
+        //jsonFlename = '../static/json/' + jsonFlename;
         updateFormFields(jsonFlename)
         // You can replace the console.log with any code to handle the change
 
@@ -808,7 +856,8 @@
                         const regex = /.nc/i;
                         const jsonFlename = dynamicField.value.replace(regex, '.json')
                         // Field is found, execute your function
-                        updateFormFields('../static/json/' + jsonFlename);
+                        //updateFormFields('../static/json/' + jsonFlename);
+                        updateFormFields(jsonFlename);
 
                         // Optionally, disconnect the observer if it's no longer needed
                         observer.disconnect();

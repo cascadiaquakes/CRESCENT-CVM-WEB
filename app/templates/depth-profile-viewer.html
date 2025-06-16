@@ -159,7 +159,7 @@
 
     <ul>
         <li><strong>Units:</strong> Select the units for display (km, kg, sec or m, g, sec combinations).</li>
-        <li><strong>Interpolation:</strong> Choose the interpolation method used to plot data (linear, nearest, cubic).
+        <li><strong>Interpolation:</strong> Choose the interpolation method used to plot data (linear, nearest).
         </li>
         <li><strong>Plot Color:</strong> Choose the lot color</a>.
         </li>
@@ -180,7 +180,7 @@
         <div>Depth-Profile Viewer</div>
         <div class="action_inner">
             <!-- Form for x-section parameters input -->
-            <form action="/profiles" method="post" id="image-form">
+            <form action="/visualize-depth-profiles-s3" method="post" id="image-form">
                 <input type="hidden" id="intersection-coords" name="intersection_coords" value="">
 
                 <div style="width: 100%;display: flex;flex-direction: row;justify-content: center; font-weight: bold">
@@ -191,6 +191,7 @@
                     <label for="title">Plot title:</label>
                     <input type="text" id="title" name="title" style="width: 50%;">
                 </div>
+                <input type="text" id="grid-ref" name="grid_ref" style="display:none" value="latitude_longitude">
                 <div class="form-container">
 
                     <div class="form-column">
@@ -210,6 +211,9 @@
                                 <option value="cgs">m.g.sec</option>
                             </select>
                         </div>
+                        <div class="form-input">
+                            <div id="notes"></div>
+                        </div>
 
                     </div>
                     <div class="form-column">
@@ -228,7 +232,6 @@
                             <select id="interpolation-method" name="interpolation_method">
                                 <option value="nearest">Nearest neighbor</option>
                                 <option value="linear">Linear</option>
-                                <option value="cubic">Cubic</option>
                             </select>
                         </div>
                         <div class="form-input">
@@ -265,14 +268,17 @@
                         </div>
                         <div style="clear: both;">
                         </div>
-
+                        <div class="form-input" style="display:none;">
+                            <label for="chunk-string">&nbsp; Chunks:</label>
+                            <input type="text" id="chunk-string" name="chunk_string" value="-">
+                        </div>
                     </div>
 
                 </div>
                 <!-- Submission button -->
                 <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
                     <button type="button" id="sync-to-iframe" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Sync
+                        style="width: 100px; width: 20%;border-radius: 15px;">Sync profile
                         to
                         map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <button type="button" id="metadata-button" class="button"
@@ -321,7 +327,7 @@
 <script>
     async function loadDropdown() {
         try {
-            const response = await fetch('/models_drop_down?required_variable=depth');
+            const response = await fetch('/data/models_drop_down_s3?required_variable=depth');
             if (response.ok) {
                 const dropdownHTML = await response.text();
                 document.getElementById('data-file').innerHTML = dropdownHTML;
@@ -411,9 +417,9 @@
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
                     // Read values from the iframe form
-                    const sel = iframeDoc.getElementById('data-file')
-                    const selection = sel.options[sel.selectedIndex].text
-                    selectOptionByText(selection)
+                    //const sel = iframeDoc.getElementById('data-file')
+                    //const selection = sel.options[sel.selectedIndex].text
+                    //selectOptionByText(selection)
                     document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
                     document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
                     document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value;
@@ -560,7 +566,9 @@
         const locked = document.getElementById('lock').checked;
         var vertical_units;
 
-        fetch(fileName)
+        // Construct the API URL
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
+        fetch(apiUrl)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -568,6 +576,11 @@
                 return response.json();
             })
             .then(data => {
+                showLoadingMessage({
+                    size_kb: data.size_kb,
+                    action: "creating visualization"
+                });
+
                 // Assuming the JSON structure matches your form fields' ids
                 for (const [key, value] of Object.entries(data)) {
                     if (key == "geospatial_lon_min") {
@@ -600,6 +613,9 @@
                             document.getElementById('title').value = value;
                             model = value
                         }
+                    }
+                    else if (key == "grid_ref") {
+                        document.getElementById('grid-ref').value = value;
                     }
 
                     else if (key == "data_vars") {
@@ -701,7 +717,6 @@
         const regex = /.nc/i;
         var jsonFlename = filename.replace(regex, '.json')
         // Field is found, execute your function
-        jsonFlename = '../static/json/' + jsonFlename;
         updateFormFields(jsonFlename)
         // You can replace the console.log with any code to handle the change
 
@@ -726,7 +741,7 @@
                         const regex = /.nc/i;
                         const jsonFlename = dynamicField.value.replace(regex, '.json')
                         // Field is found, execute your function
-                        updateFormFields('../static/json/' + jsonFlename);
+                        updateFormFields(jsonFlename);
 
                         // Optionally, disconnect the observer if it's no longer needed
                         observer.disconnect();

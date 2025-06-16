@@ -32,14 +32,6 @@ const boundaryLineWidth = [2, 0.5];
 const boundaryMarker = ["line"];
 
 
-var dataSources = [];
-const auxData = ["https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/cascadia_subduction_interface_temp.geojson", "/static/geojson/Hayesetal2018_slab2_v2018.geojson", "/static/geojson/McCroryetal_gmtcontour.geojson", "/static/geojson/Delphetal-2021.geojson"];
-const auxLabel = ["CFM - Cascadia Subduction Interface", "Hayes et al., 2018 Slab2", "McCrory et al., 2012 Juan de Fuca slab", "Delph et al., 2021 Modified McCrory et al 2012"];
-const auxColor = [Cesium.Color.GREEN, Cesium.Color.ORANGE, Cesium.Color.PINK, Cesium.Color.YELLOW];
-const auxFillOpacity = [0.3, 0.3, 0.3, 0.3];
-const auxLineWidth = [4, 4, 4, 4];
-const auxMarker = ["rectangle", "rectangle", "rectangle", "rectangle"];
-
 /*
 var data = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_traces.geojson', 'https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d.geojson'];
 var label = ['CRESCENT Cascadia Fault Traces', 'CRESCENT Cascadia Fault Surfaces', 'Earthquakes (M ≥ 4), Circle Size ∝ Magnitude'];

@@ -2,26 +2,25 @@ import os
 import sys
 import json
 import traceback
-import boto3
+
+import time
 
 from typing import Optional
 
-from fastapi import APIRouter, Request, HTTPException, Query, Request, Form
+from fastapi import APIRouter, Request, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 from fastapi.templating import Jinja2Templates
-from fastapi import FastAPI, Response
+from fastapi import Response
 from fastapi.responses import JSONResponse
 import numpy as np
 from PIL import Image, ImageDraw
 from io import BytesIO
-from utils.json_utilities import read_json_files
 import xarray as xr
 from pyproj import Proj, Geod
 from numpy import nanmin, nanmax
 
 # from metpy.interpolate import cross_section
 import base64
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -30,12 +29,18 @@ from datetime import datetime, timezone
 from matplotlib.ticker import FormatStrFormatter
 import matplotlib.colors as mcolors
 
+import fsspec
+
 import math
 import gc
 
 import urllib.parse
 from urllib.parse import urlencode
-from uuid import uuid4
+
+import boto3
+from botocore.exceptions import ClientError
+
+s3_client = boto3.client("s3")
 
 import logging
 
@@ -47,6 +52,14 @@ logger = logging.getLogger(__name__)
 
 from geographiclib.geodesic import Geodesic
 
+from constants import (
+    LOGO_FILE,
+    LOGO_INCH_OFFSET_BELOW,
+    CHUNKS,
+    BUCKET_NAME,
+    PREFIX,
+    VERSION,
+)
 
 router = APIRouter()
 
@@ -60,10 +73,18 @@ PARENT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, os.pardir))
 BASE_DIR = PARENT_DIR
 JSON_DIR = os.path.join(BASE_DIR, "static", "json")
 NETCDF_DIR = os.path.join(BASE_DIR, "static", "netcdf")
-LOGO_FILE = "static/images/Crescent_Logos_horizontal_transparent.png"
 
 # Logo placement in inches below the lower left corner of the plot area
 LOGO_INCH_OFFSET_BELOW = 0.5
+
+# Print all environment variables
+# Create a single string with all environment variables
+env_string = "\n".join(f"[ENV] {key}: {value}" for key, value in os.environ.items())
+
+# Get the ENVIRONMENT variable from the environment or default to 'dev'
+logger.info(f"[INFO] ENVIRONMENT: {env_string}")
+ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev?")
+logger.info(f"[INFO] ACTIVE_ENVIRONMENT: {ACTIVE_ENVIRONMENT}")
 
 grid_ref_dict = {
     "latitude_longitude": {
@@ -77,32 +98,6 @@ grid_ref_dict = {
 
 # Templates
 templates = Jinja2Templates(directory="templates")
-
-
-def points_to_array(points, delimiter=";"):
-    """Converts a string of coordinate points that are separated by a delimiter to array of points.'123,45;124,46' -> [[123,45],[124,46]]"""
-    points_list = points.strip().split(delimiter)
-    coord_list = list()
-    name_list = list()
-    name_info_list = list()
-    for point in points_list:
-        lon_lat, name, name_info = point.strip().split("|")
-        lon, lat = lon_lat.strip().split(",")
-        coord_list.append([float(lat), float(lon)])
-        name_list.append(name)
-        name_info_list.append(name_info)
-    return coord_list, name_list, name_info_list
-
-
-def points_to_dist(start, points_list):
-    """calculates distance of a series of points from a starting point."""
-    distance_list = list()
-    geod = Geod(ellps="WGS84")
-
-    for point in points_list:
-        _, _, distance = geod.inv(start[1], start[0], point[1], point[0])
-        distance_list.append(distance)
-    return distance_list
 
 
 def utc_now():
@@ -123,20 +118,39 @@ def utc_now():
 def standard_units(unit):
     """Check an input unit and return the corresponding standard unit."""
     unit = unit.strip().lower()
-    if unit in ["m", "meter"]:
+    if unit in ["m", "meter", "meters"]:
         return "m"
     elif unit in ["degrees", "degrees_east", "degrees_north"]:
         return "degrees"
-    elif unit in ["km", "kilometer"]:
+    elif unit in ["km", "kilometer", "kilometers"]:
         return "km"
     elif unit in ["g/cc", "g/cm3", "g.cm-3", "grams.centimeter-3"]:
         return "g/cc"
     elif unit in ["kg/m3", "kh.m-3"]:
         return "kg/m3"
-    elif unit in ["km/s", "kilometer/second", "km.s-1", "kilometer/s", "km/s"]:
+    elif unit in [
+        "km/s",
+        "kilometer/second",
+        "kilometers/second",
+        "kilometers/seconds",
+        "km.s-1",
+        "kilometer/s",
+        "kilometers/s",
+        "km/s",
+    ]:
         return "km/s"
-    elif unit in ["m/s", "meter/second", "m.s-1", "meter/s", "m/s"]:
+    elif unit in [
+        "m/s",
+        "meter/second",
+        "meters/second",
+        "meters/seconds",
+        "m.s-1",
+        "meters/s",
+        "m/s",
+    ]:
         return "m/s"
+    elif unit.strip().lower in ["%", "percent"]:
+        return "%"
     elif unit.strip().lower in ["", "none"]:
         return ""
 
@@ -188,48 +202,27 @@ def unit_conversion_factor(unit_in, unit_out):
         return unit_in, 1
 
 
-def dip_dir_to_azimuth(dip_dir):
-    """Convert dip direction to azimuth angle."""
-    cardinal_to_azimuth = {
-        "N": 0,
-        "NE": 45,
-        "E": 90,
-        "SE": 135,
-        "S": 180,
-        "SW": 225,
-        "W": 270,
-        "NW": 315,
-    }
-    if dip_dir.upper() == "VERTICAL":
-        return None  # Special case for vertical dip direction
-    return cardinal_to_azimuth[dip_dir.upper()]
-
-
-def calculate_azimuth(start_lat, start_lon, end_lat, end_lon):
-    """Calculate azimuth between two geographical points."""
-    geod = Geodesic.WGS84
-    inv = geod.Inverse(start_lat, start_lon, end_lat, end_lon)
-    return inv["azi1"]
-
-
-def project_feature(
-    dip, dip_azimuth, section_azimuth, upper_depth, lower_depth, start_lat, start_lon
-):
-    """Project the feature onto the section plane, accounting for dip."""
-    dip_angle = np.radians(dip)
-    vertical_range = lower_depth - upper_depth
-
-    if dip_azimuth is None:
-        # Vertical dip: horizontal positions are the same
-        horizontal_position_start = 0
-        horizontal_position_end = 0
+def get_chunks(chunk_string, grid_ref):
+    if grid_ref.lower() == "latitude_longitude":
+        keys = ["depth", "latitude", "longitude"]
     else:
-        relative_azimuth = np.radians(dip_azimuth - section_azimuth)
-        horizontal_offset = vertical_range / np.tan(dip_angle)
-        horizontal_position_start = 0  # Start position relative to start coordinates
-        horizontal_position_end = horizontal_offset * np.cos(relative_azimuth)
+        keys = ["depth", "y", "x"]
 
-    return horizontal_position_start, horizontal_position_end, upper_depth, lower_depth
+    if not chunk_string.strip():
+        chunks = {}
+    else:
+        chunk_list = chunk_string.strip().split(",")
+        if len(chunk_list) != 3:
+            chunks = {}
+        else:
+            chunks = {}
+            for i, chunk in enumerate(chunk_list):
+                if int(chunk) <= 0:
+                    continue
+                else:
+                    chunks[keys[i]] = int(chunk)
+    logger.debug(f"CHUNKS: {chunks}")
+    return chunks
 
 
 def extract_values(
@@ -323,7 +316,7 @@ def interpolate_path(
         if None in (utm_zone, ellipsoid):
             message = f"[ERR] for grid_ref: {grid_ref}, utm_zone and ellipsoid are required. Current values: {utm_zone}, {ellipsoid}!"
             logger.error(message)
-            raise
+            sys.exit(1)
         x_points = list()
         y_points = list()
         for index, lat_value in enumerate(lat_points):
@@ -340,6 +333,21 @@ def interpolate_path(
         interpolated_ds = ds.interp(x=path.x, y=path.y, method=method)
 
     return interpolated_ds, lat_points, lon_points
+
+
+def get_colormap_names():
+    """Returns a list of all colormap names in matplotlib."""
+    continuous_colormaps = []
+    discrete_colormaps = []
+
+    for cmap_name in plt.colormaps():
+        cmap = plt.get_cmap(cmap_name)
+        if isinstance(cmap, mcolors.ListedColormap):
+            discrete_colormaps.append(cmap_name)
+        else:
+            continuous_colormaps.append(cmap_name)
+
+    return continuous_colormaps, discrete_colormaps
 
 
 def project_lonlat_utm(
@@ -438,96 +446,18 @@ async def favicon():
 
 
 @router.get("/request", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def get_request(request: Request):
     return templates.TemplateResponse("form.html", {"request": request})
 
 
 @router.get("/news", response_class=HTMLResponse)
-async def read_root(request: Request):
+async def get_news(request: Request):
     return templates.TemplateResponse("news.html", {"request": request})
 
 
 @router.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
-
-
-"""
-@router.get("/depth-slice-viewer", response_class=HTMLResponse)
-async def read_page1(request: Request):
-    return templates.TemplateResponse("depth-slice-viewer.html", {"request": request})
-"""
-
-
-# Route to create html for model dropdown. This is a comprehensive list that includes other model parameters.
-@router.get("/models_drop_down_coverage", response_class=HTMLResponse)
-def models_drop_down_coverage(required_variable: Optional[str] = None):
-    logger.debug(f"Received required_variable: {required_variable}")
-
-    json_directory = JSON_DIR
-    coords_list = list()
-    model_list = list()
-    title_list = list()
-    logger.debug(f"Reading json_directory {json_directory}")
-    for filename in sorted(
-        [f for f in os.listdir(json_directory) if f.endswith(".json")]
-    ):
-        logger.debug(f"Reading {filename}")
-        # Opening the file and loading the data
-        with open(os.path.join(json_directory, filename), "r") as file:
-            json_data = json.load(file)
-            logger.debug(f"{json_data}")
-
-            # Skip the file if file does not have the require variable
-            if required_variable is not None:
-                if required_variable not in json_data["vars"]:
-                    logger.warning(
-                        f"[WARN] Model {filename} is rejected since the required variable '{required_variable}' was not in '{json_data['vars']}'"
-                    )
-                    continue
-
-            coords = list()
-            coords.append(str(json_data["geospatial_lon_min"]))
-            coords.append(str(json_data["geospatial_lon_max"]))
-            coords.append(str(json_data["geospatial_lat_min"]))
-            coords.append(str(json_data["geospatial_lat_max"]))
-
-            # Cesium takes depth in meters
-            if standard_units(json_data["geospatial_vertical_units"]) == "m":
-                depth_factor = 1000
-            elif standard_units(json_data["geospatial_vertical_units"]) == "km":
-                depth_factor = 1
-            else:
-                depth_factor = 1
-                logger.error(
-                    f"[ERR] Invalid depth unit of {json_data['geospatial_vertical_units']}"
-                )
-
-            coords.append(
-                str(float(json_data["geospatial_vertical_min"]) / depth_factor)
-            )
-            coords.append(
-                str(float(json_data["geospatial_vertical_max"]) / depth_factor)
-            )
-
-            model_coords = f"({','.join(coords)})"
-            if "title" in json_data:
-                title_list.append(json_data["title"])
-            else:
-                title_list.append("-")
-            model_name = json_data["model"]
-            coords_list.append(model_coords)
-            model_list.append(model_name)
-
-    # Prepare the HTML for the dropdown
-    dropdown_html = f'<option value="">None</option>'
-    for i, filename in enumerate(model_list):
-        selected = " selected" if i == 0 else ""
-        dropdown_html += (
-            f'<option value="{coords_list[i]}"{selected}>{model_list[i]}</option>'
-        )
-        logger.debug(f"dropdown_html {dropdown_html}")
-    return dropdown_html
 
 
 # Route to create html for model dropdown. A simple drop-down of the file names and model variables.
@@ -652,7 +582,7 @@ async def list_table(request: Request, selected_model: str):
 
 # Route to display the table of JSON files with some data hidden.
 @router.get("/list_json_files/{selected_model}", response_class=HTMLResponse)
-def list_table(request: Request, selected_model: str):
+def list_json_files(request: Request, selected_model: str):
     header_style = "background-color: rgba(0, 79, 89, 0.8); color:white;font-size:10pt;"
     checkbox_style = "background-color: rgba(0, 79, 89, 0.8); color:white; font-size:10pt; border: none; padding: 5px;"
 
@@ -753,58 +683,6 @@ def list_table(request: Request, selected_model: str):
     return html_content
 
 
-def project_lonlat_utm(
-    longitude, latitude, utm_zone, ellipsoid, xy_to_latlon=False, preserve_units=False
-):
-    """
-    Performs cartographic transformations. Converts from longitude, latitude to UTM x,y coordinates
-    and vice versa using PROJ (https://proj.org).
-
-     Keyword arguments:
-    longitude (scalar or array) – Input longitude coordinate(s).
-    latitude (scalar or array) – Input latitude coordinate(s).
-    xy_to_latlon (bool, default=False) – If inverse is True the inverse transformation from x/y to lon/lat is performed.
-    preserve_units (bool) – If false, will ensure +units=m.
-    """
-    P = Proj(
-        proj="utm",
-        zone=utm_zone,
-        ellps=ellipsoid,
-    )
-    # preserve_units=preserve_units,
-
-    x, y = P(
-        longitude,
-        latitude,
-        inverse=xy_to_latlon,
-    )
-    return x, y
-
-
-def read_image(image_path):
-    """Read an image file."""
-    try:
-        return plt.imread(image_path)
-    except Exception as e:
-        logger.error(f"[ERR] Failed to read image {image_path}: {e}")
-        raise
-
-
-def get_colormap_names():
-    """Returns a list of all colormap names in matplotlib."""
-    continuous_colormaps = []
-    discrete_colormaps = []
-
-    for cmap_name in plt.colormaps():
-        cmap = plt.get_cmap(cmap_name)
-        if isinstance(cmap, mcolors.ListedColormap):
-            discrete_colormaps.append(cmap_name)
-        else:
-            continuous_colormaps.append(cmap_name)
-
-    return continuous_colormaps, discrete_colormaps
-
-
 @router.get("/colors", response_class=HTMLResponse)
 async def color_dropdown():
     default = "red"
@@ -863,27 +741,41 @@ async def colormap_dropdown():
     return html_content
 
 
+"""
 if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="127.0.0.1", port=8000)
+"""
 
 
 # Plot an interpolated depth-profiles.
-@router.route("/profiles", methods=["POST"])
-async def depth_profiles(request: Request):
-    version = "v.2024.102"
+@router.route("/visualize-depth-profiles-s3", methods=["POST"])
+async def visualize_depth_profiles_s3(request: Request):
+    version = VERSION
+
+    # Record the start time.
+    start_time = time.time()
     version_label = f"{version}  {utc_now()['date_time']} UTC"
     form_data = await request.form()
 
     items_dict = dict(form_data.items())
-    logger.debug(f"POST: {items_dict}")
+
+    logger.debug(f">>>POST: {items_dict}")
+    chunk_string = "-1,-1,-1"
+    if "chunk_string" in items_dict:
+        chunk_string = items_dict["chunk_string"]
+        if chunk_string.strip() == "-":
+            chunk_string = CHUNKS["profile"]
+
+    data_grid_ref = "latitude_longitude"
+    if "grid_ref" in items_dict:
+        data_grid_ref = items_dict["grid_ref"]
 
     try:
         # lazy loading with Dask.
-        plot_data = xr.open_dataset(
-            os.path.join("static", "netcdf", items_dict["data_file"]), chunks={}
-        )
+        data_chunks = get_chunks(chunk_string, data_grid_ref)
+        plot_data = open_chunked_from_netcdf_s3(items_dict["data_file"], data_chunks)
         plot_var = items_dict["plot_variable"]
         start = [float(items_dict["start_lat"]), float(items_dict["start_lng"])]
         depth = [float(items_dict["start_depth"]), float(items_dict["end_depth"])]
@@ -968,9 +860,8 @@ async def depth_profiles(request: Request):
         logger.warning(
             f"[WARN] The 'grid_ref' attribute not found. Assuming geographic coordinate system"
         )
-        grid_ref = "latitude_longitude"
-    else:
-        grid_ref = meta["grid_ref"]
+
+    grid_ref = meta.get("grid_ref", "latitude_longitude")
 
     # Cross-section interpolation type.
     interp_type = items_dict["interpolation_method"]
@@ -983,8 +874,8 @@ async def depth_profiles(request: Request):
             depth,
             grid_ref=grid_ref,
             interpolation_method=interp_type,
-            utm_zone=meta["utm_zone"],
-            ellipsoid=meta["ellipsoid"],
+            utm_zone=meta.get("utm_zone", 10),
+            ellipsoid=meta.get("ellipsoid", "WGS84"),
         )
     except Exception as ex:
         message = f"[ERR] cross_section failed: {ex}\n{traceback.format_exc()}"
@@ -1020,7 +911,12 @@ async def depth_profiles(request: Request):
         plt.gca().set_aspect("auto")
         plt.gca().invert_yaxis()
 
-        plt.title(title)
+        if chunk_string:
+            time_to_here = time.time()
+            elapsed_time = f"netCDF on S3: {time_to_here - start_time :.2f} s chunk: {data_chunks} {data_grid_ref}"
+            plt.title(f"{title} ")  # {elapsed_time}")
+        else:
+            plt.title(title)
 
     except Exception as ex:
         message = f"[ERR] Bad data selection: {ex}\n{traceback.format_exc()}"
@@ -1088,20 +984,28 @@ async def depth_profiles(request: Request):
 
 
 # Plot an interpolated cross-section.
-@router.route("/xsection3d", methods=["POST"])
-async def xsection(request: Request):
-    version = "v.2024.102"
+@router.route("/visualize-xsection-3d-s3", methods=["POST"])
+async def visualize_xsection_3d_s3(request: Request):
+    version = VERSION
+    start_time = time.time()
     version_label = f"{version}  {utc_now()['date_time']} UTC"
     form_data = await request.form()
 
     items_dict = dict(form_data.items())
-    logger.debug(f"POST: {items_dict}")
+    logger.debug(f">>>POST: {items_dict}")
+    chunk_string = "-1,-1,-1"
+    if "chunk_string" in items_dict:
+        chunk_string = items_dict["chunk_string"]
+        if chunk_string.strip() == "-":
+            chunk_string = CHUNKS["xsection"]
 
+    data_grid_ref = "latitude_longitude"
+    if "grid_ref" in items_dict:
+        data_grid_ref = items_dict["grid_ref"]
     try:
         # lazy loading with Dask.
-        plot_data = xr.open_dataset(
-            os.path.join("static", "netcdf", items_dict["data_file"]), chunks={}
-        )
+        data_chunks = get_chunks(chunk_string, data_grid_ref)
+        plot_data = open_chunked_from_netcdf_s3(items_dict["data_file"], data_chunks)
         vertical_exaggeration = float(items_dict["vertical_exaggeration"])
 
         start = [float(items_dict["start_lat"]), float(items_dict["start_lng"])]
@@ -1151,287 +1055,282 @@ async def xsection(request: Request):
         logger.warning(
             f"[WARN] The 'grid_ref' attribute not found. Assuming geographic coordinate system"
         )
-        grid_ref = "latitude_longitude"
-    else:
-        grid_ref = meta["grid_ref"]
+    grid_ref = meta.get("grid_ref", "latitude_longitude")
 
-        # Cross-section interpolation type.
-        interp_type = items_dict["interpolation_method"]
+    # Cross-section interpolation type.
+    interp_type = items_dict["interpolation_method"]
 
-        # Steps in the cross-section.
-        steps = int(items_dict["num_points"])
-        logger.info(
-            f"[INFO] cross_section start:{start}, end: {end}, steps: {steps}, interp_type: {interp_type}, plot_data: {plot_data}"
+    # Steps in the cross-section.
+    steps = int(items_dict["num_points"])
+    logger.info(
+        f"[INFO] cross_section start:{start}, end: {end}, steps: {steps}, interp_type: {interp_type}, plot_data: {plot_data}"
+    )
+    # Extract the cross-section.
+    logger.info(
+        f"[INFO] Before cross_section (plot_data,start,end,steps,interp_type:)\n{plot_data},{start},{end},{steps},{interp_type}"
+    )
+    try:
+        plot_data, latitudes, longitudes = interpolate_path(
+            plot_data,
+            start,
+            end,
+            num_points=steps,
+            method=interp_type,
+            grid_ref=grid_ref,
+            utm_zone=meta.get("utm_zone", 10),
+            ellipsoid=meta.get("ellipsoid", "WGS84"),
         )
-        # Extract the cross-section.
-        logger.info(
-            f"[INFO] Before cross_section (plot_data,start,end,steps,interp_type:)\n{plot_data},{start},{end},{steps},{interp_type}"
-        )
-        try:
-            plot_data, latitudes, longitudes = interpolate_path(
-                plot_data,
-                start,
-                end,
-                num_points=steps,
-                method=interp_type,
-                grid_ref=grid_ref,
-                utm_zone=meta["utm_zone"],
-                ellipsoid=meta["ellipsoid"],
+
+    except Exception as ex:
+        message = f"[ERR] cross_section failed: {ex}\n{traceback.print_exc()}"
+        logger.error(message)
+        return Response(content=create_error_image(message), media_type="image/png")
+
+    plot_var = items_dict["plot_variable"]
+
+    logger.debug(f"After cross_section: plot_data:{plot_data[plot_var]}")
+    logger.debug(f"After cross_section: plot_data:{plot_data[plot_var].values}")
+    # Extract latitude and longitude from your cross-section data
+    # latitudes = plot_data['latitude'].values
+    # longitudes = plot_data['longitude'].values
+
+    # If the original is not geographic, going outside the model coverage will result in NaN values.
+    # Recompute these using the primary coordinates.
+    # for _index, _lon in enumerate(plot_data['latitude'].values):
+    #     if  np.isnan(_lon):
+    #         plot_data['longitude'].values[_index], plot_data['latitude'].values[_index] = project_lonlat_utm(
+    #         plot_data['x'].values[_index], plot_data['y'].values[_index], utm_zone, meta["ellipsoid"], xy_to_latlon=True)
+
+    # Geod object for WGS84 (a commonly used Earth model)
+    geod = Geod(ellps="WGS84")
+
+    # Calculate distances between consecutive points
+    _, _, distances = geod.inv(
+        longitudes[:-1], latitudes[:-1], longitudes[1:], latitudes[1:]
+    )
+
+    # Compute cumulative distance, starting from 0
+    cumulative_distances = np.concatenate(([0], np.cumsum(distances)))
+
+    if units == "mks":
+        cumulative_distances = cumulative_distances / 1000.0
+
+    logger.debug(f"units: {units}, cumulative_distances: {cumulative_distances}")
+
+    # Assuming 'plot_data' is an xarray Dataset or DataArray
+    # Create a new coordinate 'distance' based on the cumulative distances
+    plot_data = plot_data.assign_coords(distance=("points", cumulative_distances))
+
+    # If you want to use 'distance' as a dimension instead of 'index',
+    # you can swap the dimensions (assuming 'index' is your current dimension)
+    plot_data = plot_data.swap_dims({"points": "distance"})
+    logger.debug(f"plot_data:{plot_data}")
+    data_to_plot = plot_data[plot_var]
+
+    # Iterate through the model variables and plot each cross-section.
+    cmap = items_dict["colormap"]
+
+    # plot_data["depth"] = -plot_data["depth"]
+
+    vmin = items_dict["start_value"].strip()
+    if vmin == "auto":
+        vmin = ""
+
+    vmax = items_dict["end_value"].strip()
+    if vmax == "auto":
+        vmax = ""
+
+    logger.info(f"[INFO] plot_var units: {data_to_plot.attrs['units']}, units: {units}")
+    unit_standard, var_factor = unit_conversion_factor(
+        data_to_plot.attrs["units"], units
+    )
+    logger.debug(
+        f"plot_var units: {data_to_plot.attrs['units']}, units: {units} => unit_standard:{unit_standard}, var_factor: {var_factor}"
+    )
+    data_to_plot = data_to_plot * var_factor
+
+    data_to_plot.attrs["units"] = unit_standard
+
+    logger.info(f"[INFO] Cross-section input: {items_dict}")
+
+    down_factor = -1
+    if "positive" in plot_data["depth"].attrs:
+        if plot_data["depth"].attrs["positive"] == "up":
+            down_factor = 1
+    # logger.info(f"[INFO] Cross-section input: {items_dict['data_file']}, start: {start}, end: {end}, step: {steps}, interp_type: {interp_type}, plot_var: {plot_var}")
+    data_to_plot["depth"] = data_to_plot["depth"] * down_factor
+
+    logger.debug(f"data_to_plot:{data_to_plot}")
+    try:
+        if vmin and vmax:
+            vmin = min(float(items_dict["start_value"]), float(items_dict["end_value"]))
+            vmax = max(float(items_dict["start_value"]), float(items_dict["end_value"]))
+
+            data_to_plot.plot.contourf(
+                x="distance",
+                y="depth",
+                cmap=cmap,
+                vmin=float(vmin),
+                vmax=float(vmax),
             )
-
-        except Exception as ex:
-            message = f"[ERR] cross_section failed: {ex}\n{traceback.print_exc()}"
-            logger.error(message)
-            return Response(content=create_error_image(message), media_type="image/png")
-
-        plot_var = items_dict["plot_variable"]
-
-        logger.debug(f"After cross_section: plot_data:{plot_data[plot_var]}")
-        logger.debug(f"After cross_section: plot_data:{plot_data[plot_var].values}")
-        # Extract latitude and longitude from your cross-section data
-        # latitudes = plot_data['latitude'].values
-        # longitudes = plot_data['longitude'].values
-
-        # If the original is not geographic, going outside the model coverage will result in NaN values.
-        # Recompute these using the primary coordinates.
-        # for _index, _lon in enumerate(plot_data['latitude'].values):
-        #     if  np.isnan(_lon):
-        #         plot_data['longitude'].values[_index], plot_data['latitude'].values[_index] = project_lonlat_utm(
-        #         plot_data['x'].values[_index], plot_data['y'].values[_index], utm_zone, meta["ellipsoid"], xy_to_latlon=True)
-
-        # Geod object for WGS84 (a commonly used Earth model)
-        geod = Geod(ellps="WGS84")
-
-        # Calculate distances between consecutive points
-        _, _, distances = geod.inv(
-            longitudes[:-1], latitudes[:-1], longitudes[1:], latitudes[1:]
-        )
-
-        # Compute cumulative distance, starting from 0
-        cumulative_distances = np.concatenate(([0], np.cumsum(distances)))
-
-        if units == "mks":
-            cumulative_distances = cumulative_distances / 1000.0
-
-        logger.debug(f"units: {units}, cumulative_distances: {cumulative_distances}")
-
-        # Assuming 'plot_data' is an xarray Dataset or DataArray
-        # Create a new coordinate 'distance' based on the cumulative distances
-        plot_data = plot_data.assign_coords(distance=("points", cumulative_distances))
-
-        # If you want to use 'distance' as a dimension instead of 'index',
-        # you can swap the dimensions (assuming 'index' is your current dimension)
-        plot_data = plot_data.swap_dims({"points": "distance"})
-        logger.debug(f"plot_data:{plot_data}")
-        data_to_plot = plot_data[plot_var]
-
-        # Iterate through the model variables and plot each cross-section.
-        cmap = items_dict["colormap"]
-
-        # plot_data["depth"] = -plot_data["depth"]
-
-        vmin = items_dict["start_value"].strip()
-        if vmin == "auto":
-            vmin = ""
-
-        vmax = items_dict["end_value"].strip()
-        if vmax == "auto":
-            vmax = ""
-
-        logger.info(
-            f"[INFO] plot_var units: {data_to_plot.attrs['units']}, units: {units}"
-        )
-        unit_standard, var_factor = unit_conversion_factor(
-            data_to_plot.attrs["units"], units
-        )
-        logger.debug(
-            f"plot_var units: {data_to_plot.attrs['units']}, units: {units} => unit_standard:{unit_standard}, var_factor: {var_factor}"
-        )
-        data_to_plot = data_to_plot * var_factor
-
-        data_to_plot.attrs["units"] = unit_standard
-
-        logger.info(f"[INFO] Cross-section input: {items_dict}")
-
-        down_factor = -1
-        if "positive" in plot_data["depth"].attrs:
-            if plot_data["depth"].attrs["positive"] == "up":
-                down_factor = 1
-        # logger.info(f"[INFO] Cross-section input: {items_dict['data_file']}, start: {start}, end: {end}, step: {steps}, interp_type: {interp_type}, plot_var: {plot_var}")
-        data_to_plot["depth"] = data_to_plot["depth"] * down_factor
-
-        logger.debug(f"data_to_plot:{data_to_plot}")
-        try:
-            if vmin and vmax:
-                vmin = min(
-                    float(items_dict["start_value"]), float(items_dict["end_value"])
-                )
-                vmax = max(
-                    float(items_dict["start_value"]), float(items_dict["end_value"])
-                )
-
-                data_to_plot.plot.contourf(
-                    x="distance",
-                    y="depth",
-                    cmap=cmap,
-                    vmin=float(vmin),
-                    vmax=float(vmax),
-                )
-            elif vmin:
-                data_to_plot.plot.contourf(
-                    x="distance", y="depth", cmap=cmap, vmin=float(vmin)
-                )
-            elif vmax:
-                data_to_plot.plot.contourf(
-                    x="distance", y="depth", cmap=cmap, vmax=float(vmax)
-                )
-            else:
-                data_to_plot.plot.contourf(cmap=cmap)
-                # data_to_plot.plot.contourf(x="distance", y="depth", cmap=cmap)
-        except Exception as ex:
-            message = f"[ERR] Bad data selection: {ex}\n{traceback.print_exc()}"
-            logger.error(message)
-            return Response(content=create_error_image(message), media_type="image/png")
-
-        # Set the depth limits for display.
-        logger.warning(f"Depth limits:{depth}")
-        if down_factor == -1:
-            plt.ylim(-depth[1], -depth[0])
+        elif vmin:
+            data_to_plot.plot.contourf(
+                x="distance", y="depth", cmap=cmap, vmin=float(vmin)
+            )
+        elif vmax:
+            data_to_plot.plot.contourf(
+                x="distance", y="depth", cmap=cmap, vmax=float(vmax)
+            )
         else:
-            plt.ylim(depth[0], depth[1])
+            data_to_plot.plot.contourf(cmap=cmap)
+            # data_to_plot.plot.contourf(x="distance", y="depth", cmap=cmap)
+    except Exception as ex:
+        message = f"[ERR] Bad data selection: {ex}\n{traceback.print_exc()}"
+        logger.error(message)
+        return Response(content=create_error_image(message), media_type="image/png")
 
-        # plt.gca().invert_yaxis()  # Invert the y-axis to show depth increasing downwards
-        # Getting current y-axis tick labels
-        labels = [item.get_text() for item in plt.gca().get_yticklabels()]
-        y_ticks = plt.gca().get_yticks()
+    # Set the depth limits for display.
+    logger.warning(f"Depth limits:{depth}")
+    if down_factor == -1:
+        plt.ylim(-depth[1], -depth[0])
+    else:
+        plt.ylim(depth[0], depth[1])
 
-        # Assuming the labels are numeric, convert them to float, multiply by -1, and set them back.
-        # If labels are not set or are custom, you might need to adjust this part.
-        new_labels = [
-            (
-                custom_formatter(down_factor * float(label.replace("−", "-")))
-                if label
-                else 0.0
-            )
-            for label in labels
-        ]  # Handles empty labels as well
+    # plt.gca().invert_yaxis()  # Invert the y-axis to show depth increasing downwards
+    # Getting current y-axis tick labels
+    labels = [item.get_text() for item in plt.gca().get_yticklabels()]
+    y_ticks = plt.gca().get_yticks()
 
-        # Setting new labels ( better to explicitly set both the locations of the ticks and their labels using
-        # set_yticks along with set_yticklabels.)
-        plt.gca().set_yticks(y_ticks)
-        plt.gca().set_yticklabels(new_labels)
-
-        plt.ylabel(y_label)
-        plt.xlabel(x_label)
-
-        # Plotting using the current axis
-        fig = plt.gcf()  # Get current figure, if you already have a figure created
-        ax = plt.gca()  # Get current axes
-
-        # Adding vertical text for start and end locations
-        plt.text(
-            cumulative_distances[0],
-            1.05,
-            f"⟸{start}",
-            rotation=90,
-            transform=plt.gca().get_xaxis_transform(),
-            verticalalignment="bottom",
-            horizontalalignment="center",
-            fontsize=9,
+    # Assuming the labels are numeric, convert them to float, multiply by -1, and set them back.
+    # If labels are not set or are custom, you might need to adjust this part.
+    new_labels = [
+        (
+            custom_formatter(down_factor * float(label.replace("−", "-")))
+            if label
+            else 0.0
         )
-        plt.text(
-            cumulative_distances[-1],
-            1.05,
-            f"⟸{end}",
-            rotation=90,
-            transform=plt.gca().get_xaxis_transform(),
-            verticalalignment="bottom",
-            horizontalalignment="center",
-            fontsize=9,
-        )
+        for label in labels
+    ]  # Handles empty labels as well
 
-        # Adjust layout to make space for the legend
-        plt.subplots_adjust(bottom=0.3)
+    # Setting new labels ( better to explicitly set both the locations of the ticks and their labels using
+    # set_yticks along with set_yticklabels.)
+    plt.gca().set_yticks(y_ticks)
+    plt.gca().set_yticklabels(new_labels)
 
-        # Setting the aspect ratio to 1:1 ('equal')
-        plt.gca().set_aspect(vertical_exaggeration)
-        fig.tight_layout()
+    plt.ylabel(y_label)
+    plt.xlabel(x_label)
 
-        # Assuming `plt` is already being used for plotting
-        fig = plt.gcf()  # Get the current figure
-        axes = fig.axes  # Get all axes objects in the figure
+    # Plotting using the current axis
+    fig = plt.gcf()  # Get current figure, if you already have a figure created
+    ax = plt.gca()  # Get current axes
 
-        # The first axes object (`axes[0]`) is typically the main plot
-        # The last axes object (`axes[-1]`) is likely the colorbar, especially if it was added automatically
-        plot_axes = axes[0]
-        colorbar_axes = axes[-1]
-        colorbar_axes.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+    # Adding vertical text for start and end locations
+    plt.text(
+        cumulative_distances[0],
+        1.05,
+        f"⟸{start}",
+        rotation=90,
+        transform=plt.gca().get_xaxis_transform(),
+        verticalalignment="bottom",
+        horizontalalignment="center",
+        fontsize=9,
+    )
+    plt.text(
+        cumulative_distances[-1],
+        1.05,
+        f"⟸{end}",
+        rotation=90,
+        transform=plt.gca().get_xaxis_transform(),
+        verticalalignment="bottom",
+        horizontalalignment="center",
+        fontsize=9,
+    )
 
-        # Get the position of the plot's y-axis
-        plot_pos = plot_axes.get_position()
+    # Adjust layout to make space for the legend
+    plt.subplots_adjust(bottom=0.3)
 
-        # Adjust the colorbar's position
-        # The numbers here are [left, bottom, width, height]
-        # You may need to adjust these values based on your specific figure layout
-        new_cbar_pos = [plot_pos.x1 + 0.01, plot_pos.y0, 0.02, plot_pos.height]
-        colorbar_axes.set_position(new_cbar_pos)
+    # Setting the aspect ratio to 1:1 ('equal')
+    plt.gca().set_aspect(vertical_exaggeration)
+    fig.tight_layout()
 
+    # Assuming `plt` is already being used for plotting
+    fig = plt.gcf()  # Get the current figure
+    axes = fig.axes  # Get all axes objects in the figure
+
+    # The first axes object (`axes[0]`) is typically the main plot
+    # The last axes object (`axes[-1]`) is likely the colorbar, especially if it was added automatically
+    plot_axes = axes[0]
+    colorbar_axes = axes[-1]
+    colorbar_axes.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
+
+    # Get the position of the plot's y-axis
+    plot_pos = plot_axes.get_position()
+
+    # Adjust the colorbar's position
+    # The numbers here are [left, bottom, width, height]
+    # You may need to adjust these values based on your specific figure layout
+    new_cbar_pos = [plot_pos.x1 + 0.01, plot_pos.y0, 0.02, plot_pos.height]
+    colorbar_axes.set_position(new_cbar_pos)
+
+    if chunk_string:
+        time_to_here = time.time()
+        elapsed_time = f"netCDF on S3: {time_to_here - start_time :.2f} s chunk: {data_chunks} {data_grid_ref}"
+        plt.title(f"{title}")  #  {elapsed_time}")
+    else:
         plt.title(title)
 
-        ax = axes[0]
-        # Logo for the plot.
-        if os.path.isfile(LOGO_FILE):
+    ax = axes[0]
+    # Logo for the plot.
+    if os.path.isfile(LOGO_FILE):
 
-            plot_ax = axes[0]
-            logo = plt.imread(LOGO_FILE)
-            # Get aspect ratio of the logo to maintain proportion
-            aspect_ratio = logo.shape[1] / logo.shape[0]  # width / height
-            # Get aspect ratio of the logo to maintain proportion
-            aspect_ratio = logo.shape[1] / logo.shape[0]  # width / height
+        plot_ax = axes[0]
+        logo = plt.imread(LOGO_FILE)
+        # Get aspect ratio of the logo to maintain proportion
+        aspect_ratio = logo.shape[1] / logo.shape[0]  # width / height
+        # Get aspect ratio of the logo to maintain proportion
+        aspect_ratio = logo.shape[1] / logo.shape[0]  # width / height
 
-            # Desired logo height in inches and its normalized figure coordinates
-            logo_height_inches = 0.3  # Height of the logo in inches
-            logo_width_inches = (
-                logo_height_inches * aspect_ratio
-            )  # Calculate width based on aspect ratio
+        # Desired logo height in inches and its normalized figure coordinates
+        logo_height_inches = 0.3  # Height of the logo in inches
+        logo_width_inches = (
+            logo_height_inches * aspect_ratio
+        )  # Calculate width based on aspect ratio
 
-            # Normalize logo size relative to figure size
-            norm_logo_width = logo_width_inches / fig_width
-            norm_logo_height = logo_height_inches / fig_height
+        # Normalize logo size relative to figure size
+        norm_logo_width = logo_width_inches / fig_width
+        norm_logo_height = logo_height_inches / fig_height
 
-            # Calculate logo position in normalized coordinates
-            norm_offset_below = LOGO_INCH_OFFSET_BELOW / fig_height
+        # Calculate logo position in normalized coordinates
+        norm_offset_below = LOGO_INCH_OFFSET_BELOW / fig_height
 
-            # Position of logo's bottom edge
-            logo_bottom = (
-                plot_ax.get_position().ymin - norm_logo_height - norm_offset_below
-            )
-            logo_left = plot_ax.get_position().xmin  # Align left edges
+        # Position of logo's bottom edge
+        logo_bottom = plot_ax.get_position().ymin - norm_logo_height - norm_offset_below
+        logo_left = plot_ax.get_position().xmin  # Align left edges
 
-            # Create an axes for the logo at the calculated position
-            logo_ax = fig.add_axes(
-                [logo_left, logo_bottom, norm_logo_width, norm_logo_height]
-            )
-            logo_ax.imshow(logo)
-            logo_ax.axis("off")  # Hide the axis
+        # Create an axes for the logo at the calculated position
+        logo_ax = fig.add_axes(
+            [logo_left, logo_bottom, norm_logo_width, norm_logo_height]
+        )
+        logo_ax.imshow(logo)
+        logo_ax.axis("off")  # Hide the axis
 
-            # Add a line of text below the logo
-            text_y_position = -logo_bottom - norm_logo_height
-            logo_ax.text(
-                logo_left,
-                text_y_position,
-                f"{version_label}\n",
-                ha="left",
-                fontsize=6,
-                color="#004F59",
-            )
+        # Add a line of text below the logo
+        text_y_position = -logo_bottom - norm_logo_height
+        logo_ax.text(
+            logo_left,
+            text_y_position,
+            f"{version_label}\n",
+            ha="left",
+            fontsize=6,
+            color="#004F59",
+        )
 
-        # Save plot to BytesIO buffer and encode in Base64
-        plot_buf = BytesIO()
-        plt.savefig(plot_buf, format="png", bbox_inches="tight")
-        plot_buf.seek(0)
-        base64_plot = base64.b64encode(plot_buf.getvalue()).decode("utf-8")
-        plt.clf()
+    # Save plot to BytesIO buffer and encode in Base64
+    plot_buf = BytesIO()
+    plt.savefig(plot_buf, format="png", bbox_inches="tight")
+    plot_buf.seek(0)
+    base64_plot = base64.b64encode(plot_buf.getvalue()).decode("utf-8")
+    plt.clf()
 
     # Convert xarray dataset to CSV (for simplicity in this example)
     # You can also consider other formats like NetCDF for more complex data
@@ -1451,21 +1350,161 @@ async def xsection(request: Request):
     return JSONResponse(content=content)
 
 
+# Route to create html for model dropdown. This is a comprehensive list that includes other model parameters.
+@router.get("/models_drop_down_coverage", response_class=HTMLResponse)
+def models_drop_down_coverage(required_variable: Optional[str] = None):
+    logger.debug(f"Received required_variable: {required_variable}")
+
+    json_directory = JSON_DIR
+    coords_list = list()
+    model_list = list()
+    title_list = list()
+    logger.debug(f"Reading json_directory {json_directory}")
+    for filename in sorted(
+        [f for f in os.listdir(json_directory) if f.endswith(".json")]
+    ):
+        logger.debug(f"Reading {filename}")
+        # Opening the file and loading the data
+        with open(os.path.join(json_directory, filename), "r") as file:
+            json_data = json.load(file)
+            logger.debug(f"{json_data}")
+
+            # Skip the file if file does not have the require variable
+            if required_variable is not None:
+                if required_variable not in json_data["vars"]:
+                    logger.warning(
+                        f"[WARN] Model {filename} is rejected since the required variable '{required_variable}' was not in '{json_data['vars']}'"
+                    )
+                    continue
+
+            coords = list()
+            coords.append(str(json_data["geospatial_lon_min"]))
+            coords.append(str(json_data["geospatial_lon_max"]))
+            coords.append(str(json_data["geospatial_lat_min"]))
+            coords.append(str(json_data["geospatial_lat_max"]))
+
+            # Cesium takes depth in meters
+            if standard_units(json_data["geospatial_vertical_units"]) == "m":
+                depth_factor = 1000
+            elif standard_units(json_data["geospatial_vertical_units"]) == "km":
+                depth_factor = 1
+            else:
+                depth_factor = 1
+                logger.error(
+                    f"[ERR] Invalid depth unit of {json_data['geospatial_vertical_units']}"
+                )
+
+            coords.append(
+                str(float(json_data["geospatial_vertical_min"]) / depth_factor)
+            )
+            coords.append(
+                str(float(json_data["geospatial_vertical_max"]) / depth_factor)
+            )
+
+            model_coords = f"({','.join(coords)})"
+            if "title" in json_data:
+                title_list.append(json_data["title"])
+            else:
+                title_list.append("-")
+            model_name = json_data["model"]
+            coords_list.append(model_coords)
+            model_list.append(model_name)
+
+    # Prepare the HTML for the dropdown
+    dropdown_html = f'<option value="">None</option>'
+    for i, filename in enumerate(model_list):
+        selected = " selected" if i == 0 else ""
+        dropdown_html += (
+            f'<option value="{coords_list[i]}"{selected}>{model_list[i]}</option>'
+        )
+        logger.debug(f"dropdown_html {dropdown_html}")
+    return dropdown_html
+
+
+def open_chunked_from_netcdf_s3(file, chunks):
+    logger.debug(f"Open {file}")
+    bucket = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    prefix = PREFIX["netcdf"]
+    fs = fsspec.filesystem("s3", anon=False)
+    path = f"s3://{bucket}/{prefix}{file}"
+    of = fs.open(path)
+    ds = xr.open_dataset(of, engine="h5netcdf", chunks=chunks)  # "auto")  # {})
+    return ds
+
+
+@router.get("/load-aux-config-s3/")
+def load_aux_config_s3():
+    try:
+        # S3 configuration
+        S3_BUCKET = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+        prefix = PREFIX["config"]
+        S3_KEY = f"{prefix}/aux_config.json"
+
+        # Get the file from S3
+        s3_response = s3_client.get_object(Bucket=S3_BUCKET, Key=S3_KEY)
+        file_content = s3_response["Body"].read().decode("utf-8")
+        config_data = json.loads(file_content)
+
+        # Rebuild the parallel arrays
+        auxData = [item["url"] for item in config_data]
+        auxLabel = [item["label"] for item in config_data]
+        auxTitle = [item["title"] for item in config_data]
+        auxCitation = [item["citation"] for item in config_data]
+        auxFillOpacity = [item["fillOpacity"] for item in config_data]
+        auxLineWidth = [item["lineWidth"] for item in config_data]
+        auxDecimation = [item["decimation"] for item in config_data]
+        auxMarker = [item["marker"] for item in config_data]
+
+        return JSONResponse(
+            content={
+                "auxData": auxData,
+                "auxLabel": auxLabel,
+                "auxTitle": auxTitle,
+                "auxCitation": auxCitation,
+                "auxFillOpacity": auxFillOpacity,
+                "auxLineWidth": auxLineWidth,
+                "auxDecimation": auxDecimation,
+                "auxMarker": auxMarker,
+            }
+        )
+
+    except ClientError as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to load config from S3: {e}"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Plot an interpolated depth slice.
-@router.route("/depth-slice-viewer", methods=["POST"])
-async def depthslice(request: Request):
+@router.route("/visualize-depth-slice-s3", methods=["POST"])
+async def visualize_depth_slice_s3(request: Request):
     form_data = await request.form()
-    version = "v.2024.102"
+    start_time = time.time()
+    version = VERSION
     version_label = f"{version}  {utc_now()['date_time']} UTC"
 
     items_dict = dict(form_data.items())
-    logger.info(f"[INFO] POST: {items_dict}")
+
+    logger.debug(f">>>POST: {items_dict}")
+    chunk_string = "-1,-1,-1"
+    if "chunk_string" in items_dict:
+        chunk_string = items_dict["chunk_string"]
+        if chunk_string.strip() == "-":
+            chunk_string = CHUNKS["slice"]
+
+    data_grid_ref = "latitude_longitude"
+    if "grid_ref" in items_dict:
+        data_grid_ref = items_dict["grid_ref"]
 
     try:
+        """
         plot_data = xr.load_dataset(
             os.path.join("static", "netcdf", items_dict["data_file"])
         )
-        logger.debug(f"POST: {items_dict}")
+        """
+        data_chunks = get_chunks(chunk_string, data_grid_ref)
+        plot_data = open_chunked_from_netcdf_s3(items_dict["data_file"], data_chunks)
         start_lat = float(items_dict["start_lat"])
         start_lon = float(items_dict["start_lng"])
         end_lat = float(items_dict["end_lat"])
@@ -1512,9 +1551,7 @@ async def depthslice(request: Request):
                     f"{new_depth.attrs['standard_name']} [{unit_standard}]"
                 )
             else:
-                new_depth.attrs["long_name"] = (
-                    f"{new_depth.attrs['variable']} [{unit_standard}]"
-                )
+                new_depth.attrs["long_name"] = f"depth [{unit_standard}]"
 
             # Replace the old 'depth' coordinate with the new one
             plot_data = plot_data.assign_coords(depth=new_depth)
@@ -1529,9 +1566,7 @@ async def depthslice(request: Request):
                     "long_name"
                 ] = f"{plot_data[z_var].attrs['standard_name']} ({unit_standard})"
             else:
-                plot_data[z_var].attrs[
-                    "long_name"
-                ] = f"{plot_data[z_var].attrs['variable']} ({unit_standard})"
+                plot_data[z_var].attrs["long_name"] = f"{z_var} [{unit_standard}]"
         vmin = items_dict["start_value"].strip()
         if vmin == "auto":
             vmin = ""
@@ -1567,22 +1602,23 @@ async def depthslice(request: Request):
             media_type="image/png",
         )
 
-    utm_zone = None
     logger.debug(f"META: {meta}")
+
+    grid_ref = meta.get("grid_ref", "latitude_longitude")
     if "grid_ref" not in meta:
         logger.warning(
-            f"[WARN] The 'grid_ref' attribute not found. Assuming geographic coordinate system"
+            "[WARN] The 'grid_ref' attribute not found. Assuming geographic coordinate system"
         )
-        grid_ref = "latitude_longitude"
-    else:
-        grid_ref = meta["grid_ref"]
 
-    if "utm_zone" in meta:
-        utm_zone = meta["utm_zone"]
-        ellipsoid = meta["ellipsoid"]
+    if "utm_zone" not in meta:
+        logger.warning(
+            "[WARN] The 'utm_zone' attribute not found. Assuming utm_zone 10 and ellipsoid WGS84"
+        )
+    utm_zone = meta.get("utm_zone", 10)
+    ellipsoid = meta.get("ellipsoid", "WGS84")
 
-        logger.info(f"[INFO] UTM zone: {utm_zone}")
-        logger.info(f"[INFO] grid_ref: ", grid_ref)
+    logger.info(f"[INFO] UTM zone: {utm_zone}")
+    logger.info(f"[INFO] grid_ref: {grid_ref}")
 
     if grid_ref == "latitude_longitude":
         # Create a 2D grid of latitudes and longitudes
@@ -1591,7 +1627,7 @@ async def depthslice(request: Request):
         x_list, y_list = project_lonlat_utm(lon_list, lat_list, utm_zone, ellipsoid)
         x_grid, y_grid = np.meshgrid(lon_list, lat_list)
         logger.debug(
-            f"plot_grid_ref: {plot_grid_ref}, grid_ref:{grid_ref}\nlat_list:{lat_list[0]} to {lat_list[-1]}, lon_list: {lon_list[0]} to {lon_list[-1]}"
+            f"1>plot_grid_ref: {plot_grid_ref}, grid_ref:{grid_ref}\nlat_list:{lat_list[0]} to {lat_list[-1]}, lon_list: {lon_list[0]} to {lon_list[-1]}"
         )
 
     else:
@@ -1604,7 +1640,7 @@ async def depthslice(request: Request):
         )
         x_grid, y_grid = np.meshgrid(x_list, y_list)
         logger.debug(
-            f"plot_ grid_ref: {plot_grid_ref}, grid_ref:{grid_ref}\nx_list:{x_list[0]} to {x_list[-1]}, y_list: {y_list[0]} to {y_list[-1]}"
+            f"2>plot_ grid_ref: {plot_grid_ref}, grid_ref:{grid_ref}\nx_list:{x_list[0]} to {x_list[-1]}, y_list: {y_list[0]} to {y_list[-1]}"
         )
 
     # Iterate through the model variables and plot each cross-section.
@@ -2008,7 +2044,12 @@ async def depthslice(request: Request):
     colorbar_axes.set_position(new_cbar_pos)
     colorbar_axes.yaxis.set_major_formatter(FormatStrFormatter("%.2f"))
 
-    plt.title(title)
+    if chunk_string:
+        time_to_here = time.time()
+        elapsed_time = f"netCDF on S3: {time_to_here - start_time :.2f} s chunk: {data_chunks}, {data_grid_ref}"
+        plt.title(f"{title}")  #  {elapsed_time}")
+    else:
+        plt.title(title)
 
     ax = axes[0]
     ax.set_aspect(aspect_ratio)  # Set the aspect ratio to the calculated value
@@ -2122,290 +2163,3 @@ async def depthslice(request: Request):
 
     # Return both the plot and data as Base64-encoded strings
     return JSONResponse(content=content)
-
-
-@router.get("/slice-data")
-async def slice_data(
-    request: Request,
-    data_file: str,
-    start_lat: float,
-    start_lng: float,
-    end_lat: float,
-    end_lng: float,
-    start_depth: float,
-    lng_points: int,
-    lat_points: int,
-    output_grid_ref: str,
-    units: str,
-    variables: str,  # Multiple comma-separated values
-    output_format: str = Query(
-        "csv"
-    ),  # Add output_format argument with default value as "csv"
-    start_value: str = Query("auto"),
-    end_value: str = Query("auto"),
-    interpolation_method: str = Query("none"),
-):
-    """
-    Generate an interpolated depth slice from a CVM model and return the data in the specified format.
-
-    Args:
-        request (Request): The request object.
-        data_file (str): The path to the netCDF file.
-        start_lat (float): The starting latitude.
-        start_lng (float): The starting longitude.
-        end_lat (float): The ending latitude.
-        end_lng (float): The ending longitude.
-        start_depth (float): The depth for the slice.
-        lng_points (int): The number of longitude points.
-        lat_points (int): The number of latitude points.
-        output_grid_ref (str): The grid ref type (latitude_longitude or transverse_mercator).
-        units (str): The units of measurement.
-        variables (str): The variables to plot, comma-separated.
-        output_format (str, optional): The output format (csv, xarray, netcdf, geocsv). Defaults to "csv".
-        start_value (str, optional): The start value for the plot. Defaults to "auto".
-        end_value (str, optional): The end value for the plot. Defaults to "auto".
-        interpolation_method (str, optional): The interpolation method. Defaults to "none".
-
-    Returns:
-        Response: The response containing the requested data.
-    """
-    version = "v.2024.102"
-
-    try:
-        data_file = urllib.parse.unquote(data_file)  # Decode the URL-safe string
-        output_data = xr.load_dataset(os.path.join("static", "netcdf", data_file))
-        logger.info(f"[INFO] GET: {locals()}")
-
-        unit_standard, depth_factor = unit_conversion_factor(
-            output_data["depth"].attrs["units"], units
-        )
-        if depth_factor != 1:
-            new_depth_values = output_data["depth"] * depth_factor
-            new_depth = xr.DataArray(
-                new_depth_values, dims=["depth"], attrs=output_data["depth"].attrs
-            )
-            new_depth.attrs["units"] = unit_standard
-            if "standard_name" in new_depth.attrs:
-                new_depth.attrs["long_name"] = (
-                    f"{new_depth.attrs['standard_name']} [{unit_standard}]"
-                )
-            else:
-                new_depth.attrs["long_name"] = (
-                    f"{new_depth.attrs['variable']} [{unit_standard}]"
-                )
-            output_data = output_data.assign_coords(depth=new_depth)
-        else:
-            output_data.depth.attrs["units"] = unit_standard
-            if "standard_name" in output_data.depth.attrs:
-                output_data.depth.attrs["long_name"] = (
-                    f"{output_data.depth.attrs['standard_name']} ({unit_standard})"
-                )
-            else:
-                utput_data.depth.attrs["long_name"] = (
-                    f"{output_data.depth.attrs['variable']} ({unit_standard})"
-                )
-
-        vmin = None if start_value == "auto" else float(start_value)
-        vmax = None if end_value == "auto" else float(end_value)
-
-        meta = output_data.attrs
-
-        variables_list = variables.split(",")  # Split the variables by comma
-        selected_data_vars = output_data[variables_list]
-
-        # Apply unit conversion to each variable
-        for var in variables_list:
-            unit_standard, var_factor = unit_conversion_factor(
-                selected_data_vars[var].attrs["units"], units
-            )
-            selected_data_vars[var].data *= var_factor
-            selected_data_vars[var].attrs["units"] = unit_standard
-            selected_data_vars[var].attrs[
-                "display_name"
-            ] = f"{selected_data_vars[var].attrs['long_name']} [{unit_standard}]"
-
-    except Exception as ex:
-        logger.error(f"[ERR] {ex}")
-        return Response(
-            content=create_error_image(
-                f"[ERR] Bad selection: \n{ex}\n{traceback.print_exc()}"
-            ),
-            media_type="image/png",
-        )
-
-    try:
-        grid_ref = meta.get("grid_ref", "latitude_longitude")
-        utm_zone = meta.get("utm_zone")
-        ellipsoid = meta.get("ellipsoid")
-
-        if grid_ref == "latitude_longitude":
-            lon_list = np.linspace(start_lng, end_lng, lng_points).tolist()
-            lat_list = np.linspace(start_lat, end_lat, lat_points).tolist()
-            x_list, y_list = project_lonlat_utm(lon_list, lat_list, utm_zone, ellipsoid)
-            x_grid, y_grid = np.meshgrid(lon_list, lat_list)
-        else:
-            start_x, start_y = project_lonlat_utm(
-                start_lng, start_lat, utm_zone, ellipsoid
-            )
-            end_x, end_y = project_lonlat_utm(end_lng, end_lat, utm_zone, ellipsoid)
-            x_list = np.linspace(start_x, end_x, lng_points).tolist()
-            y_list = np.linspace(start_y, end_y, lat_points).tolist()
-            lon_list, lat_list = project_lonlat_utm(
-                x_list, y_list, utm_zone, ellipsoid, xy_to_latlon=True
-            )
-            x_grid, y_grid = np.meshgrid(x_list, y_list)
-
-        interp_type = interpolation_method
-
-        if interp_type == "none":
-            start_lat = closest(output_data["latitude"].data, start_lat)
-            end_lat = closest(output_data["latitude"].data, end_lat)
-            start_lng = closest(output_data["longitude"].data, start_lng)
-            end_lng = closest(output_data["longitude"].data, end_lng)
-            depth_closest = closest(list(output_data["depth"].data), start_depth)
-            selected_data_vars = selected_data_vars.where(
-                output_data.depth == depth_closest, drop=True
-            )
-            selected_data_vars = selected_data_vars.where(
-                (output_data.latitude >= start_lat)
-                & (output_data.latitude <= end_lat)
-                & (output_data.longitude >= start_lng)
-                & (output_data.longitude <= end_lng),
-                drop=True,
-            )
-            data_to_return = selected_data_vars
-        else:
-            interpolated_values_2d = {}
-            for var in variables_list:
-                if grid_ref == "latitude_longitude":
-                    interpolated_values_2d[var] = selected_data_vars[var].interp(
-                        latitude=lat_list,
-                        longitude=lon_list,
-                        depth=start_depth,
-                        method=interp_type,
-                    )
-                else:
-                    interpolated_values_2d[var] = selected_data_vars[var].interp(
-                        y=y_list, x=x_list, depth=start_depth, method=interp_type
-                    )
-
-            if any(
-                np.all(np.isnan(interpolated_values_2d[var])) and interp_type == "cubic"
-                for var in variables_list
-            ):
-                message = "[ERR] Data with NaN values. Can't use the cubic spline interpolation"
-                logger.error(message)
-                base64_plot = base64.b64encode(create_error_image(message)).decode(
-                    "utf-8"
-                )
-                plt.clf()
-                csv_buf = BytesIO()
-                selected_data_vars.to_dataframe().to_csv(csv_buf)
-                csv_buf.seek(0)
-                base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
-                content = {"image": base64_plot, "csv_data": base64_csv}
-                output_data.close()
-                del output_data
-                gc.collect()
-                return JSONResponse(content=content)
-            data_to_return = xr.Dataset(interpolated_values_2d)
-
-        unique_id = uuid4().hex
-        if output_format == "csv":
-            df = data_to_return.to_dataframe().reset_index()
-            csv_path = f"/tmp/plot_data_{unique_id}.csv"
-            df.to_csv(csv_path, index=False)
-            return FileResponse(
-                path=csv_path, filename="plot_data.csv", media_type="text/csv"
-            )
-        elif output_format == "xarray":
-            response_json = jsonable_encoder(data_to_return.to_dict())
-            return JSONResponse(content=response_json)
-        elif output_format == "netcdf":
-            netcdf_path = f"/tmp/plot_data_{unique_id}.nc"
-            data_to_return.to_netcdf(netcdf_path)
-            return FileResponse(
-                path=netcdf_path,
-                filename="plot_data.nc",
-                media_type="application/netcdf",
-            )
-        elif output_format == "geocsv":
-            df = data_to_return.to_dataframe().reset_index()
-            df.to_csv(csv_path, index=False)
-            geocsv_path = f"/tmp/plot_data_{unique_id}.geocsv"
-            df.to_csv(geocsv_path, index=False)
-            return FileResponse(
-                path=geocsv_path, filename="plot_data.geocsv", media_type="text/csv"
-            )
-        else:
-            raise HTTPException(
-                status_code=400, detail="Invalid output format specified"
-            )
-
-    except Exception as ex:
-        logger.error(f"[ERR] {ex}")
-        return Response(
-            content=create_error_image(f"[ERR] {ex}\n{traceback.print_exc()}"),
-            media_type="image/png",
-        )
-
-
-@router.post("/submitForm")
-async def submit_form(
-    name: str = Form(...),
-    institution: str = Form(...),
-    email: str = Form(...),
-    message: str = Form(...),
-):
-
-    try:
-        # Create SES client
-        AWS_REGION = "us-east-2"
-        SENDER_EMAIL = "manochehr.bahavar@earthscope.org"
-        RECIPIENT_EMAIL = "manochehr.bahavar@earthscope.org"
-        ses_client = boto3.client("ses", region_name=AWS_REGION)
-
-        # Email content
-        subject = "New Request from Form"
-        body_text = f"Name: {name}\nEmail: {email}\nMessage: {message}"
-        body_html = f"""<html>
-        <head></head>
-        <body>
-        <h1>New Request</h1>
-        <p><strong>Name:</strong> {name}</p>
-        <p><strong>Email:</strong> {email}</p>
-        <p><strong>Message:</strong> {message}</p>
-        </body>
-        </html>
-                    """
-
-        response = ses_client.send_email(
-            Destination={
-                "ToAddresses": [
-                    RECIPIENT_EMAIL,
-                ],
-            },
-            Message={
-                "Body": {
-                    "Html": {
-                        "Charset": "UTF-8",
-                        "Data": body_html,
-                    },
-                    "Text": {
-                        "Charset": "UTF-8",
-                        "Data": body_text,
-                    },
-                },
-                "Subject": {
-                    "Charset": "UTF-8",
-                    "Data": subject,
-                },
-            },
-            Source=SENDER_EMAIL,
-        )
-    except Exception as e:
-        # Log the exception if needed
-        logger.error(f"[ERR] Error sending email: {e}")
-    return HTMLResponse(content="<p>Form submitted successfully!</p>", status_code=200)
-
-    # return {"message": "Email sent successfully!"}

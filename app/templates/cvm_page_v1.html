@@ -4,12 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="/static/js/shared.js"></script>
     <title>CVM Web</title>
-    <link rel="icon" href="/static/favicon.ico" type="image/png">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="/static/css/cvm.css" />
-
     {% block style %}{% endblock %}
 </head>
 
@@ -20,7 +18,7 @@
 
             <div class="logo-container">
                 <a href="https://cascadiaquakes.org/" target="_blank" style="text-decoration: none;">
-                    <img src="/static/images/IMG_6459_NSF.png" alt="Logo" width="250px">
+                    <img src="/static/images/IMG_6459_NSF.png" alt="Logo" width="250px" />
                 </a>
                 <a href="https://cascadiaquakes.org/cvm" target="_blank" style="text-decoration: none;">
                     <div class="working-group-name">&nbsp;&nbsp;Community Velocity Model (CVM)</div>
@@ -97,11 +95,13 @@
             {% block filter %}{% endblock %}
         </div>
         <div class="left-right">
-            {% block leftpanel%}{% endblock %} {% block rightpanel%}{% endblock %} </div>
+            {% block leftpanel %}{% endblock %} {% block rightpanel %}{% endblock %} </div>
         <div class="footer">
             <!-- Footer content -->
         </div>
-        {% block scripts %}{% endblock %}
+        {% block scripts %}
+        <script src="/static/js/shared.js"></script>
+        {% endblock %}
     </div>
 
 </body>

@@ -39,8 +39,9 @@ function display_metadata() {
         const regex = /.nc/i;
         const jsonFlename = model.value.replace(regex, '.json')
         // Field is found, execute your function
-
-        fetch('../static/json/' + jsonFlename)
+        // Construct the API URL
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(jsonFlename)}`;
+        fetch(apiUrl)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -70,5 +71,59 @@ function toggleDescription(title) {
     } else {
         description.style.display = "none";
         //button.innerHTML = "&#9660;&nbsp;" + title; // Down arrow
+    }
+}
+
+
+//Large file animation/extraction message
+function showLoadingMessage(options = {}) {
+    const {
+        size_kb,
+        action = "processing",
+        threshold = 10000.0,
+        containerId = "loadingMessage",
+        notesId = "notes",
+        largeColor = "red",
+        normalColor = "black",
+        fontSize = "11px"
+    } = options;
+
+    const isLarge = size_kb !== undefined && size_kb >= threshold;
+    const color = isLarge ? largeColor : normalColor;
+
+    const mainMessage = isLarge
+        ? `Large file – ${action} may take time`
+        : `${action.charAt(0).toUpperCase() + action.slice(1)}&nbsp;`;
+
+    const blinkingSpan = `&nbsp;<span class="blinking-dots">...</span>working`;
+    const loadingHTML = `<b style="color:${color};font-size:${fontSize};">${mainMessage}${blinkingSpan}</b>`;
+
+    const container = document.getElementById(containerId);
+    if (container) {
+        container.innerHTML = loadingHTML;
+    } else {
+        console.warn(`Element with ID '${containerId}' not found.`);
+    }
+
+    const notesElem = document.getElementById(notesId);
+    if (notesElem) {
+        notesElem.innerHTML = isLarge
+            ? `<span style="color:${largeColor};font-size:${fontSize};">Note: Large file – ${action} may take time to complete.</span>`
+            : "";
+    }
+
+    // Inject blinking-dots style once
+    if (!document.getElementById("blinking-style")) {
+        const style = document.createElement("style");
+        style.id = "blinking-style";
+        style.innerHTML = `
+            .blinking-dots {
+                animation: blink 1s steps(1, start) infinite;
+            }
+            @keyframes blink {
+                50% { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
     }
 }

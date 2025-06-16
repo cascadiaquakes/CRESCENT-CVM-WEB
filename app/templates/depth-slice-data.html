@@ -265,7 +265,7 @@
                 <!-- Submission button -->
                 <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
                     <button type="button" id="sync-to-iframe" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Sync to
+                        style="width: 100px; width: 20%;border-radius: 15px;">Sync slice to
                         map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <button type="button" id="metadata-button" class="button"
                         style="width: 100px; width: 20%;border-radius: 15px; display: none;">Metadata</button><!--&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
@@ -356,7 +356,7 @@
             var vertical_units;
 
             // Construct the API URL
-            const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
 
             fetch(apiUrl)
                 .then(response => {
@@ -435,9 +435,9 @@
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
                     // Read values from the iframe form
-                    const sel = iframeDoc.getElementById('data-file')
-                    const selection = sel.options[sel.selectedIndex].text
-                    selectOptionByText(selection)
+                    //const sel = iframeDoc.getElementById('data-file')
+                    //const selection = sel.options[sel.selectedIndex].text
+                    //selectOptionByText(selection)
                     document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
                     document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
                     document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
@@ -649,7 +649,7 @@
         const locked = document.getElementById('lock').checked;
 
         // Construct the API URL
-        const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
 
         fetch(apiUrl)
             .then(response => {
@@ -661,11 +661,10 @@
             .then(data => {
                 // Note on the file size.
                 const encodedFilename = encodeURIComponent(fileName);
-                if (data.hasOwnProperty("size_kb")) {
-                    size_kb = parseFloat(data["size_kb"]);
-                    if (size_kb >= 10000.0) { document.getElementById('notes').innerHTML = "<b style='color:red;font-size: 9px;'>Warning: Large File Extraction" }
-
-                }
+                showLoadingMessage({
+                    size_kb: data.size_kb,
+                    action: "extracting data"
+                });
                 for (const [key, value] of Object.entries(data)) {
                     if (key == "geospatial_lon_min") {
                         if (!locked) document.getElementById('start-lng').value = value;

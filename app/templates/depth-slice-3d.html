@@ -76,58 +76,63 @@
         <div>
             <hr style="border-top: 1px solid #0000FF" />
         </div>
+        <div style=" font-weight: bold;">CVM:</div>
         <form id="iframe-form">
-            <div>
+            <div style="display:none">
                 <label for="data-file">CVM:</label>
-                <select id="data-file" name="data_file"></select>
+                <select id="data-file" name="data_file" disabled></select>
             </div>
             <div>&nbsp;</div>
             <div style="font-weight: bold;">Lower Left</div>
             <div class="sliderContainer">
-                <label class="sliderLabel">&nbsp; Latitude: <input type="range" id="minLatSlider" min="47" max="50.9"
-                        step="0.1" value="47"></label>
-                <span id="minLatValue">47</span>
+                <label class="sliderLabel" style="font-size:smaller;">&nbsp; Latitude: <input type="range"
+                        id="minLatSlider" min="47" max="50.9" step="0.1" value="47"></label>
+                <span id="minLatValue" style=" font-weight: bold;">47</span>&deg;
             </div>
             <div class="sliderContainer">
-                <label class="sliderLabel">&nbsp; Longitude: <input type="range" id="minLonSlider" min="-126"
-                        max="-121.1" step="0.1" value="-126"></label>
-                <span id="minLonValue">-126</span>
+                <label class="sliderLabel" style="font-size:smaller;">&nbsp; Longitude: <input type="range"
+                        id="minLonSlider" min="-126" max="-121.1" step="0.1" value="-126"></label>
+                <span id="minLonValue" style="font-size:smaller;">-126</span>&deg;
             </div>
             <div style="font-weight: bold;">Upper Right</div>
             <div class="sliderContainer">
-                <label class="sliderLabel">&nbsp; Latitude: <input type="range" id="maxLatSlider" min="47" max="50.9"
-                        step="0.1" value="50.9"></label>
-                <span id="maxLatValue">50.9</span>
+                <label class="sliderLabel" style="font-size:smaller;">&nbsp; Latitude: <input type="range"
+                        id="maxLatSlider" min="47" max="50.9" step="0.1" value="50.9"></label>
+                <span id="maxLatValue" style="font-size:smaller;">50.9</span>&deg;
             </div>
 
             <div class="sliderContainer">
-                <label class="sliderLabel">&nbsp; Longitude: <input type="range" id="maxLonSlider" min="-126"
-                        max="-121.1" step="0.1" value="-121.1"></label>
-                <span id="maxLonValue">-121.1</span>
+                <label class="sliderLabel" style="font-size:smaller;">&nbsp; Longitude: <input type="range"
+                        id="maxLonSlider" min="-126" max="-121.1" step="0.1" value="-121.1"></label>
+                <span id="maxLonValue" style="font-size:smaller;">-121.1</span>&deg;
             </div>
             <div class="sliderContainer">
-                <label class="sliderLabel">Depth (km): <input type="range" id="minDepthSlider" min="0" max="93" step="1"
-                        value="0"></label>
-                <span id="minDepthValue">0</span>
+                <label class="sliderLabel" style="font-weight: bold;">Depth (km): <input type="range"
+                        id="minDepthSlider" min="0" max="93" step="1" value="0"></label>
+                <span id="minDepthValue" style="font-size:smaller;">0</span>&nbsp;km
             </div>
 
             <div class="sliderContainer" style="display: none;">
                 <label class="sliderLabel">Max Depth (km): <input type="range" id="maxDepthSlider" min="0" max="93"
-                        step="1" value="93"></label>
-                <span id="maxDepthValue">93</span>
-            </div>
-            <div class="sliderContainer">
-                <label class="sliderLabel" style=" font-weight: bold;">Grid Opacity:
-                    <input type="range" id="gridTransparencySlider" min="0" max="1" step="0.1" value="0.3">
-                </label>
-                <span id="gridTransparencyValue">0.3</span>
+                        step="1" value="93"></label>&nbsp;km
+                <span id="maxDepthValue" style="font-size:smaller;;">93</span>
             </div>
             <div class="sliderContainer">
                 <label class="sliderLabel" style=" font-weight: bold;">Selection Opacity: <input type="range"
                         id="alphaSlider" min="0" max="1" step="0.1" value="0.3"></label>
-                <span id="alphaValue">0.3</span>
+                <span id="alphaValue" style="font-size:smaller;">0.3</span>
             </div>
-            <button type="button" class="button" id="sync-to-parent">Sync to Form</button>
+            <hr style="border-top: 1px solid #0000FF" />
+
+            <div class="sliderContainer">
+                <label class="sliderLabel" style=" font-weight: bold;">Grid Opacity:
+                    <input type="range" id="gridTransparencySlider" min="0" max="1" step="0.1" value="0.3">
+                </label>
+                <span id="gridTransparencyValue" style="font-size:smaller;">0.3</span>
+            </div>
+
+
+            <button type="button" class="button" id="sync-to-parent">Sync slice to form</button>
         </form>
 
     </div>
@@ -147,6 +152,7 @@
 
     <script>
 
+        let auxData, auxLabel, auxTitle, auxCitation, auxFillOpacity, auxLineWidth, auxDecimation, auxMarker;
 
         var viewer = new Cesium.Viewer('cesiumContainer', {
             imageryProvider: new Cesium.IonImageryProvider({ assetId: 3954 }),
@@ -400,7 +406,7 @@
 
         async function loadDropdown() {
             try {
-                const response = await fetch('/models_drop_down?required_variable=depth');
+                const response = await fetch('/data/models_drop_down_s3?required_variable=depth');
                 if (response.ok) {
                     const dropdownHTML = await response.text();
                     document.getElementById('data-file').innerHTML = dropdownHTML;
@@ -665,7 +671,7 @@
 
         async function loadDropdown() {
             try {
-                const response = await fetch('/models_drop_down_coverage');
+                const response = await fetch('/data/models_drop_down_coverage_s3');
                 if (response.ok) {
                     const dropdownHTML = await response.text();
                     document.getElementById('data-file').innerHTML = dropdownHTML;
@@ -1043,116 +1049,11 @@
 
         // Handling the 2D Geojson data.
         document.addEventListener('DOMContentLoaded', function () {
-            function handleGeoJsonData(checkboxId, dataArray, labelArray, colorArray, lineWidthArray, fillOpacityArray, dataSourcesArray, extraLogic) {
-                var checkbox = document.getElementById(checkboxId);
-                function handleData(checked) {
-                    if (checked) {
-                        for (var i = 0; i < dataArray.length; i++) {
-                            (function (index) {
-                                Cesium.GeoJsonDataSource.load(dataArray[index], {
-                                    label: labelArray[index],
-                                    stroke: colorArray[index],
-                                    fill: colorArray[index].withAlpha(fillOpacityArray[index]),
-                                    strokeWidth: lineWidthArray[index],
-                                    markerSymbol: '?'
-                                }).then(function (dataSource) {
-                                    if (extraLogic) {
-                                        extraLogic(dataSource, index);
-                                    }
 
-                                    dataSourcesArray.push(dataSource);
-                                    viewer.dataSources.add(dataSource);
-                                }).catch(function (error) {
-                                    console.error('Error loading GeoJSON:', error);
-                                });
-                            })(i);
-                        }
-                    } else {
-                        for (var i = 0; i < dataSourcesArray.length; i++) {
-                            if (viewer.dataSources.contains(dataSourcesArray[i])) {
-                                viewer.dataSources.remove(dataSourcesArray[i]);
-                            }
-                        }
-                        dataSourcesArray.length = 0; // Clear the array
-                    }
-                }
-
-                checkbox.addEventListener('change', function () {
-                    handleData(this.checked);
-                });
-
-                handleData(checkbox.checked);
-            }
-            // Function to populate the dropdown menu dynamically using auxLabel array
-            function populateDropdown() {
-                const dropdown = document.getElementById('select2dSurface');
-
-                // Clear existing options (if any)
-                dropdown.innerHTML = '';
-
-                // Add options from auxLabel array
-                auxLabel.forEach((label, index) => {
-                    const option = document.createElement('option');
-                    option.value = index;  // Set value as the index in the array
-                    option.textContent = label;  // Set the display text from the array
-                    dropdown.appendChild(option);
-                });
-            }
-
-            // Function to enforce a maximum of 2 selections
-            function enforceSelectionLimit() {
-                const dropdown = document.getElementById('select2dSurface');
-                const selectedOptions = Array.from(dropdown.selectedOptions);
-
-                // Enforce selection limit of 2
-                if (selectedOptions.length > 2) {
-                    // Deselect the latest selected option
-                    selectedOptions[selectedOptions.length - 1].selected = false;
-                    alert('You can only select a maximum of 2 options.');
-                }
-            }
-
-            // Function to update the legend
-            function updateLegend() {
-                const dropdown = document.getElementById('select2dSurface');
-                const selectedOptions = Array.from(dropdown.selectedOptions);
-                const legend = document.getElementById('legend');
-
-                // Clear the current legend
-                legend.innerHTML = '';
-
-                // Loop over selected options and add to legend
-                let selectionIndex = -1;
-                selectedOptions.forEach(option => {
-                    const selectedValue = option.value;
-                    selectionIndex += 1;
-                    const color = auxDefaultColor[selectionIndex];  // Get the color for the selected option
-
-                    // Create a new legend item
-                    const legendItem = document.createElement('div');
-                    legendItem.style.display = 'flex';
-                    legendItem.style.alignItems = 'center';
-                    legendItem.style.marginBottom = '5px';
-
-                    // Create a colored box for the legend
-                    const colorBox = document.createElement('div');
-                    colorBox.style.width = '20px';
-                    colorBox.style.height = '20px';
-                    colorBox.style.backgroundColor = color.toCssColorString();  // Assuming auxColor is a Cesium Color object
-                    colorBox.style.marginRight = '10px';
-
-                    // Create a label for the legend item
-                    const label = document.createElement('span');
-                    label.textContent = auxLabel[selectedValue];  // Label from the auxLabel array
-
-                    // Add the color box and label to the legend item
-                    legendItem.appendChild(colorBox);
-                    legendItem.appendChild(label);
-
-                    // Add the legend item to the legend div
-                    legend.appendChild(legendItem);
-                });
-            }
+            // Run this once when page loads
+            loadAuxConfig().then(() => {
+                populateDropdown();
+            });
 
             // Function to handle the dropdown change event
             var auxDataSources = [];
@@ -1185,7 +1086,7 @@
                 selectedOptions.forEach(option => {
                     const selectedValue = option.value;
                     selectionIndex += 1;
-                    handleGeoJsonData(
+                    handleS3GeoJsonData(
                         'toggle2dSurfaceCheckbox',
                         [auxData[selectedValue]],
                         [auxLabel[selectedValue]],
@@ -1240,7 +1141,7 @@
 
             // Boundary lines.
             var boundaryDataSources = [];
-            handleGeoJsonData(
+            handleLocalGeoJsonData(
                 'toggleBoundaryCheckbox',
                 boundaryData,
                 boundaryLabel, // Assuming you have a label array for boundaryData

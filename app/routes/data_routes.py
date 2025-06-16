@@ -30,6 +30,7 @@ import xarray as xr
 from pyproj import Proj, Geod
 
 import time
+from urllib.parse import urlencode
 
 # from metpy.interpolate import cross_section
 import base64
@@ -42,6 +43,8 @@ from datetime import datetime, timezone
 import gc
 
 import h5py
+
+from botocore.exceptions import ClientError
 
 import logging
 
@@ -56,6 +59,9 @@ import urllib.parse
 import numpy as np
 
 import boto3
+import fsspec
+
+from constants import LAMBDA_FUNCTIONS, BUCKET_NAME, PREFIX
 
 s3_client = boto3.client("s3")
 lambda_client = boto3.client("lambda")
@@ -82,28 +88,6 @@ logger.info(f"[INFO] ENVIRONMENT: {env_string}")
 ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev?")
 logger.info(f"[INFO] ACTIVE_ENVIRONMENT: {ACTIVE_ENVIRONMENT}")
 
-# The Lambda funtion names.
-LAMBDA_FUNCTIONS = {"slice": {"dev": "cvm-data-extractor-initial-extract-slice", "stage": "cvm-data-extractor-extract-slice", "crescent": "cvm-data-extractor-extract-slice"},
-"xsection":{"dev": "cvm-data-extractor-initial-extract-xsection", "stage": "cvm-data-extractor-extract-xsection", "crescent": "cvm-data-extractor-extract-xsection"},
-"volume": {"dev": "cvm-data-extractor-initial-extract-volume", "stage": "cvm-data-extractor-extract-volume", "crescent": "cvm-data-extractor-extract-volume"}}
-
-# The S3 bucket names.
-BUCKET_NAME = {"dev":"cvm-s3-data-lifecycle-dev-us-east-2-aer1lu3eichu", 
-"stage": "cvm-s3-data-stage-us-east-2-aer1lu3eichu", 
-"crescent": "cvm-s3-data-crescent-us-east-2-aer1lu3eichu"}
-
-# Logo placement in inches below the lower left corner of the plot area
-LOGO_INCH_OFFSET_BELOW = 0.5
-
-grid_ref_dict = {
-    "latitude_longitude": {
-        "x": "longitude",
-        "y": "latitude",
-        "x2": "longitude",
-        "y2": "latitude",
-    },
-    "transverse_mercator": {"x": "x", "y": "y", "x2": "easting", "y2": "northing"},
-}
 
 # Templates
 templates = Jinja2Templates(directory="templates")
@@ -127,20 +111,39 @@ def utc_now():
 def standard_units(unit):
     """Check an input unit and return the corresponding standard unit."""
     unit = unit.strip().lower()
-    if unit in ["m", "meter"]:
+    if unit in ["m", "meter", "meters"]:
         return "m"
     elif unit in ["degrees", "degrees_east", "degrees_north"]:
         return "degrees"
-    elif unit in ["km", "kilometer"]:
+    elif unit in ["km", "kilometer", "kilometers"]:
         return "km"
     elif unit in ["g/cc", "g/cm3", "g.cm-3", "grams.centimeter-3"]:
         return "g/cc"
     elif unit in ["kg/m3", "kh.m-3"]:
         return "kg/m3"
-    elif unit in ["km/s", "kilometer/second", "km.s-1", "kilometer/s", "km/s"]:
+    elif unit in [
+        "km/s",
+        "kilometer/second",
+        "kilometers/second",
+        "kilometers/seconds",
+        "km.s-1",
+        "kilometer/s",
+        "kilometers/s",
+        "km/s",
+    ]:
         return "km/s"
-    elif unit in ["m/s", "meter/second", "m.s-1", "meter/s", "m/s"]:
+    elif unit in [
+        "m/s",
+        "meter/second",
+        "meters/second",
+        "meters/seconds",
+        "m.s-1",
+        "meters/s",
+        "m/s",
+    ]:
         return "m/s"
+    elif unit.strip().lower in ["%", "percent"]:
+        return "%"
     elif unit.strip().lower in ["", "none"]:
         return ""
 
@@ -203,7 +206,7 @@ def unit_conversion_factor(unit_in, unit_out):
         else:
             return standard_units("kg/m3"), 1
     elif unit in ["", " "]:
-        return standard_units(""), 1    
+        return standard_units(""), 1
     elif unit in ["%"]:
         return standard_units("%"), 1
     elif unit in ["degrees"]:
@@ -482,7 +485,9 @@ def save_data_large_all(data_to_return, output_format, output_file_prefix):
                             </ul>"""
             # Calculate the dataset size
             dataset_size = calculate_dataset_size(data_to_return)
-            logger.debug(f"[DEBUG] Expected Dataset size: {dataset_max_size_csv:.2f} MB")
+            logger.debug(
+                f"[DEBUG] Expected Dataset size: {dataset_max_size_csv:.2f} MB"
+            )
             logger.debug(f"[DEBUG] Calculated Dataset size: {dataset_size:.2f} MB")
 
             # Check if the dataset size exceeds the maximum allowed size
@@ -838,6 +843,14 @@ def interpolate_path(
     return interpolated_ds, lat_points, lon_points
 
 
+def open_chunked_netcdf_s3(file, bucket=BUCKET_NAME["dev"], prefix=PREFIX["netcdf"]):
+    fs = fsspec.filesystem("s3", anon=False)
+    path = f"s3://{bucket}/{prefix}{file}"
+    of = fs.open(path)
+    ds = xr.open_dataset(of, engine="h5netcdf", chunks={})
+    return ds
+
+
 @router.get("/volume-data", response_class=HTMLResponse)
 async def read_root(request: Request):
     return templates.TemplateResponse("volume-data.html", {"request": request})
@@ -886,6 +899,177 @@ def project_lonlat_utm(
     return x, y
 
 
+@router.get("/list_json_files_s3/{selected_model}", response_class=HTMLResponse)
+def list_json_files_s3(request: Request, selected_model: str):
+    # AWS S3 configurations (you already have these)
+    bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    JSON_PREFIX = PREFIX["json"]
+    NETCDF_PREFIX = PREFIX["netcdf"]
+
+    header_style = "background-color: rgba(0, 79, 89, 0.8); color:white;font-size:10pt;"
+    checkbox_style = "background-color: rgba(0, 79, 89, 0.8); color:white; font-size:10pt; border: none; padding: 5px;"
+
+    html_content = f"""
+    <div id='tableContainer' style='max-height: 600px; overflow-y: auto; border: 1px solid #ccc; margin-top: 10px;'>
+    <table style='width: 100%; border-collapse: collapse;'>
+    <tr style='{header_style}'>
+    <th></th>
+    <th>3D Model</th>
+    <th>Summary</th>
+    <th class='hidden'>lat_min</th>
+    <th class='hidden'>lat_max</th>
+    <th class='hidden'>lon_min</th>
+    <th class='hidden'>lon_max</th>
+    <th class='hidden'>file</th>
+    <th>Variable(s)</th>
+    <th class='hidden'>depth_min</th>
+    <th class='hidden'>depth_max</th>
+    <th>Description</th>
+    </tr>
+    """
+
+    # List JSON files in the S3 prefix
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=JSON_PREFIX)
+    if "Contents" not in response:
+        return HTMLResponse(content="<p>No files found in S3.</p>", status_code=404)
+
+    for obj in response["Contents"]:
+        key = obj["Key"]
+        if not key.endswith(".json"):
+            continue
+
+        file_obj = s3_client.get_object(Bucket=bucket_name, Key=key)
+        data = json.load(file_obj["Body"])
+
+        filename = key.split("/")[-1]
+        filename_no_extension = filename.rsplit(".", 1)[0]
+
+        # Parse fields from JSON
+        lon_min = data.get("geospatial_lon_min", "-")
+        lon_max = data.get("geospatial_lon_max", "-")
+        lat_min = data.get("geospatial_lat_min", "-")
+        lat_max = data.get("geospatial_lat_max", "-")
+        depth_min = data.get("geospatial_vertical_min", "-")
+        depth_max = data.get("geospatial_vertical_max", "-")
+        model = data.get("model", "-")
+        summary = data.get("summary", "-")
+        data_vars = data.get("data_vars", [])
+        zvar = data.get("z_var", "-")
+
+        var_desc = []
+        for var in data_vars:
+            desc = data.get("variables", {})
+            if var in desc:
+                v = desc[var]
+                if "display_name" in v:
+                    var_desc.append(v["display_name"])
+                elif "long_name" in v and "units" in v:
+                    var_desc.append(f'{v["long_name"]} ({v["units"]})')
+                elif "long_name" in v:
+                    var_desc.append(v["long_name"])
+                else:
+                    var_desc.append(var)
+            else:
+                var_desc.append(var)
+
+        row_style = (
+            "background-color: rgba(0, 79, 89, 0.4);" if model == selected_model else ""
+        )
+
+        params = {"filename": filename}
+        full_url = f"/data/download-netcdf-s3/?{urlencode(params)}"
+
+        size_kb = data.get("size_kb", "")
+        if size_kb:
+            size_kb = f", netCDF {size_kb:,} KB"
+
+        html_content += f"""
+        <tr style='{row_style}'>
+        <td><input type='radio' name='selection' {'checked' if model == selected_model else ''} style="display:none;"></td>
+        <td style='text-decoration:underline;cursor:pointer;font-size:8pt;'>{model}</td>
+        <td style='font-size:9pt;'>{summary} <a href='{full_url}' download>download</a>{size_kb}</td>
+        <td class='hidden'>{lat_min}</td>
+        <td class='hidden'>{lat_max}</td>
+        <td class='hidden'>{lon_min}</td>
+        <td class='hidden'>{lon_max}</td>
+        <td class='hidden' name='filename'>{filename_no_extension}</td>
+        <td style='font-size:9pt;'><b>{", ".join(data_vars)}</b><br /><i>f({zvar})</i></td>
+        <td class='hidden'>{depth_min}</td>
+        <td class='hidden'>{depth_max}</td>
+        <td style='font-size:9pt;'>{", ".join(var_desc)}</td>
+        </tr>
+        """
+
+    html_content += "</table></div>"
+    return html_content
+
+
+@router.get("/get_netcdf_download_link", response_class=HTMLResponse)
+def get_netcdf_download_link(filename: str):
+    """
+    Returns an HTML snippet with a download link and file size for a given NetCDF file.
+    """
+    bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    netcdf_prefix = PREFIX["netcdf"]
+    s3_key = f"{netcdf_prefix}{filename}"
+
+    try:
+        # Get file size
+        head_obj = s3_client.head_object(Bucket=bucket_name, Key=s3_key)
+        file_size_kb = round(head_obj["ContentLength"] / 1024, 2)
+    except s3_client.exceptions.NoSuchKey:
+        return HTMLResponse(
+            content=f"<span style='color:red;'>File not found: {filename}</span>",
+            status_code=404,
+        )
+    except Exception as e:
+        return HTMLResponse(
+            content=f"<span style='color:red;'>Error: {str(e)}</span>", status_code=500
+        )
+
+    # Construct download URL using your internal route
+    download_url = f"/data/download-netcdf-s3/?{urlencode({'filename': filename})}"
+
+    html_snippet = f"""
+    <a href="{download_url}" download>Download</a> <span style="font-size: 9pt;">({file_size_kb:,} KB)</span>
+    """
+
+    return HTMLResponse(content=html_snippet)
+
+
+@router.get("/download-netcdf-s3/")
+def download_netcdf_s3(filename: str):
+    file_name = os.path.splitext(os.path.basename(filename))[0]
+    local_path = os.path.join(NETCDF_DIR, f"{file_name}.nc")
+
+    # Try serving from local disk
+    if os.path.isfile(local_path):
+        return FileResponse(
+            path=local_path,
+            filename=f"{file_name}.nc",
+            media_type="application/netcdf",
+            headers={"Content-Disposition": f"attachment; filename={file_name}.nc"},
+        )
+
+    # Try serving from S3
+    s3_key = f"{PREFIX['netcdf']}{file_name}.nc"
+    bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+
+    s3 = boto3.client("s3")
+    try:
+        s3_object = s3.get_object(Bucket=bucket_name, Key=s3_key)
+        return StreamingResponse(
+            s3_object["Body"],
+            media_type="application/netcdf",
+            headers={"Content-Disposition": f"attachment; filename={file_name}.nc"},
+        )
+    except ClientError as e:
+        if e.response["Error"]["Code"] == "NoSuchKey":
+            raise HTTPException(status_code=404, detail="File not found in S3")
+        else:
+            raise HTTPException(status_code=500, detail="S3 access error")
+
+
 @router.get("/download-netcdf/")
 def download_netcdf(filename: str):
     # Define the directory where the NetCDF files are stored
@@ -932,7 +1116,7 @@ async def volume_data(
         variables_to_keep = variables_hidden.split(",")
         data_file = urllib.parse.unquote(data_file)  # Decode the URL-safe string
 
-        ds = xr.load_dataset(os.path.join("static", "netcdf", data_file))
+        ds = open_chunked_netcdf_s3(data_file)
 
         # We will be working with the variable dataset, so capture the metadata for the main dataset now.
         meta = ds.attrs
@@ -964,9 +1148,7 @@ async def volume_data(
                     f"{new_depth.attrs['standard_name']} [{unit_standard}]"
                 )
             else:
-                new_depth.attrs["long_name"] = (
-                    f"{new_depth.attrs['variable']} [{unit_standard}]"
-                )
+                new_depth.attrs["long_name"] = f"depth [{unit_standard}]"
             # Assign new depth coordinates with converted units
             ds = ds.assign_coords(depth=new_depth)
         else:
@@ -977,11 +1159,9 @@ async def volume_data(
                     f"{ds.depth.attrs['standard_name']} ({unit_standard})"
                 )
             else:
-                ds.depth.attrs["long_name"] = (
-                    f"{new_depth.attrs['variable']} [{unit_standard}]"
-                )
+                ds.depth.attrs["long_name"] = f"depth [{unit_standard}]"
         # Extract grid ref metadata
-        grid_ref= meta.get("grid_ref", "latitude_longitude")
+        grid_ref = meta.get("grid_ref", "latitude_longitude")
         logger.debug(f"[DEBUG] Meta: {meta}\n\ngrid_ref:{grid_ref}")
         # If data is not "latitude_longitude", we need to get the start and end in the primary axis.
         if grid_ref != "latitude_longitude":
@@ -1112,6 +1292,7 @@ async def volume_data(
 
     return save_data_large_all(output_data, output_format, output_file_prefix)
 
+
 @router.get("/extract-volume-data-s3")
 async def volume_data(
     request: Request,
@@ -1157,10 +1338,12 @@ async def volume_data(
         )
 
         # Read and decode Lambda response
-        lambda_response = json.loads(response['Payload'].read().decode('utf-8'))
+        lambda_response = json.loads(response["Payload"].read().decode("utf-8"))
 
         # Extract status code and response body
-        status_code = lambda_response.get("statusCode", 500)  # Default to 500 if missing
+        status_code = lambda_response.get(
+            "statusCode", 500
+        )  # Default to 500 if missing
 
         try:
             body_content = lambda_response.get("body", "{}")
@@ -1181,7 +1364,6 @@ async def volume_data(
         logger.info(f"[INFO] Lambda response status, status_code: {status_code}")
         logger.info(f"[INFO] Lambda response status, parsed_body: {parsed_body}")
 
-
         # Raise HTTPException with properly formatted JSON response
         if status_code != 200:
             logger.error(f"[ERROR] Lambda returned error {status_code}: {parsed_body}")
@@ -1191,25 +1373,31 @@ async def volume_data(
         s3_key = parsed_body.get("s3_key")
         if not s3_key:
             logger.error("[ERROR] Missing 's3_key' in Lambda response")
-            raise HTTPException(status_code=500, detail="Lambda response missing 's3_key'")
+            raise HTTPException(
+                status_code=500, detail="Lambda response missing 's3_key'"
+            )
 
         # Fetch the file from S3
         try:
             s3_response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-            file_stream = io.BytesIO(s3_response['Body'].read())
+            file_stream = io.BytesIO(s3_response["Body"].read())
         except s3_client.exceptions.NoSuchKey:
             logger.error(f"[ERROR] S3 key {s3_key} not found in {bucket_name}")
-            raise HTTPException(status_code=404, detail=f"S3 key {s3_key} not found in {bucket_name}")
+            raise HTTPException(
+                status_code=404, detail=f"S3 key {s3_key} not found in {bucket_name}"
+            )
 
         # Delete the file from S3 after retrieval
         try:
             s3_client.delete_object(Bucket=bucket_name, Key=s3_key)
-            logger.warning(f"[WARN] Removed the output file {s3_key} from {bucket_name} bucket")
+            logger.warning(
+                f"[WARN] Removed the output file {s3_key} from {bucket_name} bucket"
+            )
         except s3_client.exceptions.NoSuchKey:
             logger.warning(f"[WARN] Attempted to delete non-existent S3 key: {s3_key}")
 
         # Determine media type based on output format
-        media_type = 'text/csv' if output_format == 'csv' else 'application/netcdf'
+        media_type = "text/csv" if output_format == "csv" else "application/netcdf"
 
         # Serve the file to the user
         return StreamingResponse(
@@ -1217,43 +1405,70 @@ async def volume_data(
             media_type=media_type,
             headers={
                 "Content-Disposition": f"attachment; filename={s3_key.split('/')[-1]}"
-            }
+            },
         )
 
     except Exception as e:
         error_details = traceback.format_exc()  # Get full traceback
-        logger.error(f"[ERROR] Exception occurred: {error_details}")  # Log detailed error
+        logger.error(
+            f"[ERROR] Exception occurred: {error_details}"
+        )  # Log detailed error
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-        
-@router.get("/fetch_json", response_model=dict)
-def fetch_json(file_name: str):
+
+@router.get("/fetch_json_s3")
+def fetch_json_s3(file_name: str, prefix_key: str = "json"):
     """
-    Fetches the JSON content from S3 under the 'data/json/' directory for the given file name.
+    Downloads a JSON or GeoJSON file from S3 and forces the browser to download it.
     """
     bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
-    JSON_PREFIX = "data/json/"
+    s3_prefix = PREFIX.get(prefix_key)
 
-    # Construct the full S3 key for the requested JSON file
-    s3_key = f"{JSON_PREFIX}{file_name}"#.json"
+    if not s3_prefix:
+        raise HTTPException(status_code=400, detail=f"Invalid prefix key: {prefix_key}")
+
+    s3_key = f"{s3_prefix}{file_name}"
+    logger.info(f"Downloading from S3: {bucket_name}/{s3_key}")
 
     try:
-        # Fetch JSON file from S3
-        json_object = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-        json_data = json.loads(json_object["Body"].read().decode("utf-8"))
-        return json_data
+        response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
+        file_stream = BytesIO(response["Body"].read())
 
-    except NoCredentialsError:
-        logger.error("AWS credentials not found. Ensure they are properly configured.")
-        raise HTTPException(status_code=500, detail="AWS credentials missing")
+        return StreamingResponse(
+            file_stream,
+            media_type="application/json",  # or "application/geo+json" if appropriate
+            headers={"Content-Disposition": f'attachment; filename="{file_name}"'},
+        )
 
     except s3_client.exceptions.NoSuchKey:
-        logger.error(f"File {s3_key} not found in S3 bucket {bucket_name}")
+        logger.error(f"File {s3_key} not found in {bucket_name}")
         raise HTTPException(status_code=404, detail="File not found")
 
     except Exception as e:
-        logger.error(f"Error accessing S3: {e}")
-        raise HTTPException(status_code=500, detail="Error retrieving JSON file")
+        logger.error(f"S3 read error: {e}")
+        raise HTTPException(status_code=500, detail="Error reading file from S3")
+
+
+@router.get("/generate-geojson-download-url-s3", response_class=JSONResponse)
+def generate_geojson_download_url_s3(file_name: str = Query(...)):
+    """
+    Generates a pre-signed URL for downloading a GeoJSON file from S3.
+    """
+    bucket = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    prefix = PREFIX["geojson"]
+    key = f"{prefix}{file_name}"
+
+    try:
+        url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=3600,  # 1 hour
+        )
+        return {"url": url}
+    except Exception as e:
+        logger.error(f"Failed to generate download URL: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate download URL")
+
 
 # Route to create html for model dropdown. A simple drop-down of the file names and model variables.
 @router.get("/models_drop_down_s3", response_class=HTMLResponse)
@@ -1262,8 +1477,8 @@ def models_drop_down_s3(required_variable: Optional[str] = None):
 
     # AWS S3 configurations
     bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
-    JSON_PREFIX = "data/json/"
-    NETCDF_PREFIX = "data/netcdf/"
+    JSON_PREFIX = PREFIX["json"]
+    NETCDF_PREFIX = PREFIX["netcdf"]
 
     file_list = []
     vars_list = []
@@ -1276,23 +1491,35 @@ def models_drop_down_s3(required_variable: Optional[str] = None):
             logger.warning(f"No JSON files found in S3 bucket {bucket_name}")
             return "<option value=''>No models available</option>"
 
-        json_files = [obj["Key"] for obj in json_objects["Contents"] if obj["Key"].endswith(".json")]
+        json_files = [
+            obj["Key"]
+            for obj in json_objects["Contents"]
+            if obj["Key"].endswith(".json")
+        ]
 
         # List NetCDF files in the S3 bucket
-        netcdf_objects = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=NETCDF_PREFIX)
+        netcdf_objects = s3_client.list_objects_v2(
+            Bucket=bucket_name, Prefix=NETCDF_PREFIX
+        )
         if "Contents" in netcdf_objects:
-            netcdf_files = {obj["Key"] for obj in netcdf_objects["Contents"]}  # Use a set for quick lookups
+            netcdf_files = {
+                obj["Key"] for obj in netcdf_objects["Contents"]
+            }  # Use a set for quick lookups
         else:
             netcdf_files = set()
-        
+
         for json_file in sorted(json_files):
             nc_filename = json_file.replace(JSON_PREFIX, "").replace(".json", ".nc")
             nc_s3_key = f"{NETCDF_PREFIX}{nc_filename}"
-            logger.warning(f"Working on {json_file} and the key: {nc_s3_key} in {bucket_name}.")
+            logger.warning(
+                f"Working on {json_file} and the key: {nc_s3_key} in {bucket_name}."
+            )
 
             # Check if the corresponding NetCDF file exists in the pre-fetched list
             if nc_s3_key not in netcdf_files:
-                logger.warning(f"NetCDF file {nc_filename} not found in S3 {bucket_name}, with key {nc_s3_key}. Skipping.")
+                logger.warning(
+                    f"NetCDF file {nc_filename} not found in S3 {bucket_name}, with key {nc_s3_key}. Skipping."
+                )
                 continue
 
             # Read JSON data from S3
@@ -1313,10 +1540,6 @@ def models_drop_down_s3(required_variable: Optional[str] = None):
             vars_list.append(data_vars)
             model_list.append(model_name)
 
-    except NoCredentialsError:
-        logger.error("AWS credentials not found. Ensure they are properly configured.")
-        return "<option value=''>Error: AWS credentials missing</option>"
-
     except Exception as e:
         logger.error(f"Error accessing S3: {e}")
         return "<option value=''>Error retrieving models</option>"
@@ -1324,10 +1547,124 @@ def models_drop_down_s3(required_variable: Optional[str] = None):
     # Prepare the HTML for the dropdown
     dropdown_html = ""
     for i, filename in enumerate(file_list):
-        selected = " selected" if i == 0 else ""
-        dropdown_html += f'<option value="{filename}"{selected}>{model_list[i]}</option>'
+        selected = "selected" if i == 0 else ""
+        dropdown_html += (
+            f'<option value="{filename}" {selected}>{model_list[i]}</option>'
+        )
 
     logger.debug(f"dropdown_html {dropdown_html}")
+    return dropdown_html
+
+
+# Route to create html for model dropdown. This is a comprehensive list that includes other model parameters.
+@router.get("/models_drop_down_coverage_s3", response_class=HTMLResponse)
+def models_drop_down_coverage_s3(required_variable: Optional[str] = None):
+    logger.debug(f"Received route_name: {required_variable}")
+
+    # AWS S3 configurations
+    bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    JSON_PREFIX = PREFIX["json"]
+    NETCDF_PREFIX = PREFIX["netcdf"]
+
+    coords_list = list()
+    model_list = list()
+    title_list = list()
+
+    try:
+        # List JSON files in the S3 bucket
+        json_objects = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=JSON_PREFIX)
+        if "Contents" not in json_objects:
+            logger.warning(f"No JSON files found in S3 bucket {bucket_name}")
+            return "<option value=''>No models available</option>"
+
+        json_files = [
+            obj["Key"]
+            for obj in json_objects["Contents"]
+            if obj["Key"].endswith(".json")
+        ]
+
+        # List NetCDF files in the S3 bucket
+        netcdf_objects = s3_client.list_objects_v2(
+            Bucket=bucket_name, Prefix=NETCDF_PREFIX
+        )
+        if "Contents" in netcdf_objects:
+            netcdf_files = {
+                obj["Key"] for obj in netcdf_objects["Contents"]
+            }  # Use a set for quick lookups
+        else:
+            netcdf_files = set()
+
+        for json_file in sorted(json_files):
+            nc_filename = json_file.replace(JSON_PREFIX, "").replace(".json", ".nc")
+            nc_s3_key = f"{NETCDF_PREFIX}{nc_filename}"
+            logger.warning(
+                f"Working on {json_file} and the key: {nc_s3_key} in {bucket_name}."
+            )
+
+            # Check if the corresponding NetCDF file exists in the pre-fetched list
+            if nc_s3_key not in netcdf_files:
+                logger.warning(
+                    f"NetCDF file {nc_filename} not found in S3 {bucket_name}, with key {nc_s3_key}. Skipping."
+                )
+                continue
+
+            # Read JSON data from S3
+            json_object = s3_client.get_object(Bucket=bucket_name, Key=json_file)
+            json_data = json.loads(json_object["Body"].read().decode("utf-8"))
+
+            # Skip files that do not contain the required variable
+            if required_variable and required_variable not in json_data.get("vars", []):
+                logger.warning(
+                    f"[WARN] Model {json_file} is rejected since the required variable '{required_variable}' "
+                    f"was not in '{json_data.get('vars', [])}'"
+                )
+                continue
+
+            coords = list()
+            coords.append(str(json_data["geospatial_lon_min"]))
+            coords.append(str(json_data["geospatial_lon_max"]))
+            coords.append(str(json_data["geospatial_lat_min"]))
+            coords.append(str(json_data["geospatial_lat_max"]))
+
+            # Cesium takes depth in meters
+            if standard_units(json_data["geospatial_vertical_units"]) == "m":
+                depth_factor = 1000
+            elif standard_units(json_data["geospatial_vertical_units"]) == "km":
+                depth_factor = 1
+            else:
+                depth_factor = 1
+                logger.error(
+                    f"[ERR] Invalid depth unit of {json_data['geospatial_vertical_units']}"
+                )
+
+            coords.append(
+                str(float(json_data["geospatial_vertical_min"]) / depth_factor)
+            )
+            coords.append(
+                str(float(json_data["geospatial_vertical_max"]) / depth_factor)
+            )
+
+            model_coords = f"({','.join(coords)})"
+            if "title" in json_data:
+                title_list.append(json_data["title"])
+            else:
+                title_list.append("-")
+            model_name = json_data["model"]
+            coords_list.append(model_coords)
+            model_list.append(model_name)
+
+    except Exception as e:
+        logger.error(f"Error accessing S3: {e}")
+        return "<option value=''>Error retrieving models</option>"
+
+    # Prepare the HTML for the dropdown
+    dropdown_html = f'<option value="">None</option>'
+    for i, filename in enumerate(model_list):
+        selected = " selected" if i == 0 else ""
+        dropdown_html += (
+            f'<option value="{coords_list[i]}"{selected}>{model_list[i]}</option>'
+        )
+        logger.debug(f"dropdown_html {dropdown_html}")
     return dropdown_html
 
 
@@ -1353,7 +1690,8 @@ async def extract_slice_data(
         # Decode the URL-safe string for the data file path
         data_file = urllib.parse.unquote(data_file)
         # Load the dataset using xarray
-        output_data = xr.load_dataset(os.path.join("static", "netcdf", data_file))
+        output_data = open_chunked_netcdf_s3(data_file)
+
         logger.warning(f"[DEBUG] GET: {locals()}")  # Log request parameters
 
         # Convert start_depth units to the desired standard. start_depth is always in KM.
@@ -1382,9 +1720,7 @@ async def extract_slice_data(
                     f"{new_depth.attrs['standard_name']} [{unit_standard}]"
                 )
             else:
-                new_depth.attrs["long_name"] = (
-                    f"{new_depth.attrs['variable']} [{unit_standard}]"
-                )
+                new_depth.attrs["long_name"] = f"depth [{unit_standard}]"
             # Assign new depth coordinates with converted units
             output_data = output_data.assign_coords(depth=new_depth)
         else:
@@ -1395,9 +1731,7 @@ async def extract_slice_data(
                     f"{output_data.depth.attrs['standard_name']} ({unit_standard})"
                 )
             else:
-                output_data.depth.attrs["long_name"] = (
-                    f"{output_data.depth.attrs['variable']} ({unit_standard})"
-                )
+                output_data.depth.attrs["long_name"] = f"depth ({unit_standard})"
         meta = output_data.attrs  # Extract metadata from the dataset
 
         # Split the hidden variables list by commas
@@ -1435,9 +1769,9 @@ async def extract_slice_data(
 
     try:
         # Extract grid ref metadata
-        grid_ref = meta.get("output_grid_ref", "latitude_longitude")
-        utm_zone = meta.get("utm_zone")
-        ellipsoid = meta.get("ellipsoid")
+        grid_ref = meta.get("grid_ref", "latitude_longitude")
+        utm_zone = meta.get("utm_zone", 10)
+        ellipsoid = meta.get("ellipsoid", "WGS84")
 
         # Generate coordinate grids based on grid ref type
         if grid_ref == "latitude_longitude":
@@ -1542,6 +1876,7 @@ async def extract_slice_data(
         data_to_return, output_format, output_file_prefix
     )  # Save and return the data in the desired format
 
+
 # Extract slice data via s3 data.
 @router.get("/extract-slice-data-s3")
 async def slice_data(
@@ -1574,7 +1909,7 @@ async def slice_data(
         "variables_hidden": variables_hidden,
         "interpolation_method": interpolation_method,
         "output_format": output_format,
-        "units": units
+        "units": units,
     }
     logger.info(f"[INFO] Invoking Lambda with event: {event}")
 
@@ -1587,10 +1922,12 @@ async def slice_data(
         )
 
         # Read and decode Lambda response
-        lambda_response = json.loads(response['Payload'].read().decode('utf-8'))
+        lambda_response = json.loads(response["Payload"].read().decode("utf-8"))
 
         # Extract status code and response body
-        status_code = lambda_response.get("statusCode", 500)  # Default to 500 if missing
+        status_code = lambda_response.get(
+            "statusCode", 500
+        )  # Default to 500 if missing
 
         try:
             body_content = lambda_response.get("body", "{}")
@@ -1611,7 +1948,6 @@ async def slice_data(
         logger.info(f"[INFO] Lambda response status, status_code: {status_code}")
         logger.info(f"[INFO] Lambda response status, parsed_body: {parsed_body}")
 
-
         # Raise HTTPException with properly formatted JSON response
         if status_code != 200:
             logger.error(f"[ERROR] Lambda returned error {status_code}: {parsed_body}")
@@ -1621,25 +1957,31 @@ async def slice_data(
         s3_key = parsed_body.get("s3_key")
         if not s3_key:
             logger.error("[ERROR] Missing 's3_key' in Lambda response")
-            raise HTTPException(status_code=500, detail="Lambda response missing 's3_key'")
+            raise HTTPException(
+                status_code=500, detail="Lambda response missing 's3_key'"
+            )
 
         # Fetch the file from S3
         try:
             s3_response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-            file_stream = io.BytesIO(s3_response['Body'].read())
+            file_stream = io.BytesIO(s3_response["Body"].read())
         except s3_client.exceptions.NoSuchKey:
             logger.error(f"[ERROR] S3 key {s3_key} not found in {bucket_name}")
-            raise HTTPException(status_code=404, detail=f"S3 key {s3_key} not found in {bucket_name}")
+            raise HTTPException(
+                status_code=404, detail=f"S3 key {s3_key} not found in {bucket_name}"
+            )
 
         # Delete the file from S3 after retrieval
         try:
             s3_client.delete_object(Bucket=bucket_name, Key=s3_key)
-            logger.warning(f"[WARN] Removed the output file {s3_key} from {bucket_name} bucket")
+            logger.warning(
+                f"[WARN] Removed the output file {s3_key} from {bucket_name} bucket"
+            )
         except s3_client.exceptions.NoSuchKey:
             logger.warning(f"[WARN] Attempted to delete non-existent S3 key: {s3_key}")
 
         # Determine media type based on output format
-        media_type = 'text/csv' if output_format == 'csv' else 'application/netcdf'
+        media_type = "text/csv" if output_format == "csv" else "application/netcdf"
 
         # Serve the file to the user
         return StreamingResponse(
@@ -1647,12 +1989,14 @@ async def slice_data(
             media_type=media_type,
             headers={
                 "Content-Disposition": f"attachment; filename={s3_key.split('/')[-1]}"
-            }
+            },
         )
 
     except Exception as e:
         error_details = traceback.format_exc()  # Get full traceback
-        logger.error(f"[ERROR] Exception occurred: {error_details}")  # Log detailed error
+        logger.error(
+            f"[ERROR] Exception occurred: {error_details}"
+        )  # Log detailed error
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -1691,7 +2035,7 @@ async def xsection_data(
         "variables_hidden": variables_hidden,
         "interpolation_method": interpolation_method,
         "output_format": output_format,
-        "units": units
+        "units": units,
     }
     logger.info(f"[INFO] Invoking Lambda with event: {event}")
 
@@ -1704,10 +2048,12 @@ async def xsection_data(
         )
 
         # Read and decode Lambda response
-        lambda_response = json.loads(response['Payload'].read().decode('utf-8'))
+        lambda_response = json.loads(response["Payload"].read().decode("utf-8"))
 
         # Extract status code and response body
-        status_code = lambda_response.get("statusCode", 500)  # Default to 500 if missing
+        status_code = lambda_response.get(
+            "statusCode", 500
+        )  # Default to 500 if missing
 
         try:
             body_content = lambda_response.get("body", "{}")
@@ -1728,7 +2074,6 @@ async def xsection_data(
         logger.info(f"[INFO] Lambda response status, status_code: {status_code}")
         logger.info(f"[INFO] Lambda response status, parsed_body: {parsed_body}")
 
-
         # Raise HTTPException with properly formatted JSON response
         if status_code != 200:
             logger.error(f"[ERROR] Lambda returned error {status_code}: {parsed_body}")
@@ -1738,25 +2083,31 @@ async def xsection_data(
         s3_key = parsed_body.get("s3_key")
         if not s3_key:
             logger.error("[ERROR] Missing 's3_key' in Lambda response")
-            raise HTTPException(status_code=500, detail="Lambda response missing 's3_key'")
+            raise HTTPException(
+                status_code=500, detail="Lambda response missing 's3_key'"
+            )
 
         # Fetch the file from S3
         try:
             s3_response = s3_client.get_object(Bucket=bucket_name, Key=s3_key)
-            file_stream = io.BytesIO(s3_response['Body'].read())
+            file_stream = io.BytesIO(s3_response["Body"].read())
         except s3_client.exceptions.NoSuchKey:
             logger.error(f"[ERROR] S3 key {s3_key} not found in {bucket_name}")
-            raise HTTPException(status_code=404, detail=f"S3 key {s3_key} not found in {bucket_name}")
+            raise HTTPException(
+                status_code=404, detail=f"S3 key {s3_key} not found in {bucket_name}"
+            )
 
         # Delete the file from S3 after retrieval
         try:
             s3_client.delete_object(Bucket=bucket_name, Key=s3_key)
-            logger.warning(f"[WARN] Removed the output file {s3_key} from {bucket_name} bucket")
+            logger.warning(
+                f"[WARN] Removed the output file {s3_key} from {bucket_name} bucket"
+            )
         except s3_client.exceptions.NoSuchKey:
             logger.warning(f"[WARN] Attempted to delete non-existent S3 key: {s3_key}")
 
         # Determine media type based on output format
-        media_type = 'text/csv' if output_format == 'csv' else 'application/netcdf'
+        media_type = "text/csv" if output_format == "csv" else "application/netcdf"
 
         # Serve the file to the user
         return StreamingResponse(
@@ -1764,12 +2115,14 @@ async def xsection_data(
             media_type=media_type,
             headers={
                 "Content-Disposition": f"attachment; filename={s3_key.split('/')[-1]}"
-            }
+            },
         )
 
     except Exception as e:
         error_details = traceback.format_exc()  # Get full traceback
-        logger.error(f"[ERROR] Exception occurred: {error_details}")  # Log detailed error
+        logger.error(
+            f"[ERROR] Exception occurred: {error_details}"
+        )  # Log detailed error
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -1802,7 +2155,7 @@ async def extract_xsection_data(
 
     try:
         # lazy loading with Dask.
-        ds = xr.open_dataset(os.path.join("static", "netcdf", data_file), chunks={})
+        ds = open_chunked_netcdf_s3(data_file)
 
         start = [start_lat, start_lng]
         end = [end_lat, end_lng]
@@ -1871,8 +2224,8 @@ async def extract_xsection_data(
                 num_points=steps,
                 method=interp_type,
                 grid_ref=grid_ref,
-                utm_zone=meta["utm_zone"],
-                ellipsoid=meta["ellipsoid"],
+                utm_zone=meta.get("utm_zone", 10),
+                ellipsoid=meta.get("ellipsoid", "WGS84"),
             )
 
         except Exception as ex:
@@ -1975,70 +2328,70 @@ async def extract_xsection_data2(
     # Extract the cross-section.
     try:
         data_file = urllib.parse.unquote(data_file)  # Decode the URL-safe string
-        with xr.open_dataset(os.path.join(NETCDF_DIR, data_file)) as ds:
+        ds = open_chunked_netcdf_s3(data_file)
 
-            plot_data = ds.copy()
-            meta = plot_data.attrs
-            plot_data = plot_data.where(
-                (plot_data.depth >= float(start_depth))
-                & (plot_data.depth <= float(end_depth)),
-                drop=True,
+        plot_data = ds.copy()
+        meta = plot_data.attrs
+        plot_data = plot_data.where(
+            (plot_data.depth >= float(start_depth))
+            & (plot_data.depth <= float(end_depth)),
+            drop=True,
+        )
+
+        start = [start_lat, start_lng]
+        end = [end_lat, end_lng]
+        grid_ref = meta.get("grid_ref", "latitude_longitude")
+        utm_zone = meta.get("utm_zone")
+        ellipsoid = meta.get("ellipsoid")
+        xsection_data, latitudes, longitudes = interpolate_path(
+            plot_data,
+            start,
+            end,
+            num_points=num_points,
+            method=interpolation_method,
+            grid_ref=grid_ref,
+            utm_zone=utm_zone,
+            ellipsoid=ellipsoid,
+        )
+
+        # Calculate distances between consecutive points
+        geod = Geod(ellps=meta.get("ellipsoid", "WGS84"))
+        _, _, distances = geod.inv(
+            longitudes[:-1],
+            latitudes[:-1],
+            longitudes[1:],
+            latitudes[1:],
+        )
+
+        # Compute cumulative distance, starting from 0
+        cumulative_distances = np.concatenate(([0], np.cumsum(distances)))
+
+        if "grid_ref" not in meta:
+            logger.warning(
+                f"[WARN] The 'grid_ref' attribute not found. Assuming geographic coordinate system"
             )
+            grid_ref = "latitude_longitude"
 
-            start = [start_lat, start_lng]
-            end = [end_lat, end_lng]
-            grid_ref = meta.get("output_grid_ref", "latitude_longitude")
-            utm_zone = meta.get("utm_zone")
-            ellipsoid = meta.get("ellipsoid")
-            xsection_data, latitudes, longitudes = interpolate_path(
-                plot_data,
-                start,
-                end,
-                num_points=num_points,
-                method=interpolation_method,
-                grid_ref=grid_ref,
-                utm_zone=utm_zone,
-                ellipsoid=ellipsoid,
-            )
+        else:
+            grid_ref = meta["grid_ref"]
 
-            # Calculate distances between consecutive points
-            geod = Geod(ellps=meta["ellipsoid"])
-            _, _, distances = geod.inv(
-                longitudes[:-1],
-                latitudes[:-1],
-                longitudes[1:],
-                latitudes[1:],
-            )
+        logger.warning(f"[WARN] Units: {units}")
+        if units == "mks":
+            cumulative_distances = cumulative_distances / 1000.0
+            distance_label = "distance (km)"
+        else:
+            distance_label = "distance (m)"
 
-            # Compute cumulative distance, starting from 0
-            cumulative_distances = np.concatenate(([0], np.cumsum(distances)))
+        # Create a new coordinate 'distance' based on the cumulative distances
+        xsection_data = xsection_data.assign_coords(
+            distance=("points", cumulative_distances)
+        )
 
-            if "grid_ref" not in meta:
-                logger.warning(
-                    f"[WARN] The 'grid_ref' attribute not found. Assuming geographic coordinate system"
-                )
-                grid_ref = "latitude_longitude"
-
-            else:
-                grid_ref = meta["grid_ref"]
-
-            logger.warning(f"[WARN] Units: {units}")
-            if units == "mks":
-                cumulative_distances = cumulative_distances / 1000.0
-                distance_label = "distance (km)"
-            else:
-                distance_label = "distance (m)"
-
-            # Create a new coordinate 'distance' based on the cumulative distances
-            xsection_data = xsection_data.assign_coords(
-                distance=("points", cumulative_distances)
-            )
-
-            # If you want to use 'distance' as a dimension instead of 'index',
-            # you can swap the dimensions (assuming 'index' is your current dimension)
-            xsection_data = xsection_data.swap_dims({"points": "distance"})
-            output_data = xsection_data.copy()
-            unique_id = generate_unique_date_string()
+        # If you want to use 'distance' as a dimension instead of 'index',
+        # you can swap the dimensions (assuming 'index' is your current dimension)
+        xsection_data = xsection_data.swap_dims({"points": "distance"})
+        output_data = xsection_data.copy()
+        unique_id = generate_unique_date_string()
     except Exception as ex:
         logger.error(f"[ERR] {ex}")
         return Response(

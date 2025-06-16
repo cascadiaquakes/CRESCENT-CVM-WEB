@@ -172,7 +172,7 @@
 <script>
     async function loadDropdown() {
         try {
-            const response = await fetch('/models_drop_down?required_variable=depth');
+            const response = await fetch('/data/models_drop_down_s3?required_variable=depth');
             if (response.ok) {
                 const dropdownHTML = await response.text();
                 document.getElementById('data-file').innerHTML = dropdownHTML;
@@ -484,7 +484,9 @@
     function updateFormFields(fileName) {
         const locked = document.getElementById('lock').checked;
         var vertical_units;
-        fetch(fileName)
+        // Construct the API URL
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
+        fetch(apiUrl)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -643,7 +645,6 @@
         const regex = /.nc/i;
         var jsonFlename = filename.replace(regex, '.json')
         // Field is found, execute your function
-        jsonFlename = '../static/json/' + jsonFlename;
         const selectElement = document.getElementById('data-file')
         const model = selectElement.options[selectElement.selectedIndex].textContent
         const vars = get_vars_from_name(model)
@@ -673,7 +674,7 @@
                         const regex = /.nc/i;
                         const jsonFlename = dynamicField.value.replace(regex, '.json')
                         // Field is found, execute your function
-                        updateFormFields('../static/json/' + jsonFlename);
+                        updateFormFields(jsonFlename);
 
                         // Optionally, disconnect the observer if it's no longer needed
                         observer.disconnect();

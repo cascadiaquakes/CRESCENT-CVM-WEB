@@ -257,7 +257,7 @@
                 <!-- Submission button -->
                 <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
                     <button type="button" id="sync-to-iframe" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Sync
+                        style="width: 100px; width: 20%;border-radius: 15px;">Sync volume
                         to
                         map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <button type="button" id="metadata-button" class="button"
@@ -267,6 +267,9 @@
                 </div>
                 <!-- Display loading message and results dynamically -->
                 <hr />
+                <label for="download-container">Download the full model file:</label>
+                <div id="download-container" style="width:100%;font-size: 8pt; height: auto;"></div>
+                <br />
                 <label for="requestUrl">Submit Data Request (click to send, edit form to modify URL):</label>
                 <div id="generatedUrl" style="width:100%;font-size: 8pt; height: auto;">
                     <a id="dynamicLink" href="" target="_blank"
@@ -305,7 +308,13 @@
             const response = await fetch('/data/models_drop_down_s3?required_variable=depth');
             if (response.ok) {
                 const dropdownHTML = await response.text();
-                document.getElementById('data-file').innerHTML = dropdownHTML;
+                const dropdownElement = document.getElementById('data-file');
+                dropdownElement.innerHTML = dropdownHTML;
+                dropdownElement.dispatchEvent(new Event('change'));  // Triggers your change handler
+
+                // Now that dropdown is populated, get the selected option
+                const selection = dropdownElement.options[dropdownElement.selectedIndex].text;
+                add_download_link(selection);  // Call this only after dropdown is ready
             } else {
                 console.error('Failed to load dropdown:', response.statusText);
                 document.getElementById('data-file').textContent = 'Failed to load dropdown.';
@@ -361,8 +370,7 @@
             //requestUrlDiv.style.display = 'none';
 
             // Construct the API URL
-            const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
-
+            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
             fetch(apiUrl)
 
                 .then(response => {
@@ -441,9 +449,9 @@
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
                     // Read values from the iframe form
-                    const sel = iframeDoc.getElementById('data-file')
-                    const selection = sel.options[sel.selectedIndex].text
-                    selectOptionByText(selection)
+                    //const sel = iframeDoc.getElementById('data-file')
+                    //const selection = sel.options[sel.selectedIndex].text
+                    //selectOptionByText(selection)
                     document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
                     document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
                     document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
@@ -657,7 +665,7 @@
         const locked = document.getElementById('lock').checked;
 
         // Construct the API URL
-        const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
 
         fetch(apiUrl)
             .then(response => {
@@ -670,11 +678,11 @@
                 // Note on the file size.
                 const encodedFilename = encodeURIComponent(fileName);
 
-                if (data.hasOwnProperty("size_kb")) {
-                    size_kb = parseFloat(data["size_kb"]);
-                    if (size_kb >= 10000.0) { document.getElementById('notes').innerHTML = "<b style='color:red;font-size: 9px;'>Warning: Large File Extraction" }
+                showLoadingMessage({
+                    size_kb: data.size_kb,
+                    action: "extracting data"
+                });
 
-                }
                 // Not using at this time.
                 if (data.hasOwnProperty("output_formats?")) {
                     // Get the select element
@@ -792,6 +800,14 @@
             .catch(error => console.error('Error fetching the JSON file:', error));
     }
 
+    // Add data download link
+    function add_download_link(filename) {        // craete a link for the full model download
+        fetch(`/data/get_netcdf_download_link?filename=${encodeURIComponent(filename)}`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("download-container").innerHTML = html;
+            });
+    }
     document.getElementById('data-file').addEventListener('change', function () {
         const filename = document.getElementById('data-file').value
         document.getElementById("jsonContent").style.display = "none"
@@ -800,7 +816,8 @@
         var jsonFlename = filename.replace(regex, '.json')
         // Field is found, execute your function
         updateFormFields(jsonFlename)
-        // You can replace the console.log with any code to handle the change
+
+        add_download_link(filename);
 
         // The first time the page is loaded, we need a sync with the map.
         document.getElementById("sync-to-iframe").style.color = "red";
@@ -836,6 +853,7 @@
 
         // Start observing the document body for DOM changes
         observer.observe(document.body, config);
+
     });
 
     // Show metadata button

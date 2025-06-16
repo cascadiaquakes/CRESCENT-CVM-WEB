@@ -183,7 +183,9 @@
 </div>
 {% endblock %}
 {% block filter %}
-
+<div id="toggleFilterPanel" onclick="toggleFilterPanel()" class="filterToggleBtn">
+    <span style="color: red;">&#9654;&nbsp;</span>Show/Hide 3D Models Filters & Coverage Comparison Controls
+</div>
 <div id="filterPanel" style="display:none;">
     <div id="filterContainer">
         <div id="latLonFilters">
@@ -313,9 +315,6 @@
 {% endblock %}
 {% block leftpanel %}
 <div id="fileListPanel">
-    <div id="toggleFilterPanel" onclick="toggleFilterPanel()" class="filterToggleBtn">
-        <span style="color: red;">&#9654;&nbsp;</span>Show/Hide 3D Models Filters & Coverage Comparison Controls
-    </div>
     <div id="fileTable"></div>
     <div>&nbsp;</div>
     <div id="auxTableContainer"></div>
@@ -342,6 +341,33 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script src="/static/config/project.js"></script>
 <script>
+    let auxData, auxLabel, auxTitle, auxCitation, auxFillOpacity, auxLineWidth, auxDecimation, auxMarker;
+
+    async function loadAuxConfig() {
+        try {
+            const response = await fetch("/load-aux-config-s3/");
+            const data = await response.json();
+            auxData = data.auxData;
+            auxLabel = data.auxLabel;
+            auxTitle = data.auxTitle;
+            auxCitation = data.auxCitation;
+            auxFillOpacity = data.auxFillOpacity;
+            auxLineWidth = data.auxLineWidth;
+            auxDecimation = data.auxDecimation;
+            auxMarker = data.auxMarker;
+
+            console.log("Aux config loaded:", auxLabel[0], auxData[0]);
+            // Now you can call other initialization logic
+            // Initialize the auxiliary table.
+            createAuxTable();
+            //initializeMap();
+        } catch (error) {
+            console.error("Error loading auxiliary config:", error);
+        }
+    }
+
+    // Run this once when page loads
+    window.addEventListener("DOMContentLoaded", loadAuxConfig);
 
     // Ensure Cesium is Loaded Before Execution
     window.onload = function () {
@@ -396,7 +422,7 @@
         var button = document.getElementById("toggleFilterPanel");
         if (filterPanel.style.display === "none") {
             filterPanel.style.display = "block";
-            button.innerHTML = "<span style='color: red;''>&#9650;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Up arrow
+            button.innerHTML = "<span style='color: red;''>&#9660;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Up arrow
         } else {
             filterPanel.style.display = "none";
             button.innerHTML = "<span style='color: red;''>&#9654;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Down arrow
@@ -670,8 +696,10 @@
         }
 
         // Display file metadata.
-        function display_metadata(model, filePath) {
-            fetch(filePath)
+        function display_metadata(model, fileName) {
+            // Construct the API URL
+            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
+            fetch(apiUrl)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
@@ -688,7 +716,7 @@
                 });
         }
 
-        fetch('/list_json_files/' + model) // Replace with the URL to your CGI script
+        fetch('/data/list_json_files_s3/' + model) // Replace with the URL to your CGI script
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -701,7 +729,7 @@
                 fileTable.innerHTML = html;
                 extractAndPopulateVariables(); // Extract and populate variables into the select dropdown
                 var firstFileName = fileTable.querySelector('tr:nth-child(2) td:nth-child(8)').textContent.trim();
-                var firstFilePath = '../static/json/' + firstFileName + '.json';
+                var firstFilePath = firstFileName + '.json';
                 var radio = fileTable.querySelector('input[type="radio"]');
                 radio.checked = true;
                 hideAllRadioButtonsExceptChecked();
@@ -738,14 +766,14 @@
                         lon_min = target.parentNode.cells[5].textContent;
                         lon_max = target.parentNode.cells[6].textContent;
                         filename = target.parentNode.cells[7].textContent;
-                        var fileName = target.textContent.trim();
+                        //var fileName = target.textContent.trim();
                         selectOptionInIframe(model)
-                        var filePath = '../static/json/' + filename + '.json';
+                        var fileName = filename + '.json';
                         var radio = target.parentNode.cells[0].querySelector('input[type="radio"]');
                         radio.checked = true;
                         hideAllRadioButtonsExceptChecked();
                         cmodelname.innerHTML = model;
-                        display_metadata(model, filePath);
+                        display_metadata(model, fileName);
                     }
                 });
 
@@ -919,7 +947,7 @@
 
     // Function to load the file list and then populate the selection boxes
     function loadFileListAndPopulateSelections(model) {
-        fetch('/list_json_files/' + model) // Replace with the URL to your CGI script
+        fetch('/data/list_json_files_s3/' + model) // Replace with the URL to your CGI script
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
@@ -956,10 +984,12 @@
     window.addEventListener('load', () => document.getElementById("h2").style.display = "block");
 
     // Summarize the json file content
-    async function summarizeGeoJSON(url, label, title, reference, decimation) {
+    async function summarizeGeoJSON(fileName, label, title, reference, decimation) {
         try {
+            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
+
             // Fetch the GeoJSON file
-            const response = await fetch(url);
+            const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
@@ -986,7 +1016,7 @@
 
             // Create the summary
             const summary = `
-            <strong>2D Model File Name:</strong> ${url}<br>
+            <strong>2D Model File Name:</strong> ${fileName}<br>
             <strong>Label:</strong> ${label}<br>
             <strong>Title:</strong> ${title}<br>
             <strong>Reference:</strong> <a href="${reference}" target="_blank">${reference}</a><br>
@@ -1095,12 +1125,13 @@
                 rows.forEach(_row => _row.classList.remove('highlighted-row'));
 
                 // Highlight the clicked row
+
                 row.classList.add('highlighted-row');
-                const url = auxData[index];
+                const dataFile = auxData[index];
                 const title = auxTitle[index];
                 const reference = auxCitation[index][1];
                 const decimation = auxDecimation[index];
-                const summary = await summarizeGeoJSON(url, label, title, reference, decimation);
+                const summary = await summarizeGeoJSON(dataFile, label, title, reference, decimation);
                 document.getElementById("jsonContent").innerHTML = summary;
 
 
@@ -1139,24 +1170,29 @@
             titleCell.appendChild(titleText);
 
             // Create a download link for the GeoJSON file.
-            const downloadLink = document.createElement('a');
-            downloadLink.href = auxData[index]; // URL or path to the GeoJSON file.
-            downloadLink.textContent = "Download the GeoJSON file";
-            downloadLink.download = auxData[index]; // Suggest the file name for download.
-            downloadLink.style.textDecoration = 'underline'; // Optional styling for link appearance.
-            downloadLink.style.marginLeft = '5px';
+            const fileName = auxData[index];  // file name for the download
+            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
+            console.log(`Fetching geojson file  ${fileName}: from ${apiUrl}`)
 
-            // Append the link to the title cell.
+
+            const downloadLink = document.createElement('a');
+            downloadLink.href = apiUrl;
+            downloadLink.textContent = "Download the GeoJSON file";
+            downloadLink.download = fileName;  // Suggest file name for download
+            downloadLink.style.textDecoration = 'underline';
+            downloadLink.style.marginLeft = '5px';
             titleCell.appendChild(downloadLink);
 
-            // Placeholder for the file size.
-            const fileSizeText = document.createTextNode(" (Estimating size...)");
-            titleCell.appendChild(fileSizeText);
 
-            // Estimate and update the file size.
-            fetchFileSize(auxData[index]).then(size => {
-                fileSizeText.textContent = ` (${size} KB)`; // Update with the estimated size.
-            });
+
+            // Placeholder for the file size. (No s3 file size)
+            //const fileSizeText = document.createTextNode(" (Estimating size...)");
+            //titleCell.appendChild(fileSizeText);
+
+            // Estimate and update the file size from S3 is not posted.
+            //fetchFileSize(auxData[index]).then(size => {
+            //    fileSizeText.textContent = ` (${size} KB)`; // Update with the estimated size.
+            //});
 
             row.appendChild(titleCell);
 
@@ -1190,8 +1226,7 @@
         });
     }
 
-    // Initialize the auxiliary table.
-    createAuxTable();
+
 
 
 </script>

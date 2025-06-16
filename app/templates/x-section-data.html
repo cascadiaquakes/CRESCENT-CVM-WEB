@@ -260,7 +260,7 @@
                 <!-- Submission button -->
                 <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
                     <button type="button" id="sync-to-iframe" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Sync
+                        style="width: 100px; width: 20%;border-radius: 15px;">Sync x-section
                         to
                         map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
                     <button type="button" id="metadata-button" class="button"
@@ -374,7 +374,7 @@
             //requestUrlDiv.style.display = 'none';
 
             // Construct the API URL
-            const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
 
             fetch(apiUrl)
                 .then(response => {
@@ -448,9 +448,9 @@
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
 
                     // Read values from the iframe form
-                    const sel = iframeDoc.getElementById('data-file')
-                    const selection = sel.options[sel.selectedIndex].text
-                    selectOptionByText(selection)
+                    //const sel = iframeDoc.getElementById('data-file')
+                    //const selection = sel.options[sel.selectedIndex].text
+                    //selectOptionByText(selection)
                     document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
                     document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
                     document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
@@ -666,7 +666,7 @@
         const locked = document.getElementById('lock').checked;
 
         // Construct the API URL
-        const apiUrl = `/data/fetch_json?file_name=${encodeURIComponent(fileName)}`;
+        const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
 
         fetch(apiUrl)
             .then(response => {
@@ -676,6 +676,14 @@
                 return response.json();
             })
             .then(data => {
+                // Note on the file size.
+                const encodedFilename = encodeURIComponent(fileName);
+
+                showLoadingMessage({
+                    size_kb: data.size_kb,
+                    action: "extracting data"
+                });
+
                 // Assuming the JSON structure matches your form fields' ids
                 for (const [key, value] of Object.entries(data)) {
                     if (key == "geospatial_lon_min") {
