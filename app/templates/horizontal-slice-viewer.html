@@ -305,13 +305,11 @@
                             <div class="form-input">
                                 <label for="image-width">&nbsp; Width:</label>
                                 <input type="text" id="image-width" name="image_width" value="7">
-                                </select>
 
                             </div>
                             <div class="form-input">
                                 <label for="image-height">&nbsp; Height:</label>
                                 <input type="text" id="image-height" name="image_height" value="12">
-                                </select>
                             </div>
                             <div style="clear: both;">
                             </div>
@@ -408,7 +406,6 @@
     });
     // Monitor iframe's selection change 
     document.addEventListener('DOMContentLoaded', function () {
-        const parentForm = document.getElementById('parent-form');
         const iframe = document.getElementById('3dIframe');
 
         // Function to send the current form data to the iframe.
@@ -579,32 +576,7 @@
     document.getElementById('image-form').addEventListener('submit', handleSubmit);
 
 
-    function isValidLatitude(lat) {
-        return !isNaN(lat) && lat >= -90 && lat <= 90;
-    }
-
-    function isValidLongitude(lng) {
-        return !isNaN(lng) && lng >= -180 && lng <= 180;
-    }
-
-
-    // Copy the form values to iframe.
-    function copyFormValues() {
-        const iframe = document.getElementById('3dIframe');
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-
-        // Read values from the iframe form
-        const sel = iframeDoc.getElementById('data-file')
-        const selection = sel.options[sel.selectedIndex].text
-        selectOptionByText(selection)
-        document.getElementById('start-lng').value = iframeDoc.getElementById('minLonSlider').value;
-        document.getElementById('end-lng').value = iframeDoc.getElementById('maxLonSlider').value;
-        document.getElementById('start-lat').value = iframeDoc.getElementById('minLatSlider').value;
-        document.getElementById('end-lat').value = iframeDoc.getElementById('maxLatSlider').value;
-        document.getElementById('start-depth').value = iframeDoc.getElementById('minDepthSlider').value;
-        document.getElementById('end-depth').value = iframeDoc.getElementById('maxDepthSlider').value;
-
-    }
+    
 
     // Capitalize First Character of a string.
     function capitalizeFirstCharacter(str) {
@@ -883,8 +855,6 @@
 
     // Show metadata button
     document.getElementById('metadata-button').addEventListener('click', display_metadata);
-    window.addEventListener('load', function () {
-    })
 </script>
 
 {%endblock%}

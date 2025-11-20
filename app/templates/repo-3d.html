@@ -42,16 +42,13 @@
 
         <!--Not displaying since we have moved the select option to the parent document.-->
         <div id="toggleSubductionInterface" style="display:none;">
-            <!-- Visible checkbox with label -->
             <div>
                 <input type="checkbox" id="toggle2dSurfaceCheckbox">
                 <label for="toggle2dSurfaceCheckbox">Clear 2D Surfaces</label>
             </div>
             <div style="font-weight:bold;padding-top: 10px;">Select 2D Surfaces:</div>
             <select id="select2dSurface" multiple size="5"></select>
-            </select>
         </div>
-
 
         <div id="toggleBoundaryInterface">
             <label>
@@ -73,7 +70,6 @@
             <input type="text" id="centerCoordinates" style="width:70px;" value="-123.0,45.5" />
             <button id="homeViewButton">Tilted View</button>
         </div>
-        <!-- Slider controls for model boundaries -->
         <div>
             <hr style="border-top: 1px solid #0000FF" />
         </div>
@@ -143,18 +139,13 @@
     </div>
 
     <script>
-
         let auxData, auxLabel, auxTitle, auxCitation, auxFillOpacity, auxLineWidth, auxDecimation, auxMarker;
 
         // Load the logo after the HTML is loaded.
         document.addEventListener('DOMContentLoaded', function () {
-            // Select the image element by its ID
             const logoImage = document.getElementById('logo-image');
-
-            // Set the src attribute to the desired image URL
             logoImage.src = logoFile;
         });
-
 
         // Initialize the viewer
         var viewer = new Cesium.Viewer('cesiumContainer', {
@@ -163,8 +154,8 @@
             nearToFarRatio: 1e6,
             farToNearRatio: 1e-6,
             sceneMode: Cesium.SceneMode.SCENE3D,
-            skyBox: false, // Disable default skybox
-            skyAtmosphere: false, // Disable sky atmosphere
+            skyBox: false,
+            skyAtmosphere: false,
             scene3DOnly: true,
             enableCollisionDetection: false,
             navigationInstructionsInitiallyVisible: true,
@@ -174,76 +165,58 @@
             })
         });
 
-        // Set background color to black
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
         // The north arrow.
         function updateNorthArrow() {
             var heading = Cesium.Math.toDegrees(viewer.camera.heading);
-            //console.log('Camera Heading: ', heading);  // Debug log to check heading
             document.getElementById('northArrow').style.transform = 'rotate(' + (-heading) + 'deg)';
         }
-        // Ensure update on initial load
         updateNorthArrow();
-
-        // Bind updateNorthArrow to the postRender event
         viewer.scene.postRender.addEventListener(updateNorthArrow);
 
         // Center view button functionality
         document.getElementById('centeredViewButton').addEventListener('click', centeredView);
         function centeredView() {
-            // Get the coordinates from the input box
             const coordinates = document.getElementById('centerCoordinates').value.split(',');
             const lon = parseFloat(coordinates[0]);
             const lat = parseFloat(coordinates[1]);
 
-            // Calculate the bounding box dimensions
             const width = east - west;
             const height = north - south;
             const maxDimension = Math.max(width, height);
-            const zoomOutFactor = 2.0; // Increased zoom out factor for better visibility
+            const zoomOutFactor = 2.0;
 
-            // Estimate height based on the bounding box size
-            const estimatedHeight = maxDimension * 111000 * zoomOutFactor; // 111,000 meters per degree
+            const estimatedHeight = maxDimension * 111000 * zoomOutFactor;
 
-            // Move the camera to the new coordinates with the estimated height
             viewer.camera.flyTo({
                 destination: Cesium.Cartesian3.fromDegrees(lon, lat, estimatedHeight),
                 orientation: {
                     heading: 0.0,
-                    pitch: Cesium.Math.toRadians(-90.0), // Looking straight down
+                    pitch: Cesium.Math.toRadians(-90.0),
                     roll: 0.0
                 }
             });
         };
-
-        centeredView()
-
+        centeredView();
 
         // Hide/open the menu button
         document.getElementById('toggleButton').addEventListener('click', function () {
             var controlContainer = document.getElementById('controlContainer');
             var toggleButton = document.getElementById('toggleButton');
-            // Get the actual styles applied
             const controlContainerDisplay = window.getComputedStyle(controlContainer).display
             if (controlContainerDisplay === 'none' || controlContainerDisplay === '') {
                 controlContainer.style.display = 'block';
-                toggleButton.innerHTML = '▲ Show/Hide Controls'; // Up arrow
+                toggleButton.innerHTML = '▲ Show/Hide Controls';
             } else {
                 controlContainer.style.display = 'none';
-                toggleButton.innerHTML = '▼ Show/Hide Controls'; // Down arrow
+                toggleButton.innerHTML = '▼ Show/Hide Controls';
             }
         });
 
-        // Function to read and clear an item from localStorage
         function readAndClearLocalStorageItem(key) {
-            // Step 1: Read the item from localStorage
             const item = localStorage.getItem(key);
-
-            // Step 2: Remove the item from localStorage
             localStorage.removeItem(key);
-
-            // Step 3: Return the parsed item, or null if it doesn't exist
             return item !== null ? JSON.parse(item) : null;
         }
 
@@ -259,17 +232,13 @@
             });
         }
 
-        // Override the home button functionality
         viewer.homeButton.viewModel.command.beforeExecute.addEventListener(function (e) {
-            e.cancel = true; // Prevent the default home button action
-            centeredView()
-
+            e.cancel = true;
+            centeredView();
         });
 
-        // Add the home button functionality
         document.getElementById("homeViewButton").addEventListener('click', function () {
-            homeView()
-
+            homeView();
         });
 
         viewer.scene.globe.frontFaceAlphaByDistance = new Cesium.NearFarScalar(50.0, 0.0, 100.0, 1.0);
@@ -322,28 +291,6 @@
         var dataSources = [];
         var boundaryDataSources = [];
 
-
-        // Really need only one variable, but my attempts at merging them was drawing extra diagonal line.
-
-        async function loadDropdown() {
-            try {
-                const response = await fetch('/data/models_drop_down_s3');
-                if (response.ok) {
-                    const dropdownHTML = await response.text();
-                    document.getElementById('data-file').innerHTML = dropdownHTML;
-                } else {
-                    console.error('Failed to load dropdown:', response.statusText);
-                    document.getElementById('data-file').textContent = 'Failed to load dropdown.';
-                }
-            } catch (error) {
-                console.error('Error fetching dropdown:', error);
-                document.getElementById('data-file').textContent = 'Error loading dropdown.';
-            }
-        }
-
-        // Call loadDropdown when the page has finished loading
-        document.addEventListener('DOMContentLoaded', loadDropdown);
-
         // Earthquakes.
         async function loadEarthquakeData(url) {
             try {
@@ -377,7 +324,6 @@
             }
         }
 
-        // Earthquakes
         loadEarthquakeData(eqQueryUrl + south + '&maxlatitude=' + north + '&minlongitude=' + west + '&maxlongitude=' + east);
 
         function updateEarthquakeVisibility() {
@@ -407,7 +353,6 @@
         });
 
         // Draw a polygon showing the study area
-        // Create the positions for the polygon
         const positions = Cesium.Cartesian3.fromDegreesArray([
             west, north,
             east, north,
@@ -415,53 +360,38 @@
             west, south
         ]);
 
-        // Get the grid slider elements
         const gridTransparencySlider = document.getElementById('gridTransparencySlider');
         const gridTransparencyValue = document.getElementById('gridTransparencyValue');
 
-        // Update the grid transparency when the slider is moved
         gridTransparencySlider.addEventListener('input', function () {
-            gridTransparency = parseFloat(gridTransparencySlider.value); // Update transparency value
-            gridTransparencyValue.textContent = gridTransparency; // Display the value
-
-            // Redraw the grid lines with the updated transparency
+            gridTransparency = parseFloat(gridTransparencySlider.value);
+            gridTransparencyValue.textContent = gridTransparency;
             addGridLines(west, east, south, north);
         });
 
-
-        // Call the function to add grid lines
         addGridLines(west, east, south, north);
-
-        // Initialize the slider with the current transparency value
         gridTransparencySlider.value = gridTransparency;
         gridTransparencyValue.textContent = gridTransparency;
 
-        // Add the polygon entity to the viewer
         viewer.entities.add({
             name: "study area",
             polygon: {
                 hierarchy: new Cesium.PolygonHierarchy(positions),
-                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]), // Cyan color with 50% transparency
-                perPositionHeight: true, // Allow different heights for each vertex
+                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]),
+                perPositionHeight: true,
                 outline: true,
                 outlineColor: cvmAreaOutlineColor[0]
             }
         });
-        //filterOutline(west + 2, east + 2, north + 2, south + 2, 2)
-        function filterOutline(cornerN, cornerS, cornerE, cornerW, lw, polylineId, colorIndex) {
 
-            // Check if the polyline already exists
+        function filterOutline(cornerN, cornerS, cornerE, cornerW, lw, polylineId, colorIndex) {
             const existingEntity = viewer.entities.getById(polylineId);
 
             if (existingEntity) {
-                // If the polyline exists, remove it
                 viewer.entities.remove(existingEntity);
             }
 
-            // If the polyline does not exist, add it if the colorIndex is not negative.
             if (colorIndex >= 0) {
-
-                // Create the positions for the polyline
                 const positions = Cesium.Cartesian3.fromDegreesArray([
                     cornerW, cornerN,
                     cornerE, cornerN,
@@ -469,28 +399,22 @@
                     cornerW, cornerS
                 ]);
 
-                // Add a polyline entity to create the dashed outline
                 viewer.entities.add({
-                    id: polylineId, // Use the unique identifier
+                    id: polylineId,
                     name: "study area outline",
                     polyline: {
-                        positions: [...positions, positions[0]], // Close the loop by adding the first position again
-                        width: lw, // Set the width of the dashed line
+                        positions: [...positions, positions[0]],
+                        width: lw,
                         material: new Cesium.PolylineDashMaterialProperty({
                             color: cesiumColorList[colorIndex],
-                            dashLength: 16.0, // Length of the dash pattern
-                            gapColor: Cesium.Color.TRANSPARENT // Transparent gap between dashes
+                            dashLength: 16.0,
+                            gapColor: Cesium.Color.TRANSPARENT
                         })
                     }
                 });
             }
-
         }
 
-
-
-
-        // Define the corner coordinates with labels
         const corners = [
             { lon: west, lat: north, label: 'NW', coordinates: `${west.toFixed(1)}, ${north.toFixed(1)}` },
             { lon: east, lat: north, label: 'NE', coordinates: `${east.toFixed(1)}, ${north.toFixed(1)}` },
@@ -498,7 +422,6 @@
             { lon: west, lat: south, label: 'SW', coordinates: `${west.toFixed(1)}, ${south.toFixed(1)}` }
         ];
 
-        // Add labels to each corner
         corners.forEach(corner => {
             viewer.entities.add({
                 position: Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat),
@@ -514,7 +437,7 @@
                     outlineWidth: 2,
                     style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                     verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                    pixelOffset: new Cesium.Cartesian2(0, -20) // Adjust label position
+                    pixelOffset: new Cesium.Cartesian2(0, -20)
                 }
             });
         });
@@ -555,7 +478,7 @@
             auxLegendContainer.appendChild(legendItem);
         });
 
-        // Load the CVM models to the drop-down.
+        // Load the CVM models to the drop-down (coverage version)
         async function loadDropdown() {
             try {
                 const response = await fetch('/data/models_drop_down_coverage_s3');
@@ -563,7 +486,6 @@
                     const dropdownHTML = await response.text();
 
                     document.getElementById('data-file').innerHTML = dropdownHTML;
-                    // Initialize sliders based on the first dropdown option
                     updateSlidersFromDropdown();
                 } else {
                     console.error('Failed to load dropdown:', response.statusText);
@@ -578,7 +500,6 @@
         // Call loadDropdown when the page has finished loading
         document.addEventListener('DOMContentLoaded', loadDropdown);
 
-        // Outline box for CVM.
         function updateBoxOutline(minLat, maxLat, minLon, maxLon, minDepth, maxDepth, alpha) {
             const minDepthScaled = minDepth * -1000;
             const maxDepthScaled = maxDepth * -1000;
@@ -625,36 +546,24 @@
                 minLon, minLat, maxDepthScaled
             ]);
 
-            // Helper function to create and add polygon entity
             function addPolygonEntity(positions, alpha, name) {
                 return viewer.entities.add({
                     name: name,
                     polygon: {
                         hierarchy: new Cesium.PolygonHierarchy(positions),
                         material: cvmFaceColor.withAlpha(alpha),
-                        perPositionHeight: true, // Allow different heights for each vertex
+                        perPositionHeight: true,
                         outline: true,
                         outlineColor: cvmOutlineColor,
                     }
                 });
-                // Add a polyline entity for a thicker outline with transparency
-                viewer.entities.add({
-                    name: name + " outline",
-                    polyline: {
-                        positions: positions,
-                        width: cvmLineWidth[0], // Set the width of the outline
-                        material: cvmOutlineColor.withAlpha(1.0)
-                    }
-                });
             }
 
-            // Remove existing entities if they exist
             if (boxEntities) {
                 boxEntities.forEach(entity => viewer.entities.remove(entity));
             }
             boxEntities = [];
 
-            // Add polygons for all six faces
             boxEntities.push(addPolygonEntity(topPositions, alpha, 'Top Surface'));
             boxEntities.push(addPolygonEntity(bottomPositions, alpha, 'Bottom Surface'));
             boxEntities.push(addPolygonEntity(northPositions, alpha, 'North Surface'));
@@ -663,12 +572,8 @@
             boxEntities.push(addPolygonEntity(westPositions, alpha, 'West Surface'));
         }
 
-
-        // Array to keep track of the box entities
         let boxEntities = [];
 
-
-        // Sliders.
         function updateSlidersFromDropdown() {
             const coords = document.getElementById('data-file').value;
 
@@ -711,51 +616,112 @@
                 maxDepthSlider.value = parseFloat(limits[5]);
                 document.getElementById('maxDepthValue').textContent = maxDepthSlider.value;
 
-                updateBoxOutline(parseFloat(minLatSlider.value), parseFloat(maxLatSlider.value), parseFloat(minLonSlider.value), parseFloat(maxLonSlider.value), parseFloat(minDepthSlider.value), parseFloat(maxDepthSlider.value), parseFloat(document.getElementById('alphaSlider').value));
+                updateBoxOutline(
+                    parseFloat(minLatSlider.value),
+                    parseFloat(maxLatSlider.value),
+                    parseFloat(minLonSlider.value),
+                    parseFloat(maxLonSlider.value),
+                    parseFloat(minDepthSlider.value),
+                    parseFloat(maxDepthSlider.value),
+                    parseFloat(document.getElementById('alphaSlider').value)
+                );
             } else {
                 if (boxEntities) {
                     boxEntities.forEach(entity => viewer.entities.remove(entity));
                 }
                 boxEntities = [];
-
             }
         }
 
-
-        // Event listeners for the sliders
         document.getElementById('minLatSlider').addEventListener('input', function () {
             document.getElementById('minLatValue').textContent = this.value;
-            updateBoxOutline(parseFloat(this.value), parseFloat(document.getElementById('maxLatSlider').value), parseFloat(document.getElementById('minLonSlider').value), parseFloat(document.getElementById('maxLonSlider').value), parseFloat(document.getElementById('minDepthSlider').value), parseFloat(document.getElementById('maxDepthSlider').value), parseFloat(document.getElementById('alphaSlider').value));
+            updateBoxOutline(
+                parseFloat(this.value),
+                parseFloat(document.getElementById('maxLatSlider').value),
+                parseFloat(document.getElementById('minLonSlider').value),
+                parseFloat(document.getElementById('maxLonSlider').value),
+                parseFloat(document.getElementById('minDepthSlider').value),
+                parseFloat(document.getElementById('maxDepthSlider').value),
+                parseFloat(document.getElementById('alphaSlider').value)
+            );
         });
 
         document.getElementById('maxLatSlider').addEventListener('input', function () {
             document.getElementById('maxLatValue').textContent = this.value;
-            updateBoxOutline(parseFloat(document.getElementById('minLatSlider').value), parseFloat(this.value), parseFloat(document.getElementById('minLonSlider').value), parseFloat(document.getElementById('maxLonSlider').value), parseFloat(document.getElementById('minDepthSlider').value), parseFloat(document.getElementById('maxDepthSlider').value), parseFloat(document.getElementById('alphaSlider').value));
+            updateBoxOutline(
+                parseFloat(document.getElementById('minLatSlider').value),
+                parseFloat(this.value),
+                parseFloat(document.getElementById('minLonSlider').value),
+                parseFloat(document.getElementById('maxLonSlider').value),
+                parseFloat(document.getElementById('minDepthSlider').value),
+                parseFloat(document.getElementById('maxDepthSlider').value),
+                parseFloat(document.getElementById('alphaSlider').value)
+            );
         });
 
         document.getElementById('minLonSlider').addEventListener('input', function () {
             document.getElementById('minLonValue').textContent = this.value;
-            updateBoxOutline(parseFloat(document.getElementById('minLatSlider').value), parseFloat(document.getElementById('maxLatSlider').value), parseFloat(this.value), parseFloat(document.getElementById('maxLonSlider').value), parseFloat(document.getElementById('minDepthSlider').value), parseFloat(document.getElementById('maxDepthSlider').value), parseFloat(document.getElementById('alphaSlider').value));
+            updateBoxOutline(
+                parseFloat(document.getElementById('minLatSlider').value),
+                parseFloat(document.getElementById('maxLatSlider').value),
+                parseFloat(this.value),
+                parseFloat(document.getElementById('maxLonSlider').value),
+                parseFloat(document.getElementById('minDepthSlider').value),
+                parseFloat(document.getElementById('maxDepthSlider').value),
+                parseFloat(document.getElementById('alphaSlider').value)
+            );
         });
 
         document.getElementById('maxLonSlider').addEventListener('input', function () {
             document.getElementById('maxLonValue').textContent = this.value;
-            updateBoxOutline(parseFloat(document.getElementById('minLatSlider').value), parseFloat(document.getElementById('maxLatSlider').value), parseFloat(document.getElementById('minLonSlider').value), parseFloat(this.value), parseFloat(document.getElementById('minDepthSlider').value), parseFloat(document.getElementById('maxDepthSlider').value), parseFloat(document.getElementById('alphaSlider').value));
+            updateBoxOutline(
+                parseFloat(document.getElementById('minLatSlider').value),
+                parseFloat(document.getElementById('maxLatSlider').value),
+                parseFloat(document.getElementById('minLonSlider').value),
+                parseFloat(this.value),
+                parseFloat(document.getElementById('minDepthSlider').value),
+                parseFloat(document.getElementById('maxDepthSlider').value),
+                parseFloat(document.getElementById('alphaSlider').value)
+            );
         });
 
         document.getElementById('minDepthSlider').addEventListener('input', function () {
             document.getElementById('minDepthValue').textContent = this.value;
-            updateBoxOutline(parseFloat(document.getElementById('minLatSlider').value), parseFloat(document.getElementById('maxLatSlider').value), parseFloat(document.getElementById('minLonSlider').value), parseFloat(document.getElementById('maxLonSlider').value), parseFloat(this.value), parseFloat(document.getElementById('maxDepthSlider').value), parseFloat(document.getElementById('alphaSlider').value));
+            updateBoxOutline(
+                parseFloat(document.getElementById('minLatSlider').value),
+                parseFloat(document.getElementById('maxLatSlider').value),
+                parseFloat(document.getElementById('minLonSlider').value),
+                parseFloat(document.getElementById('maxLonSlider').value),
+                parseFloat(this.value),
+                parseFloat(document.getElementById('maxDepthSlider').value),
+                parseFloat(document.getElementById('alphaSlider').value)
+            );
         });
 
         document.getElementById('maxDepthSlider').addEventListener('input', function () {
             document.getElementById('maxDepthValue').textContent = this.value;
-            updateBoxOutline(parseFloat(document.getElementById('minLatSlider').value), parseFloat(document.getElementById('maxLatSlider').value), parseFloat(document.getElementById('minLonSlider').value), parseFloat(document.getElementById('maxLonSlider').value), parseFloat(document.getElementById('minDepthSlider').value), parseFloat(this.value), parseFloat(document.getElementById('alphaSlider').value));
+            updateBoxOutline(
+                parseFloat(document.getElementById('minLatSlider').value),
+                parseFloat(document.getElementById('maxLatSlider').value),
+                parseFloat(document.getElementById('minLonSlider').value),
+                parseFloat(document.getElementById('maxLonSlider').value),
+                parseFloat(document.getElementById('minDepthSlider').value),
+                parseFloat(this.value),
+                parseFloat(document.getElementById('alphaSlider').value)
+            );
         });
 
         document.getElementById('alphaSlider').addEventListener('input', function () {
             document.getElementById('alphaValue').textContent = this.value;
-            updateBoxOutline(parseFloat(document.getElementById('minLatSlider').value), parseFloat(document.getElementById('maxLatSlider').value), parseFloat(document.getElementById('minLonSlider').value), parseFloat(document.getElementById('maxLonSlider').value), parseFloat(document.getElementById('minDepthSlider').value), parseFloat(document.getElementById('maxDepthSlider').value), parseFloat(this.value));
+            updateBoxOutline(
+                parseFloat(document.getElementById('minLatSlider').value),
+                parseFloat(document.getElementById('maxLatSlider').value),
+                parseFloat(document.getElementById('minLonSlider').value),
+                parseFloat(document.getElementById('maxLonSlider').value),
+                parseFloat(document.getElementById('minDepthSlider').value),
+                parseFloat(document.getElementById('maxDepthSlider').value),
+                parseFloat(this.value)
+            );
         });
 
         document.getElementById('data-file').addEventListener('change', updateSlidersFromDropdown);
@@ -765,9 +731,8 @@
 
         var points = [];
         var distanceDisplay = document.getElementById('distanceDisplay');
-        var clearButton = document.getElementById('clearButton');
-        var distanceLineEntity = null; // Reference to the distance line entity
-        var pointEntities = []; // To store point entities for click locations
+        var distanceLineEntity = null;
+        var pointEntities = [];
 
         function calculateDistance(point1, point2) {
             return Cesium.Cartesian3.distance(point1, point2);
@@ -782,13 +747,11 @@
             points = [];
             distanceDisplay.textContent = '';
 
-            // Remove the distance line entity
             if (distanceLineEntity) {
                 viewer.entities.remove(distanceLineEntity);
                 distanceLineEntity = null;
             }
 
-            // Remove all point markers
             pointEntities.forEach(function (entity) {
                 viewer.entities.remove(entity);
             });
@@ -807,27 +770,25 @@
                 if (document.getElementById('clearCheckbox').checked) {
                     points.push(cartesian);
 
-                    // Add a point or marker (using X symbol or just a point)
                     var pointEntity = viewer.entities.add({
                         position: cartesian,
                         point: {
-                            pixelSize: 10, // Adjust size of the X marker
+                            pixelSize: 10,
                             color: Cesium.Color.ORANGE,
                             outlineWidth: 1,
                             outlineColor: Cesium.Color.WHITE
                         }
                     });
-                    pointEntities.push(pointEntity); // Store point entity for future removal
+                    pointEntities.push(pointEntity);
                 }
 
                 if (points.length == 2) {
                     var distance = calculateDistance(points[0], points[1]);
                     updateDistanceDisplay(distance);
 
-                    // Add a new distance line
                     distanceLineEntity = viewer.entities.add({
                         polyline: {
-                            positions: [points[0], points[1]], // Use the last two points
+                            positions: [points[0], points[1]],
                             width: 2,
                             material: Cesium.Color.ORANGE
                         }
@@ -842,46 +803,33 @@
             }
         });
 
-
         document.getElementById('toggleGlobeCheckbox').addEventListener('change', function () {
             viewer.scene.globe.show = this.checked;
         });
 
         // Handling the Geojson data.
         document.addEventListener('DOMContentLoaded', function () {
-
-
-            // Run this once when page loads
             loadAuxConfig().then(() => {
                 populateDropdown();
             });
 
-            // Function to handle the dropdown change event
             var auxDataSources = [];
 
             function handleDropdownChange() {
                 const dropdown = document.getElementById('select2dSurface');
                 const checkbox = document.getElementById('toggle2dSurfaceCheckbox');
 
-                // Get selected options
                 const selectedOptions = Array.from(dropdown.selectedOptions);
 
-                // Check if there are any selections
-                if (selectedOptions.length > 0) {
-                    checkbox.checked = true;
-                } else {
-                    checkbox.checked = false;
-                }
+                checkbox.checked = selectedOptions.length > 0;
 
-                // Clear items from the last selection, if any
                 for (var i = 0; i < auxDataSources.length; i++) {
                     if (viewer.dataSources.contains(auxDataSources[i])) {
                         viewer.dataSources.remove(auxDataSources[i]);
                     }
                 }
-                auxDataSources.length = 0; // Clear the array
+                auxDataSources.length = 0;
 
-                // Loop over selected options and handle each selection
                 let selectionIndex = -1;
                 selectedOptions.forEach(option => {
                     const selectedValue = option.value;
@@ -889,7 +837,7 @@
                     handleS3GeoJsonData(
                         'toggle2dSurfaceCheckbox',
                         [auxData[selectedValue]],
-                        [auxLabel[selectedValue]], // Assuming you have a label array for auxData
+                        [auxLabel[selectedValue]],
                         [auxDefaultColor[selectionIndex]],
                         [auxLineWidth[selectedValue]],
                         [auxFillOpacity[selectedValue]],
@@ -897,31 +845,25 @@
                     );
                 });
 
-                // Update the legend whenever the selection changes
                 updateLegend();
             }
 
-
-            // Add event listener to the dropdown
             document.getElementById('select2dSurface').addEventListener('change', function () {
                 enforceSelectionLimit();
                 handleDropdownChange();
             });
 
-
-            // Boundary lines.
             var boundaryDataSources = [];
             handleLocalGeoJsonData(
                 'toggleBoundaryCheckbox',
                 boundaryData,
-                boundaryLabel, // Assuming you have a label array for boundaryData
+                boundaryLabel,
                 boundaryColor,
                 boundaryLineWidth,
                 boundaryFillOpacity,
                 boundaryDataSources
             );
 
-            // CFM data with additional logic
             var cfmDataSources = [];
             handleLocalGeoJsonData(
                 'toggleCFMCheckbox',
@@ -934,7 +876,6 @@
                 function (dataSource, index) {
                     var entitiesToRemove = [];
                     dataSource.entities.values.forEach(function (entity) {
-
                         if (Cesium.defined(entity.polygon)) {
                             var coordinates = entity.polygon.hierarchy.getValue().positions;
                             coordinates.forEach(function (coordinate) {
@@ -955,7 +896,6 @@
                             }
                         }
                         entity.description = description;
-
                     });
 
                     entitiesToRemove.forEach(function (entity) {
@@ -964,7 +904,6 @@
                 }
             );
 
-            // CFM Trace data with additional logic
             var cfmTraceDataSources = [];
             handleLocalGeoJsonData(
                 'toggleCFMTraceCheckbox',
@@ -977,7 +916,6 @@
                 function (dataSource, index) {
                     var entitiesToRemove = [];
                     dataSource.entities.values.forEach(function (entity) {
-                        // Display all.
                         if (Cesium.defined(entity.polygon)) {
                             var coordinates = entity.polygon.hierarchy.getValue().positions;
                             coordinates.forEach(function (coordinate) {
@@ -998,7 +936,6 @@
                             }
                         }
                         entity.description = description;
-
                     });
 
                     entitiesToRemove.forEach(function (entity) {
@@ -1007,8 +944,6 @@
                 }
             );
         });
-
-        centeredView()
     </script>
 </body>
 

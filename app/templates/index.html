@@ -275,35 +275,27 @@
                 <!-- 6 selection boxes identified by corresponding colors -->
                 <select id="modelSelect1" class="modelSelect" style="background-color: red;">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect2" class="modelSelect" style="background-color: green;">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect3" class="modelSelect" style="background-color: blue;">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect4" class="modelSelect" style="background-color: yellow;">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect5" class="modelSelect" style="background-color: white">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect6" class="modelSelect" style="background-color: brown">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect7" class="modelSelect" style="background-color: purple">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <select id="modelSelect8" class="modelSelect" style="background-color: pink">
                     <option value="">Select a model</option>
-                    <!-- Other options here -->
                 </select>
                 <button id="clearModelsBtn" class="clearModelsBtn">Clear Selected Models</button>
 
@@ -325,8 +317,6 @@
 </pre>
     </div>
 </div>
-
-
 {% endblock %}
 {% block rightpanel %}
 <div id="contentPanel">
@@ -337,12 +327,13 @@
 </div>
 {% endblock %}
 {% block scripts %}
+<script src="/static/js/shared.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
-<script src="/static/config/project.js"></script>
 <script>
     let auxData, auxLabel, auxTitle, auxCitation, auxFillOpacity, auxLineWidth, auxDecimation, auxMarker;
 
+    // Load auxiliary (2D) model config and build the 2D table
     async function loadAuxConfig() {
         try {
             const response = await fetch("/load-aux-config-s3/");
@@ -357,23 +348,14 @@
             auxMarker = data.auxMarker;
 
             console.log("Aux config loaded:", auxLabel[0], auxData[0]);
-            // Now you can call other initialization logic
-            // Initialize the auxiliary table.
             createAuxTable();
-            //initializeMap();
         } catch (error) {
             console.error("Error loading auxiliary config:", error);
         }
     }
 
-    // Run this once when page loads
+    // Run this once when DOM is ready
     window.addEventListener("DOMContentLoaded", loadAuxConfig);
-
-    // Ensure Cesium is Loaded Before Execution
-    window.onload = function () {
-        const viewer = new Cesium.Viewer('cesiumContainer');
-        console.log("Cesium viewer initialized.");
-    };
 
     // Populate latitude and longitude input boxes initially
     function populateLatLonInputs() {
@@ -383,23 +365,13 @@
         document.getElementById('lon_max').value = east;
     }
 
-    // Call the loadConfig function on page load
-    window.addEventListener('load', () => populateLatLonInputs());
-
-
     /**
      * Generates HTML content from a given JSON object, handling nested structures recursively.
-     * 
+     *
      * @param {Object} jsonData - The JSON object to be converted into HTML.
      * @returns {string} - The generated HTML content as a string.
      */
     function createHtmlFromJson(jsonData) {
-        /**
-         * Recursively processes JSON data to generate HTML content.
-         * 
-         * @param {Object} jsonData - The current level of the JSON object to be processed.
-         * @returns {string} - The HTML content for the current level of the JSON object.
-         */
         function processJson(jsonData) {
             let htmlContent = '<div class="json-container">';
             for (let key in jsonData) {
@@ -412,22 +384,22 @@
             htmlContent += '</div>';
             return htmlContent;
         }
-
         return processJson(jsonData);
     }
 
     // Toggle filter panel.
     function toggleFilterPanel() {
-        var filterPanel = document.getElementById("filterPanel");
-        var button = document.getElementById("toggleFilterPanel");
+        const filterPanel = document.getElementById("filterPanel");
+        const button = document.getElementById("toggleFilterPanel");
         if (filterPanel.style.display === "none") {
             filterPanel.style.display = "block";
-            button.innerHTML = "<span style='color: red;''>&#9660;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Up arrow
+            button.innerHTML = "<span style='color: red;'>&#9660;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls";
         } else {
             filterPanel.style.display = "none";
-            button.innerHTML = "<span style='color: red;''>&#9654;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls"; // Down arrow
+            button.innerHTML = "<span style='color: red;'>&#9654;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls";
         }
     }
+
     // Extract unique variables from the 9th column of the table and populate the select dropdown
     async function extractAndPopulateVariables() {
         const rows = document.querySelectorAll('#fileTable tr');
@@ -441,24 +413,22 @@
         } catch (error) {
             console.error('Error fetching variables JSON:', error);
         }
+
         // Extract all unique variables from the 9th column of the table
         rows.forEach((row, index) => {
             if (index === 0) return; // Skip the header row
 
-            const lastColumnText = row.cells[8]?.textContent?.trim() || ''; // Safely access and trim content
+            const lastColumnText = row.cells[8]?.textContent?.trim() || '';
             const variables = lastColumnText
-                .split('f(')[0] // Take text before 'f('
-                .split(',') // Split by commas
-                .map(v => v.trim()); // Normalize by trimming 
+                .split('f(')[0]
+                .split(',')
+                .map(v => v.trim());
 
-            // Add each variable to the set
             variables.forEach(variable => {
-                if (variable) variableSet.add(variable); // Exclude empty strings
+                if (variable) variableSet.add(variable);
             });
         });
 
-        // Filter JSON keys to retain only those with matching variables in the table
-        // Convert variableSet to an array for easier manipulation
         const variableSetArray = Array.from(variableSet);
 
         // Step 1: Filter variablesList to remove any variables not in variableSet
@@ -467,21 +437,15 @@
         // Step 2: Append missing variables from variableSet that are not in filteredVariablesList
         variableSetArray.forEach(variable => {
             if (!filteredVariablesList.includes(variable)) {
-                filteredVariablesList.push(variable); // Append missing variables to the end
+                filteredVariablesList.push(variable);
             }
         });
 
-        // The finalVariablesList retains the order of variablesList and appends new items at the end
         const finalVariablesList = filteredVariablesList;
 
-        // Optionally log or display the final list
-        //console.log("Final Variables List:", finalVariablesList);
-        //alert("Final Variables List: " + JSON.stringify(finalVariablesList));
-
         const variableSelect = document.getElementById('variableSelect');
-        variableSelect.innerHTML = ''; // Clear existing options
+        variableSelect.innerHTML = '';
 
-        // Use finalVariablesList to populate the select dropdown
         finalVariablesList.forEach(variable => {
             const option = document.createElement('option');
             option.value = variable;
@@ -489,16 +453,13 @@
             variableSelect.appendChild(option);
         });
 
-        // Initialize Select2 for the variable select dropdown
         $(variableSelect).select2();
-
     }
-
-
 
     async function filterTable() {
         const iframe = document.getElementById('3dIframe');
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
         const lat_min = parseFloat(document.getElementById('lat_min').value);
         const lat_max = parseFloat(document.getElementById('lat_max').value);
         const lon_min = parseFloat(document.getElementById('lon_min').value);
@@ -507,7 +468,7 @@
         const depth_max = parseFloat(document.getElementById('depth_max').value);
         const selectedVariables = $('#variableSelect').val() || [];
 
-        // Fetch JSON file
+        // Fetch variable mapping
         let variableMapping = {};
         try {
             const response = await fetch('../static/config/variables.json');
@@ -517,33 +478,29 @@
         }
 
         // Plot the area filter outline on the iframe's map
-        const wholeAreaCondition = false; // Set to true if the whole area is selected
-        if (!wholeAreaCondition) {
-            if (iframeDoc) {
-                const iframeWindow = iframe.contentWindow;
+        const wholeAreaCondition = false;
+        if (iframeDoc) {
+            const iframeWindow = iframe.contentWindow;
+            if (!wholeAreaCondition) {
                 iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 2, "studyAreaOutline", 0);
-            }
-        } else {
-            if (iframeDoc) {
-                const iframeWindow = iframe.contentWindow;
+            } else {
                 iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 0, "studyAreaOutline", 0);
             }
         }
 
         const rows = document.querySelectorAll('#fileTable tr');
 
-        // Start the loop from the second row (index 1) to skip the header
         rows.forEach((row, index) => {
-            if (index === 0) return; // Skip the first row (header)
+            if (index === 0) return; // Skip header
 
             const latMinVal = parseFloat(row.cells[3].textContent);
             const latMaxVal = parseFloat(row.cells[4].textContent);
             const lonMinVal = parseFloat(row.cells[5].textContent);
             const lonMaxVal = parseFloat(row.cells[6].textContent);
-            const rowVariables = row.cells[8].textContent.split('f(')[0].split(',').map(v => v.trim()); // 9th column
+            const rowVariables = row.cells[8].textContent.split('f(')[0].split(',').map(v => v.trim());
 
-            const minDepthVal = parseFloat(row.cells[9].textContent);  // 10th column
-            const maxDepthVal = parseFloat(row.cells[10].textContent); // 11th column
+            const minDepthVal = parseFloat(row.cells[9].textContent);
+            const maxDepthVal = parseFloat(row.cells[10].textContent);
 
             const latLonCondition = isNaN(lat_min) || isNaN(lat_max) || isNaN(lon_min) || isNaN(lon_max) ||
                 (latMinVal <= lat_max && latMaxVal >= lat_min && lonMinVal <= lon_max && lonMaxVal >= lon_min);
@@ -553,9 +510,9 @@
 
             const variableCondition = selectedVariables.length === 0 || selectedVariables.some(selectedVar => {
                 const mappedValues = (variableMapping[selectedVar] || []).map(v => v.trim());
-                const rowVariablesLowerCase = rowVariables.map(rv => rv.trim());
-                return rowVariablesLowerCase.includes(selectedVar.trim()) ||
-                    rowVariablesLowerCase.some(rv => mappedValues.includes(rv));
+                const rowVariablesNormalized = rowVariables.map(rv => rv.trim());
+                return rowVariablesNormalized.includes(selectedVar.trim()) ||
+                    rowVariablesNormalized.some(rv => mappedValues.includes(rv));
             });
 
             if (latLonCondition && depthCondition && variableCondition) {
@@ -565,8 +522,6 @@
             }
         });
     }
-
-
 
     // Clear filters and reset to default values
     function clearFilters() {
@@ -581,74 +536,13 @@
         filterTable();
     }
 
-    // Change form's selection
-    function selectOptionInForm(model) {
-        const select = document.getElementById('data-file');
-        let optionFound = false;
-
-        if (select) {
-            for (let i = 0; i < select.options.length; i++) {
-                if (select.options[i].text.trim() === model) {
-                    select.selectedIndex = i;
-                    optionFound = true;
-                    // Trigger the change event
-                    const event = new Event('change');
-                    select.dispatchEvent(event);
-                    break;
-                }
-            }
-
-            if (!optionFound) {
-                alert('Error: Option not found');
-            }
-        } else {
-            alert('Error: Select element not found in form: ' + model);
-        }
-    }
-
-    // Monitor iframes selection change 
-    function monitorIframeSelection() {
-        const iframe = document.getElementById('3dIframe');
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        let previousValue = '';
-
-        if (iframeDoc) {
-            const select = iframeDoc.getElementById('data-file');
-            if (select) {
-                setInterval(() => {
-                    const currentValue = select.options[select.selectedIndex].text;
-                    if (currentValue !== previousValue) {
-
-                        previousValue = currentValue;
-                        //selectOptionInForm(currentValue);
-                        // Handle the selection change as needed
-                        //loadFileListAndJSON(currentValue)
-                        const event = new Event("change");
-                        select.dispatchEvent(event);
-
-                    }
-                }, 1000); // Check every second (adjust the interval as needed)
-            } else {
-                console.error('Select element not found in iframe');
-            }
-        } else {
-            console.error('Iframe document not accessible');
-        }
-    }
-
-    window.onload = function () {
-        monitorIframeSelection();
-        populateLatLonInputs();
-    }
-
-    // Function to fetch the CGI script output and inject it into the <div>
+    // Fetch the file list, build table, variables, and model-selection dropdowns
     function loadFileListAndJSON(model) {
-
-        var count = 0;
-        let lat_min = south;
-        let lat_max = north;
-        let lon_min = west;
-        let lon_max = east;
+        const fileTable = document.getElementById('fileTable');
+        if (!fileTable) {
+            console.error("fileTable element not found");
+            return;
+        }
 
         let summary = "-";
         let filename = "-";
@@ -657,13 +551,13 @@
             const radios = fileTable.querySelectorAll('input[type="radio"]');
             radios.forEach(radio => {
                 if (radio.checked) {
-                    radio.disabled = false; // Make sure it's enabled
-                    radio.parentNode.style.opacity = 1; // Full opacity for checked
-                    radio.parentNode.style.backgroundColor = ''; // Reset background if needed
+                    radio.disabled = false;
+                    radio.parentNode.style.opacity = 1;
+                    radio.parentNode.style.backgroundColor = '';
                 } else {
-                    radio.disabled = true; // Disable the radio
-                    radio.parentNode.style.opacity = 0.5; // Lower opacity for unchecked
-                    radio.parentNode.style.backgroundColor = 'white'; // Apply a background color
+                    radio.disabled = true;
+                    radio.parentNode.style.opacity = 0.5;
+                    radio.parentNode.style.backgroundColor = 'white';
                 }
             });
         }
@@ -680,7 +574,6 @@
                     if (select.options[i].text === model) {
                         select.selectedIndex = i;
                         optionFound = true;
-                        // Trigger the change event
                         const event = new Event('click');
                         select.dispatchEvent(event);
                         break;
@@ -697,7 +590,6 @@
 
         // Display file metadata.
         function display_metadata(model, fileName) {
-            // Construct the API URL
             const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
             fetch(apiUrl)
                 .then(response => {
@@ -707,7 +599,6 @@
                     return response.json();
                 })
                 .then(jsonData => {
-                    // Display JSON content in the panel
                     document.getElementById("mmodelname").innerHTML = model + " Metadata";
                     document.getElementById("jsonContent").innerHTML = createHtmlFromJson(jsonData);
                 })
@@ -716,84 +607,93 @@
                 });
         }
 
-        fetch('/data/list_json_files_s3/' + model) // Replace with the URL to your CGI script
+        fetch('/data/list_json_files_s3/' + model)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
-                return response.text(); // Assuming CGI script returns HTML
+                return response.text();
             })
             .then(html => {
-
-                // Inject the received HTML into the fileTable div
                 fileTable.innerHTML = html;
-                extractAndPopulateVariables(); // Extract and populate variables into the select dropdown
-                var firstFileName = fileTable.querySelector('tr:nth-child(2) td:nth-child(8)').textContent.trim();
-                var firstFilePath = firstFileName + '.json';
-                var radio = fileTable.querySelector('input[type="radio"]');
-                radio.checked = true;
-                hideAllRadioButtonsExceptChecked();
-                var model = fileTable.querySelector('tr:nth-child(2) td:nth-child(2)').textContent.trim();
-                var summary = fileTable.querySelector('tr:nth-child(2) td:nth-child(3)').textContent.trim();
-                var lat_min = fileTable.querySelector('tr:nth-child(2) td:nth-child(4)').textContent.trim();
-                var lat_max = fileTable.querySelector('tr:nth-child(2) td:nth-child(5)').textContent.trim();
-                var lon_min = fileTable.querySelector('tr:nth-child(2) td:nth-child(6)').textContent.trim();
-                var lon_max = fileTable.querySelector('tr:nth-child(2) td:nth-child(7)').textContent.trim();
-                var filename = fileTable.querySelector('tr:nth-child(2) td:nth-child(8)').textContent.trim();
+
+                // Populate variables and model-selection dropdowns
+                extractAndPopulateVariables();
+                populateModelSelectionBoxes();
+
+                const firstRow = fileTable.querySelector('tr:nth-child(2)');
+                if (!firstRow) {
+                    console.warn("No data rows in fileTable");
+                    return;
+                }
+
+                const firstFileName = firstRow.querySelector('td:nth-child(8)').textContent.trim();
+                const firstFilePath = firstFileName + '.json';
+                const radio = fileTable.querySelector('input[type="radio"]');
+                if (radio) {
+                    radio.checked = true;
+                    hideAllRadioButtonsExceptChecked();
+                }
+
+                let modelName = firstRow.querySelector('td:nth-child(2)').textContent.trim();
+                summary = firstRow.querySelector('td:nth-child(3)').textContent.trim();
+                let lat_min = firstRow.querySelector('td:nth-child(4)').textContent.trim();
+                let lat_max = firstRow.querySelector('td:nth-child(5)').textContent.trim();
+                let lon_min = firstRow.querySelector('td:nth-child(6)').textContent.trim();
+                let lon_max = firstRow.querySelector('td:nth-child(7)').textContent.trim();
+                filename = firstFileName;
+
                 const cmodelname = document.getElementById('cmodelname');
-                cmodelname.innerHTML = model;
+                cmodelname.innerHTML = modelName;
 
-                // Display initial metadata
-                //display_metadata(model, firstFilePath);
-
-                // Attach event listener to table rows
+                // Optionally display initial metadata
+                //display_metadata(modelName, firstFilePath);
 
                 fileTable.addEventListener('click', function (event) {
                     const iframe = document.getElementById('3dIframe');
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    var target = event.target;
+                    const target = event.target;
+
                     if (target.tagName === 'TD' && target.parentNode.cells[1] === target) {
-                        // Remove highlight from all rows
-                        var rows = fileTable.querySelectorAll('tr');
+                        const rows = fileTable.querySelectorAll('tr');
                         rows.forEach(row => row.classList.remove('highlighted-row'));
 
-                        // Highlight the clicked row
                         target.parentNode.classList.add('highlighted-row');
-                        model = target.parentNode.cells[1].textContent;
+
+                        modelName = target.parentNode.cells[1].textContent;
                         summary = target.parentNode.cells[2].textContent;
                         lat_min = target.parentNode.cells[3].textContent;
                         lat_max = target.parentNode.cells[4].textContent;
                         lon_min = target.parentNode.cells[5].textContent;
                         lon_max = target.parentNode.cells[6].textContent;
                         filename = target.parentNode.cells[7].textContent;
-                        //var fileName = target.textContent.trim();
-                        selectOptionInIframe(model)
-                        var fileName = filename + '.json';
-                        var radio = target.parentNode.cells[0].querySelector('input[type="radio"]');
-                        radio.checked = true;
-                        hideAllRadioButtonsExceptChecked();
-                        cmodelname.innerHTML = model;
-                        display_metadata(model, fileName);
+
+                        selectOptionInIframe(modelName);
+                        const fileName = filename + '.json';
+                        const radio = target.parentNode.cells[0].querySelector('input[type="radio"]');
+                        if (radio) {
+                            radio.checked = true;
+                            hideAllRadioButtonsExceptChecked();
+                        }
+                        cmodelname.innerHTML = modelName;
+                        display_metadata(modelName, fileName);
                     }
                 });
 
-                // Apply the current filter after loading the table
+                // Apply current filter after loading table
                 filterTable();
-
             })
             .catch(error => console.error('Error fetching file list:', error));
     }
 
-    // Function to populate the selection boxes with models from the table
+    // Populate the selection boxes with models from the table
     function populateModelSelectionBoxes() {
         const rows = document.querySelectorAll('#fileTable tr');
         const modelOptions = [];
 
-        // Skip the first row (header)
         rows.forEach((row, index) => {
-            if (index === 0) return; // Skip the header
-
-            const modelName = row.cells[1].textContent.trim(); // Assuming the model name is in the 2nd column
+            if (index === 0) return; // Skip header
+            const modelName = row.cells[1].textContent.trim();
             if (modelName) {
                 modelOptions.push(modelName);
             }
@@ -801,16 +701,13 @@
 
         const modelSelects = document.querySelectorAll('.modelSelect');
         modelSelects.forEach((select, index) => {
-            // Clear existing options
             select.innerHTML = '';
 
-            // Add a default option
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = 'Select a model';
             select.appendChild(defaultOption);
 
-            // Populate with model options
             modelOptions.forEach(model => {
                 const option = document.createElement('option');
                 option.value = model;
@@ -818,17 +715,14 @@
                 select.appendChild(option);
             });
 
-            // Initialize the data-previous-value attribute
             select.setAttribute('data-previous-value', '');
 
-            // Add event listener to each selection box
             select.addEventListener('change', function () {
                 handleModelSelection(this, index + 1);
             });
         });
     }
 
-    // Function to handle model selection change
     function handleModelSelection(select, modelIndex) {
         const selectedModel = select.value;
         const previouslySelectedModel = select.getAttribute('data-previous-value');
@@ -836,26 +730,24 @@
         if (selectedModel) {
             if (isModelAlreadySelected(selectedModel, select)) {
                 alert(`The model "${selectedModel}" has already been selected. Please choose another model.`);
-                select.value = previouslySelectedModel; // Revert to the previously selected model
+                select.value = previouslySelectedModel;
             } else {
                 if (previouslySelectedModel) {
-                    enableModelOption(previouslySelectedModel); // Re-enable the previously selected model
+                    enableModelOption(previouslySelectedModel);
                 }
-                findModelCoordinates(selectedModel, modelIndex); // Pass the modelIndex (1-based index)
-                select.setAttribute('data-previous-value', selectedModel); // Update the data attribute
-                disableSelectedModels(); // Disable already selected models in other dropdowns
+                findModelCoordinates(selectedModel, modelIndex);
+                select.setAttribute('data-previous-value', selectedModel);
+                disableSelectedModels();
             }
         } else {
-            // If "Select a model" is chosen again, pass the previous model and modelIndex -1
             if (previouslySelectedModel) {
                 findModelCoordinates(previouslySelectedModel, -1);
-                enableModelOption(previouslySelectedModel); // Re-enable the previously selected model
-                select.setAttribute('data-previous-value', ''); // Clear the data attribute
+                enableModelOption(previouslySelectedModel);
+                select.setAttribute('data-previous-value', '');
             }
         }
     }
 
-    // Function to check if a model is already selected in another dropdown
     function isModelAlreadySelected(model, currentSelect) {
         const modelSelects = document.querySelectorAll('.modelSelect');
         for (let select of modelSelects) {
@@ -866,7 +758,6 @@
         return false;
     }
 
-    // Function to disable already selected models in other dropdowns
     function disableSelectedModels() {
         const modelSelects = document.querySelectorAll('.modelSelect');
         const selectedModels = Array.from(modelSelects).map(select => select.value);
@@ -883,7 +774,6 @@
         });
     }
 
-    // Function to enable a model option in all dropdowns
     function enableModelOption(model) {
         const modelSelects = document.querySelectorAll('.modelSelect');
         modelSelects.forEach(select => {
@@ -896,12 +786,11 @@
         });
     }
 
-    // Function to find the coordinates of the selected model from the table
     function findModelCoordinates(modelName, modelIndex) {
         const rows = document.querySelectorAll('#fileTable tr');
 
         rows.forEach((row, index) => {
-            if (index === 0) return; // Skip the header
+            if (index === 0) return;
 
             const currentModelName = row.cells[1].textContent.trim();
             if (currentModelName === modelName) {
@@ -910,92 +799,47 @@
                 const lonMinVal = parseFloat(row.cells[5].textContent);
                 const lonMaxVal = parseFloat(row.cells[6].textContent);
 
-                // Pass the coordinates and model name to the function to call filterOutline
                 displayCoordinates(latMinVal, latMaxVal, lonMinVal, lonMaxVal, modelName, modelIndex);
             }
         });
     }
 
-    // Function to pass coordinates and model name to the filterOutline method
     function displayCoordinates(latMin, latMax, lonMin, lonMax, modelName, modelIndex) {
         const iframe = document.getElementById('3dIframe');
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (iframeDoc) {
-            // Access the content window of the iframe
             const iframeWindow = iframe.contentWindow;
             iframeWindow.filterOutline(latMax, latMin, lonMax, lonMin, 8, modelName, modelIndex);
         }
     }
 
-    // Function to clear all models and trigger change event
     function clearAllModels() {
         const modelSelects = document.querySelectorAll('.modelSelect');
         modelSelects.forEach(select => {
             const previouslySelectedModel = select.getAttribute('data-previous-value');
 
-            // If a model was previously selected, pass it with index -1 and enable it
             if (previouslySelectedModel) {
                 findModelCoordinates(previouslySelectedModel, -1);
                 enableModelOption(previouslySelectedModel);
             }
 
-            select.value = ''; // Set to "Select a model"
-            select.setAttribute('data-previous-value', ''); // Clear previous value
-            select.dispatchEvent(new Event('change')); // Trigger change event
+            select.value = '';
+            select.setAttribute('data-previous-value', '');
+            select.dispatchEvent(new Event('change'));
         });
     }
 
-    // Function to load the file list and then populate the selection boxes
-    function loadFileListAndPopulateSelections(model) {
-        fetch('/data/list_json_files_s3/' + model) // Replace with the URL to your CGI script
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                return response.text(); // Assuming CGI script returns HTML
-            })
-            .then(html => {
-                // Inject the received HTML into the fileTable div
-                document.getElementById('fileTable').innerHTML = html;
-
-                // Extract and populate variables into the select dropdown
-                extractAndPopulateVariables();
-
-                // Populate the model selection boxes
-                populateModelSelectionBoxes();
-
-                // Attach event listener to table rows (as in your original code)
-                // ...
-            })
-            .catch(error => console.error('Error fetching file list:', error));
-    }
-
-    // Call loadFileListAndPopulateSelections function on page load
-    window.addEventListener('load', () => {
-        loadFileListAndPopulateSelections("-");
-
-        // Attach event listener to Clear Models button
-        document.getElementById('clearModelsBtn').addEventListener('click', clearAllModels);
-    });
-
-
-    // Call the function when the page loads
-    window.addEventListener('load', () => loadFileListAndJSON("-"));
-    window.addEventListener('load', () => document.getElementById("h2").style.display = "block");
-
-    // Summarize the json file content
+    // Summarize the json file content (2D models)
     async function summarizeGeoJSON(fileName, label, title, reference, decimation) {
         try {
             const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
 
-            // Fetch the GeoJSON file
             const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
             const data = await response.json();
 
-            // Ensure the file is a valid GeoJSON
             if (!data || !data.type || data.type !== "FeatureCollection") {
                 throw new Error("Invalid GeoJSON file.");
             }
@@ -1004,7 +848,6 @@
             const geometryTypes = new Set();
             const propertiesSet = new Set();
 
-            // Iterate through features to extract information
             data.features.forEach(feature => {
                 if (feature.geometry) {
                     geometryTypes.add(feature.geometry.type);
@@ -1014,7 +857,6 @@
                 }
             });
 
-            // Create the summary
             const summary = `
             <strong>2D Model File Name:</strong> ${fileName}<br>
             <strong>Label:</strong> ${label}<br>
@@ -1026,20 +868,17 @@
             <strong>Properties:</strong> ${Array.from(propertiesSet).join(', ')}
         `;
 
-            return summary; // Return the summary for further use
+            return summary;
         } catch (error) {
             console.error("Error reading GeoJSON file:", error);
-            return `<span style="color: red;">Error: ${error.message}</span>`; // Return error message
+            return `<span style="color: red;">Error: ${error.message}</span>`;
         }
     }
 
-
-
-    // Function to create the auxiliary table.
+    // Create the auxiliary (2D models) table.
     function createAuxTable() {
         const container = document.getElementById('auxTableContainer');
 
-        // Create a toggle button for the auxiliary table.
         const toggleButton = document.createElement('div');
         toggleButton.id = '2DModelToggle';
         toggleButton.style = `
@@ -1049,11 +888,9 @@
         text-align: left;
         cursor: pointer;
         padding: 5px;
-        margin-bottom: 5px;
-    `;
+        margin-bottom: 5px;`;
         toggleButton.innerHTML = `<span style="color: red;">&#9660;&nbsp;</span>Show/Hide 2D Models`;
 
-        // Create a wrapper for the table.
         const auxTableWrapper = document.createElement('div');
         auxTableWrapper.id = 'auxTableWrapper';
         auxTableWrapper.style = `
@@ -1061,20 +898,16 @@
         overflow-y: auto;
         border: 1px solid #ccc;
         margin-top: 5px;
-        display: block; /* Initially visible */
-    `;
+        display: block;`;
 
-        // Create the auxiliary table.
         const auxTable = document.createElement('table');
         auxTable.id = 'auxDataTable';
         auxTable.style = `
         font-size: 10pt;
         width: 100%;
         border-collapse: collapse;
-        table-layout: fixed; /* Consistent column widths */
-    `;
+        table-layout: fixed;`;
 
-        // Create table header.
         const header = document.createElement('thead');
         const headerRow = document.createElement('tr');
         const headers = ['2D Model', 'Title', 'Reference'];
@@ -1088,43 +921,22 @@
             text-align: center;
             position: sticky;
             top: 0;
-            z-index: 1;
-        `;
+            z-index: 1;`;
             headerRow.appendChild(th);
         });
         header.appendChild(headerRow);
         auxTable.appendChild(header);
 
-        // Function to fetch the file size.
-        async function fetchFileSize(url) {
-            try {
-                const response = await fetch(url, { method: 'HEAD' }); // Perform a HEAD request.
-                const size = response.headers.get('Content-Length'); // Get the 'Content-Length' header.
-                if (size) {
-                    return (size / 1024).toFixed(1); // Convert to KB and return.
-                }
-                return "Unknown"; // Fallback if size is not available.
-            } catch (error) {
-                console.error(`Error fetching file size for ${url}:`, error);
-                return "Unknown"; // Fallback on error.
-            }
-        }
-
-        // Create table body.
         const body = document.createElement('tbody');
         auxLabel.forEach((label, index) => {
             const row = document.createElement('tr');
 
-            // Model column.
             const modelCell = document.createElement('td');
             modelCell.style.textDecoration = 'underline';
             modelCell.style.cursor = 'pointer';
             modelCell.onclick = async () => {
-                // Remove the previous highlights.
-                var rows = auxTable.querySelectorAll('tr');
+                const rows = auxTable.querySelectorAll('tr');
                 rows.forEach(_row => _row.classList.remove('highlighted-row'));
-
-                // Highlight the clicked row
 
                 row.classList.add('highlighted-row');
                 const dataFile = auxData[index];
@@ -1134,8 +946,6 @@
                 const summary = await summarizeGeoJSON(dataFile, label, title, reference, decimation);
                 document.getElementById("jsonContent").innerHTML = summary;
 
-
-                // Select the corresponding option in the iframe's dropdown.
                 const iframe = document.getElementById('3dIframe');
                 if (iframe && iframe.contentWindow) {
                     const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
@@ -1145,7 +955,6 @@
                         if (optionToSelect) {
                             selectDropdown.value = optionToSelect.value;
 
-                            // Trigger the change event for the dropdown.
                             const changeEvent = new Event('change', { bubbles: true });
                             selectDropdown.dispatchEvent(changeEvent);
                         } else {
@@ -1157,47 +966,28 @@
                 } else {
                     console.error("Iframe with ID '3dIframe' not accessible.");
                 }
-
             };
             modelCell.textContent = label;
             row.appendChild(modelCell);
 
-            // Title column.
             const titleCell = document.createElement('td');
-
-            // Add the title text.
             const titleText = document.createTextNode(auxTitle[index] + " ");
             titleCell.appendChild(titleText);
 
-            // Create a download link for the GeoJSON file.
-            const fileName = auxData[index];  // file name for the download
+            const fileName = auxData[index];
             const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
-            console.log(`Fetching geojson file  ${fileName}: from ${apiUrl}`)
-
+            console.log(`Fetching geojson file ${fileName}: from ${apiUrl}`);
 
             const downloadLink = document.createElement('a');
             downloadLink.href = apiUrl;
             downloadLink.textContent = "Download the GeoJSON file";
-            downloadLink.download = fileName;  // Suggest file name for download
+            downloadLink.download = fileName;
             downloadLink.style.textDecoration = 'underline';
             downloadLink.style.marginLeft = '5px';
             titleCell.appendChild(downloadLink);
 
-
-
-            // Placeholder for the file size. (No s3 file size)
-            //const fileSizeText = document.createTextNode(" (Estimating size...)");
-            //titleCell.appendChild(fileSizeText);
-
-            // Estimate and update the file size from S3 is not posted.
-            //fetchFileSize(auxData[index]).then(size => {
-            //    fileSizeText.textContent = ` (${size} KB)`; // Update with the estimated size.
-            //});
-
             row.appendChild(titleCell);
 
-
-            // Reference column with hyperlink.
             const referenceCell = document.createElement('td');
             const link = document.createElement('a');
             link.href = auxCitation[index][1];
@@ -1212,11 +1002,9 @@
         auxTable.appendChild(body);
         auxTableWrapper.appendChild(auxTable);
 
-        // Append the toggle button and table wrapper to the container.
         container.appendChild(toggleButton);
         container.appendChild(auxTableWrapper);
 
-        // Add toggle functionality.
         toggleButton.addEventListener('click', () => {
             const isVisible = auxTableWrapper.style.display === 'block';
             auxTableWrapper.style.display = isVisible ? 'none' : 'block';
@@ -1226,8 +1014,16 @@
         });
     }
 
-
-
-
+    // Single load handler for the main page
+    window.addEventListener("load", () => {
+        populateLatLonInputs();
+        loadFileListAndJSON("-");
+        const h2 = document.getElementById("h2");
+        if (h2) h2.style.display = "block";
+        const clearModelsBtn = document.getElementById('clearModelsBtn');
+        if (clearModelsBtn) {
+            clearModelsBtn.addEventListener('click', clearAllModels);
+        }
+    });
 </script>
 {% endblock %}

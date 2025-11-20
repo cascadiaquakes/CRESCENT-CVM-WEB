@@ -245,9 +245,6 @@
         // Ensure update on initial load
         updateNorthArrow();
 
-        // Bind updateNorthArrow to the postRender event
-        viewer.scene.postRender.addEventListener(updateNorthArrow);
-
         // Center view button functionality
         document.getElementById('centeredViewButton').addEventListener('click', centeredView)
 
@@ -403,25 +400,6 @@
 
         var upperLeftLabel = null;
         var upperRightLabel = null;
-
-        async function loadDropdown() {
-            try {
-                const response = await fetch('/data/models_drop_down_s3?required_variable=depth');
-                if (response.ok) {
-                    const dropdownHTML = await response.text();
-                    document.getElementById('data-file').innerHTML = dropdownHTML;
-                } else {
-                    console.error('Failed to load dropdown:', response.statusText);
-                    document.getElementById('data-file').textContent = 'Failed to load dropdown.';
-                }
-            } catch (error) {
-                console.error('Error fetching dropdown:', error);
-                document.getElementById('data-file').textContent = 'Error loading dropdown.';
-            }
-        }
-
-        // Call loadDropdown when the page has finished loading
-        document.addEventListener('DOMContentLoaded', loadDropdown);
 
         //select an option from a <select> menu based on the option’s text
         function selectOptionByText(text) {
@@ -626,7 +604,7 @@
                             entities.forEach(function (entity) {
                                 entity.point = new Cesium.PointGraphics({
                                     color: eqColor,
-                                    pixelSize: calculateMarkerSize(circleSizeSlider.value, entity.properties.mag)
+                                    pixelSize: calculateMarkerSize(circleSizeSlider.value, entity.properties.mag.getValue())
                                 });
                             });
                         }
@@ -799,7 +777,6 @@
                     height: minDepth * -1000,  // Base height of the polygon
                     outline: true, // Optional outline
                     outlineColor: Cesium.Color.CYAN
-
                 }
             });
 
@@ -965,7 +942,6 @@
 
         var points = [];
         var distanceDisplay = document.getElementById('distanceDisplay');
-        var clearButton = document.getElementById('clearButton');
         var distanceLineEntity = null; // Reference to the distance line entity
         var pointEntities = []; // To store point entities for click locations
 

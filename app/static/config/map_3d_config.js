@@ -31,7 +31,6 @@ const boundaryFillOpacity = [0.0, 0.0];
 const boundaryLineWidth = [2, 0.5];
 const boundaryMarker = ["line"];
 
-
 /*
 var data = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_traces.geojson', 'https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d.geojson'];
 var label = ['CRESCENT Cascadia Fault Traces', 'CRESCENT Cascadia Fault Surfaces', 'Earthquakes (M ≥ 4), Circle Size ∝ Magnitude'];
