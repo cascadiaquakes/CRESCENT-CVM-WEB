@@ -1,0 +1,191 @@
+name: Deploy with CDK
+run-name: ${{ github.actor }} triggered workflow
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout when the 'permissions' key is present
+env:
+  ECR_REPOSITORY_NAME: cvm-web # this application's name
+  ECR_REGISTRY_DOMAIN_NAME: 818214664804.dkr.ecr.us-east-2.amazonaws.com
+  RELATIVE_PATH_TO_CDK_APP: "infra/cvmwebApp513F4FCD"
+  # By default, recent versions of buildx include provenance and SBOM attestations, which some registries (like Amazon ECR)
+  # may reject if specific permissions are not set. Disable attestations to avoid this issue.
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+jobs:
+  build:
+    name: Validate Docker Image Build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image_uri: ${{ env.ECR_REGISTRY_DOMAIN_NAME }}/${{ env.ECR_REPOSITORY_NAME }}:${{ steps.version.outputs.version }}
+      metadata_tags: ${{ steps.metadata.outputs.tags }}
+      metadata_labels: ${{ steps.metadata.outputs.labels }}
+    steps:
+      - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
+      - name: Check out repository code
+        uses: actions/checkout@v6
+      - run: echo "🔎 The name of your branch is ${{ github.ref }}."
+      - name: Generate version tag
+        id: version
+        run: |
+          NOW_AS_DOT_TIME=$(date +'%Y.%m.%d.%H%M%S')
+          SHORT_SHA=${GITHUB_SHA::7}
+          SAFE_GITHUB_REF_NAME=$(echo "$GITHUB_REF_NAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          VERSION="${NOW_AS_DOT_TIME}-${SAFE_GITHUB_REF_NAME}-${SHORT_SHA}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version tag: $VERSION"
+      - name: Docker metadata
+        uses: docker/metadata-action@v6
+        id: metadata
+        with:
+          images: ${{ env.ECR_REGISTRY_DOMAIN_NAME }}/${{ env.ECR_REPOSITORY_NAME }}
+          # The registry has magic that will ensure a tag like 'dev-latest' only exist on one image at a time.
+          tags: |
+            type=sha,format=long
+            type=raw,value=dev-latest
+            type=raw,value=${{ steps.version.outputs.version }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build Docker image
+        uses: docker/build-push-action@v7
+        with:
+          push: false
+          tags: ${{ steps.metadata.outputs.metadata_tags }}
+          labels: ${{ steps.metadata.outputs.metadata_labels }}
+
+
+  push_image:
+    name: Build and Push Docker Image to ECR
+    # To push an image to AWS ECR, there are two prerequisites:
+    # 1. The ECR repository must already exist (in the matching region and AWS account).
+    # 2. The IAM role that github assumes must have permissions to push images and layers to the repository.
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ needs.build.outputs.image_uri }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: assumedRoleForGithubSession
+          aws-region: us-east-2
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Docker Login to ECR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.ECR_REGISTRY_DOMAIN_NAME }}
+      - run: echo "Ready to push ${{ env.ECR_REGISTRY_DOMAIN_NAME }}/${{ env.ECR_REPOSITORY_NAME }}"
+      - name: Build and Push
+        uses: docker/build-push-action@v7
+        with:
+          push: true
+          tags: |
+            ${{ needs.build.outputs.metadata_tags }}
+          labels: ${{ needs.build.outputs.metadata_labels }}
+
+  deploy_dev:
+    name: Deploy Dev Resources
+    needs: push_image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ needs.push_image.outputs.image_uri }}
+    env:
+      ECR_IMAGE_URI: ${{ needs.push_image.outputs.image_uri }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: assumedRoleForGithubSession
+          aws-region: us-east-2
+      - name: set up Node.js for CDK
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: set up Python for CDK
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - run: |
+          echo "Image to use is ${{ env.ECR_IMAGE_URI }}"
+      - name: Install CDK Dependencies
+        run: |
+          npm install -g aws-cdk
+          cd ${{ env.RELATIVE_PATH_TO_CDK_APP }}
+          pip install -r requirements.txt
+      - name: Deploy with CDK
+        run: |
+          pwd
+          cd ${{ env.RELATIVE_PATH_TO_CDK_APP }}
+          pwd
+          cdk diff --context deployment-environment=dev
+          cdk deploy --require-approval never --context deployment-environment=dev
+  deploy_prod:
+    name: Deploy to Prod Environment
+    needs: deploy_dev
+    environment:
+      name: Production
+    runs-on: ubuntu-latest
+    env:
+      ECR_IMAGE_URI: ${{ needs.deploy_dev.outputs.image_uri }}
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v6
+      - name: Show role target
+        run: |
+          echo "Using role ARN prefix: ${AWS_ROLE_ARN: 0-20}"
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-session-name: assumedRoleForGithubSession
+          aws-region: us-east-2
+      - name: set up Node.js for CDK
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: set up Python for CDK
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.14'
+      - name: Install CDK Dependencies
+        run: |
+          npm install -g aws-cdk
+          cd ${{ env.RELATIVE_PATH_TO_CDK_APP }}
+          pip install -r requirements.txt
+      - name: Login to AWS ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Docker Login to ECR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.ECR_REGISTRY_DOMAIN_NAME }}
+      - run: |
+          echo "Image to use is ${{ env.ECR_IMAGE_URI }}"
+      - name: Re-tag image for prod
+        run: |
+          docker pull ${{ env.ECR_IMAGE_URI }}
+          docker tag ${{ env.ECR_IMAGE_URI }} ${{ env.ECR_REGISTRY_DOMAIN_NAME }}/${{ env.ECR_REPOSITORY_NAME }}:prod-latest
+          docker push ${{ env.ECR_REGISTRY_DOMAIN_NAME }}/${{ env.ECR_REPOSITORY_NAME }}:prod-latest
+      - name: Deploy with CDK
+        run: |
+          cd ${{ env.RELATIVE_PATH_TO_CDK_APP }}
+          cdk diff --context deployment-environment=prod
+          # cdk deploy --require-approval never --context deployment-environment=prod
