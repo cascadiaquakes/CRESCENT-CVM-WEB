@@ -184,11 +184,7 @@ class CvmwebApp513F4FcdStack(Stack):
                 },
               ],
               'essential': True,
-              'image': ''.join([
-                '718999558082.dkr.ecr.us-east-2.',
-                self.url_suffix,
-                '/cvm-web:main-20251113211153-7f0eee4e',
-              ]),
+              'image': config.ecr_image_uri,
               'logConfiguration': {
                 'logDriver': 'awslogs',
                 'options': {
@@ -240,7 +236,7 @@ class CvmwebApp513F4FcdStack(Stack):
                 ],
                 'Effect': 'Allow',
                 'Resource': [
-                  'arn:aws:ecr:us-east-2:718999558082:repository/cvm-web',
+                  'arn:aws:ecr:us-east-2:818214664804:repository/cvm-web',
                 ],
               },
               {
