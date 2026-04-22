@@ -188,4 +188,4 @@ jobs:
         run: |
           cd ${{ env.RELATIVE_PATH_TO_CDK_APP }}
           cdk diff --context deployment-environment=prod
-          # cdk deploy --require-approval never --context deployment-environment=prod
+          cdk deploy --require-approval never --context deployment-environment=prod
