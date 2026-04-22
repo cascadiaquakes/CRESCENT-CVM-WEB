@@ -56,7 +56,8 @@ const boundaryMarker = ["line"];
 
 
 // CFM data
-const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d.geojson'];
+// const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d.geojson'];
+const cfmData = [];
 const cfmLabel = ['Cascadia Fault Surfaces'];
 const cfmColor = [Cesium.Color.DARKMAGENTA];
 const cfmFillOpacity = [0.5];
