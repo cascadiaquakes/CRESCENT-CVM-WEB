@@ -1,10 +1,10 @@
 # Web app
-fastapi[standard]>=0.118.2   # 0.118.2 adds Python 3.13 support :contentReference[oaicite:0]{index=0}
-uvicorn[standard]            # 0.38.0+ is tested on 3.13+ :contentReference[oaicite:1]{index=1}
-jinja2
+fastapi[standard]~=0.121.2   # 0.118.2 adds Python 3.13 support :contentReference[oaicite:0]{index=0}
+uvicorn[standard]~=0.38.0    # 0.38.0+ is tested on 3.13+ :contentReference[oaicite:1]{index=1}
+starlette~=0.49.3
 
 # Imaging / plotting / numerics
-Pillow>=11.0.0               # 11.x is the first line that officially supports Python 3.13 :contentReference[oaicite:2]{index=2}
+Pillow~=12.0.0               # 11.x is the first line that officially supports Python 3.13 :contentReference[oaicite:2]{index=2}
 numpy                        # NumPy 2.x supports 3.13; leave unpinned so SciPy can choose compatible version :contentReference[oaicite:3]{index=3}
 scipy>=1.14.1                # 1.14.1 adds Python 3.13 wheels; 1.15.x adds free-threaded support :contentReference[oaicite:4]{index=4}
 matplotlib
@@ -16,11 +16,11 @@ xarray
 geographiclib
 
 # NetCDF / HDF
-netCDF4>=1.7.2               # 1.7.2+ adds Python 3.13 wheels :contentReference[oaicite:8]{index=8}
-h5py>=3.13.0                 # 3.13 is the current line; built against recent HDF5 and Python :contentReference[oaicite:9]{index=9}
+netCDF4~=1.7.2               # 1.7.2+ adds Python 3.13 wheels :contentReference[oaicite:8]{index=8}
+h5py~=3.13.0                 # 3.13 is the current line; built against recent HDF5 and Python :contentReference[oaicite:9]{index=9}
 h5netcdf
 
 # Cloud / filesystem
-boto3
+boto3~=1.40.73
 s3fs                        # latest versions are 3.13-ready :contentReference[oaicite:10]{index=10}
 fsspec
