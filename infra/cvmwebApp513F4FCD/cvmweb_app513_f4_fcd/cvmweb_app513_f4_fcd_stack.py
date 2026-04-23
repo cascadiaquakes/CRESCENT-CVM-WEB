@@ -180,7 +180,7 @@ class CvmwebApp513F4FcdStack(Stack):
               'environment': [
                 {
                   'name': 'ENVIRONMENT',
-                  'value': 'crescent',
+                  'value': config.runtime_environment_name,
                 },
               ],
               'essential': True,
