@@ -20,12 +20,14 @@ deployment_environments_configs: dict[str, DeploymentEnvironmentConfig] = {
     "dev": DeploymentEnvironmentConfig(
         site_domain_name = "dev.cvm.cascadiaquakes.org",
         ecr_image_uri = os.getenv("ECR_IMAGE_URI",
-                           default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:dev-latest')
+                           default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:dev-latest'),
+        bucket_name = "cvm-s3-data-latest-dev-us-east-2-aer1lu3eichu"
     ),
     "prod": DeploymentEnvironmentConfig(
         site_domain_name = "cvm.cascadiaquakes.org",
         ecr_image_uri = os.getenv("ECR_IMAGE_URI",
-                           default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:prod-latest')
+                           default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:prod-latest'),
+        bucket_name = "cvm-s3-data-crescent-us-east-2-aer1lu3eichu"
     )
 }
 
