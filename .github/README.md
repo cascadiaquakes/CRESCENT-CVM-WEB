@@ -1,1 +1,0 @@
-See the `README.md` in the `infra` directory.
