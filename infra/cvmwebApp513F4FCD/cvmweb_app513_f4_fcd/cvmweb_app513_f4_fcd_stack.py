@@ -180,7 +180,7 @@ class CvmwebApp513F4FcdStack(Stack):
               'environment': [
                 {
                   'name': 'ENVIRONMENT',
-                  'value': 'crescent',
+                  'value': config.runtime_environment_name,
                 },
               ],
               'essential': True,
@@ -312,9 +312,9 @@ class CvmwebApp513F4FcdStack(Stack):
                 ],
                 'Effect': 'Allow',
                 'Resource': [
-                  'arn:aws:s3:::cvm-s3-data-crescent-us-east-2-aer1lu3eichu',
-                  'arn:aws:s3:::cvm-s3-data-crescent-us-east-2-aer1lu3eichu/data/*',
-                  'arn:aws:s3:::cvm-s3-data-crescent-us-east-2-aer1lu3eichu/work_area/*',
+                  f'arn:aws:s3:::{config.bucket_name}',
+                  f'arn:aws:s3:::{config.bucket_name}/data/*',
+                  f'arn:aws:s3:::{config.bucket_name}/work_area/*',
                 ],
               },
             ],
