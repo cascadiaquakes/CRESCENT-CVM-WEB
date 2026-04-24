@@ -298,9 +298,9 @@ class CvmwebApp513F4FcdStack(Stack):
                 'Action': 'lambda:InvokeFunction',
                 'Effect': 'Allow',
                 'Resource': [
-                  'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_slice}',
-                  'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_xsection}',
-                  'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_volume}',
+                  f'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_slice}',
+                  f'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_xsection}',
+                  f'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_volume}',
                 ],
               },
               {
