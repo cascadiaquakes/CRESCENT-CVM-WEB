@@ -100,6 +100,9 @@ jobs:
     needs: push_image
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency:
+      group: 'dev-deployments'
+      cancel-in-progress: false
     outputs:
       image_uri: ${{ needs.push_image.outputs.image_uri }}
     env:
@@ -141,6 +144,9 @@ jobs:
     environment:
       name: Production
     runs-on: ubuntu-latest
+    concurrency:
+      group: 'prod-deployments'
+      cancel-in-progress: false
     env:
       ECR_IMAGE_URI: ${{ needs.deploy_dev.outputs.image_uri }}
     steps:
