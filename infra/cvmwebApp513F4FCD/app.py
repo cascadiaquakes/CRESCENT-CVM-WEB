@@ -22,6 +22,9 @@ deployment_environments_configs: dict[str, DeploymentEnvironmentConfig] = {
         ecr_image_uri = os.getenv("ECR_IMAGE_URI",
                            default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:dev-latest'),
         bucket_name = "cvm-s3-data-latest-dev-us-east-2-aer1lu3eichu",
+        lambda_function_name_slice = "cvm-data-extractor-latest-extract-slice",
+        lambda_function_name_xsection = "cvm-data-extractor-latest-extract-xsection",
+        lambda_function_name_volume = "cvm-data-extractor-extract-xsection",
         runtime_environment_name = "dev"
     ),
     "prod": DeploymentEnvironmentConfig(
@@ -29,6 +32,9 @@ deployment_environments_configs: dict[str, DeploymentEnvironmentConfig] = {
         ecr_image_uri = os.getenv("ECR_IMAGE_URI",
                            default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:prod-latest'),
         bucket_name = "cvm-s3-data-crescent-us-east-2-aer1lu3eichu",
+        lambda_function_name_slice = "cvm-data-extractor-extract-slice",
+        lambda_function_name_xsection = "cvm-data-extractor-extract-xsection",
+        lambda_function_name_volume = "cvm-data-extractor-extract-volume",
         runtime_environment_name = "crescent"
     )
 }

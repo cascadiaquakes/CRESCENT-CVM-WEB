@@ -298,9 +298,9 @@ class CvmwebApp513F4FcdStack(Stack):
                 'Action': 'lambda:InvokeFunction',
                 'Effect': 'Allow',
                 'Resource': [
-                  'arn:aws:lambda:us-east-2:818214664804:function:cvm-data-extractor-extract-slice',
-                  'arn:aws:lambda:us-east-2:818214664804:function:cvm-data-extractor-extract-volume',
-                  'arn:aws:lambda:us-east-2:818214664804:function:cvm-data-extractor-extract-xsection',
+                  'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_slice}',
+                  'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_xsection}',
+                  'arn:aws:lambda:us-east-2:818214664804:function:{config.lambda_function_name_volume}',
                 ],
               },
               {
