@@ -56,11 +56,7 @@ const boundaryMarker = ["line"];
 
 
 // CFM data
-//
-// The 3D fault surfaces via the cfm are currently disabled (by setting `cfmData` to an empty list).
-// The mapping component fails while processing the current geojson (deprecated attributes like 'crs') and crashes the web page.
-// const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d.geojson'];
-const cfmData = [];
+const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d_lowres.geojson'];
 const cfmLabel = ['Cascadia Fault Surfaces'];
 const cfmColor = [Cesium.Color.DARKMAGENTA];
 const cfmFillOpacity = [0.5];
