@@ -2,17 +2,14 @@
 LAMBDA_FUNCTIONS = {
     "slice": {
         "dev": "cvm-data-extractor-latest-extract-slice",
-        "stage": "cvm-data-extractor-extract-slice",
         "crescent": "cvm-data-extractor-extract-slice",
     },
     "xsection": {
         "dev": "cvm-data-extractor-latest-extract-xsection",
-        "stage": "cvm-data-extractor-extract-xsection",
         "crescent": "cvm-data-extractor-extract-xsection",
     },
     "volume": {
         "dev": "cvm-data-extractor-latest-extract-volume",
-        "stage": "cvm-data-extractor-extract-volume",
         "crescent": "cvm-data-extractor-extract-volume",
     },
 }
@@ -20,7 +17,6 @@ LAMBDA_FUNCTIONS = {
 # The S3 bucket names.
 BUCKET_NAME = {
     "dev": "cvm-s3-data-latest-dev-us-east-2-aer1lu3eichu",
-    "stage": "cvm-s3-data-stage-us-east-2-aer1lu3eichu",
     "crescent": "cvm-s3-data-crescent-us-east-2-aer1lu3eichu",
 }
 
