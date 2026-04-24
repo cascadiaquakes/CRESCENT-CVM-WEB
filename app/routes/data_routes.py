@@ -83,6 +83,9 @@ LOGO_FILE = "static/images/Crescent_Logos_horizontal_transparent.png"
 # Create a single string with all environment variables
 env_string = "\n".join(f"[ENV] {key}: {value}" for key, value in os.environ.items())
 
+# TODO: hide sensitive environment variables
+# if env_string ...
+
 # Get the ENVIRONMENT variable from the environment or default to 'dev'
 logger.info(f"[INFO] ENVIRONMENT: {env_string}")
 ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev?")
