@@ -1,3 +1,7 @@
+# TODO: the environment-specific config is known to the deployment tools (CDK). Consider
+# passing in the environment-specific config for lambda function names and bucket name from CDK
+# (as environment variables) instead of hardcoding it here.
+
 # The Lambda funtion names.
 LAMBDA_FUNCTIONS = {
     "slice": {
