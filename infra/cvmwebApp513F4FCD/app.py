@@ -24,7 +24,7 @@ deployment_environments_configs: dict[str, DeploymentEnvironmentConfig] = {
         bucket_name = "cvm-s3-data-latest-dev-us-east-2-aer1lu3eichu",
         lambda_function_name_slice = "cvm-data-extractor-latest-extract-slice",
         lambda_function_name_xsection = "cvm-data-extractor-latest-extract-xsection",
-        lambda_function_name_volume = "cvm-data-extractor-extract-xsection",
+        lambda_function_name_volume = "cvm-data-extractor-latest-extract-volume",
         runtime_environment_name = "dev"
     ),
     "prod": DeploymentEnvironmentConfig(
