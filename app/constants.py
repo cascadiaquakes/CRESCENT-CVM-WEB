@@ -20,7 +20,7 @@ LAMBDA_FUNCTIONS = {
 
 # The S3 bucket names.
 BUCKET_NAME = {
-    "dev": "cvm-s3-data-latest-dev-us-east-2-aer1lu3eichu",
+    "dev": "cvm-s3-data-dev-us-east-2-aer1lu3eichu",
     "crescent": "cvm-s3-data-crescent-us-east-2-aer1lu3eichu",
 }
 
