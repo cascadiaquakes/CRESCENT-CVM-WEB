@@ -877,34 +877,6 @@ async def read_page1(request: Request):
     return templates.TemplateResponse("x-section-data.html", {"request": request})
 
 
-def project_lonlat_utm(
-    longitude, latitude, utm_zone, ellipsoid, xy_to_latlon=False, preserve_units=False
-):
-    """
-    Performs cartographic transformations. Converts from longitude, latitude to UTM x,y coordinates
-    and vice versa using PROJ (https://proj.org).
-
-     Keyword arguments:
-    longitude (scalar or array) – Input longitude coordinate(s).
-    latitude (scalar or array) – Input latitude coordinate(s).
-    xy_to_latlon (bool, default=False) – If inverse is True the inverse transformation from x/y to lon/lat is performed.
-    preserve_units (bool) – If false, will ensure +units=m.
-    """
-    P = Proj(
-        proj="utm",
-        zone=utm_zone,
-        ellps=ellipsoid,
-    )
-    # preserve_units=preserve_units,
-
-    x, y = P(
-        longitude,
-        latitude,
-        inverse=xy_to_latlon,
-    )
-    return x, y
-
-
 @router.get("/list_json_files_s3/{selected_model}", response_class=HTMLResponse)
 def list_json_files_s3(request: Request, selected_model: str):
     # AWS S3 configurations (you already have these)
