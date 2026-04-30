@@ -79,15 +79,18 @@ JSON_DIR = os.path.join(BASE_DIR, "static", "json")
 NETCDF_DIR = os.path.join(BASE_DIR, "static", "netcdf")
 LOGO_FILE = "static/images/Crescent_Logos_horizontal_transparent.png"
 
-# Print all environment variables
-# Create a single string with all environment variables
-env_string = "\n".join(f"[ENV] {key}: {value}" for key, value in os.environ.items())
+# Print all environment variables, masking sensitive ones
+logger.info("[INFO] Environment Variables:")
+SENSITIVE_KEYWORDS = {"KEY", "SECRET", "TOKEN", "PASS", "CRED"}
+for key, value in os.environ.items():
+    if any(sensitive in key.upper() for sensitive in SENSITIVE_KEYWORDS):
+        env_string = f"{key}=***REDACTED***{value[-4:]}"
+    else:
+        env_string = f"{key}={value}"
+    logger.info(f"[ENV] {env_string}")
 
-# TODO: hide sensitive environment variables
-# if env_string ...
 
-# Get the ENVIRONMENT variable from the environment or default to 'dev'
-logger.info(f"[INFO] ENVIRONMENT: {env_string}")
+# Get the Active Environment or default to 'dev' if unset
 ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev?")
 logger.info(f"[INFO] ACTIVE_ENVIRONMENT: {ACTIVE_ENVIRONMENT}")
 
