@@ -152,11 +152,6 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v6
-      - name: Show role target
-        run: |
-          echo "Using role ARN prefix: ${AWS_ROLE_ARN: 0-20}"
-        env:
-          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
