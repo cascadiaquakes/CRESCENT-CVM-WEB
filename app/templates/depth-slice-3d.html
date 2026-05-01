@@ -171,12 +171,6 @@
             })
         });
 
-        window.addEventListener('unload', function () {
-            if (viewer && !viewer.isDestroyed()) {
-                viewer.destroy();
-            }
-        });
-
         // Bind updateNorthArrow to the postRender event
         viewer.scene.postRender.addEventListener(updateNorthArrow);
 
