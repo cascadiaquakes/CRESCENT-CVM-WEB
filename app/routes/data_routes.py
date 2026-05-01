@@ -91,7 +91,7 @@ for key, value in os.environ.items():
 
 
 # Get the Active Environment or default to 'dev' if unset
-ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev?")
+ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
 logger.info(f"[INFO] ACTIVE_ENVIRONMENT: {ACTIVE_ENVIRONMENT}")
 
 
@@ -849,7 +849,7 @@ def interpolate_path(
     return interpolated_ds, lat_points, lon_points
 
 
-def open_chunked_netcdf_s3(file, bucket=BUCKET_NAME[ACTIVE_ENVIRONMENT] prefix=PREFIX["netcdf"]):
+def open_chunked_netcdf_s3(file, bucket=BUCKET_NAME[ACTIVE_ENVIRONMENT], prefix=PREFIX["netcdf"]):
     fs = fsspec.filesystem("s3", anon=False)
     path = f"s3://{bucket}/{prefix}{file}"
     of = fs.open(path)

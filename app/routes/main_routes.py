@@ -83,7 +83,7 @@ env_string = "\n".join(f"[ENV] {key}: {value}" for key, value in os.environ.item
 
 # Get the ENVIRONMENT variable from the environment or default to 'dev'
 logger.info(f"[INFO] ENVIRONMENT: {env_string}")
-ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev?")
+ACTIVE_ENVIRONMENT = os.getenv("ENVIRONMENT", "dev")
 logger.info(f"[INFO] ACTIVE_ENVIRONMENT: {ACTIVE_ENVIRONMENT}")
 
 grid_ref_dict = {
