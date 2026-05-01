@@ -40,4 +40,4 @@ LOGO_INCH_OFFSET_BELOW = 0.5
 # chuck will exclude that dimension from chunking. -1,-1,-1 -> {} as auto chunking.
 CHUNKS = {"profile": "-1,256,256", "slice": "1,-1,-1", "xsection": "-1,-1,-1"}
 
-VERSION = "v2026.120"
+VERSION = "v2026.121"
