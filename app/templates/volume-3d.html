@@ -182,6 +182,12 @@
                 minimumZoomDistance: 0.0
             })
         });
+
+        window.addEventListener('unload', function () {
+            if (viewer && !viewer.isDestroyed()) {
+                viewer.destroy();
+            }
+        });
         // Center view button functionality
         document.getElementById('centeredViewButton').addEventListener('click', centeredView);
 
