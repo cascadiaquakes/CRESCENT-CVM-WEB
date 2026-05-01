@@ -165,6 +165,12 @@
             })
         });
 
+        window.addEventListener('unload', function () {
+            if (viewer && !viewer.isDestroyed()) {
+                viewer.destroy();
+            }
+        });
+
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
         // The north arrow.

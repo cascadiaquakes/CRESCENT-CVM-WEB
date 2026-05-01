@@ -183,6 +183,12 @@
             })
         });
 
+        window.addEventListener('unload', function () {
+            if (viewer && !viewer.isDestroyed()) {
+                viewer.destroy();
+            }
+        });
+
         // Set background color to black
         viewer.scene.backgroundColor = Cesium.Color.BLACK;
 
