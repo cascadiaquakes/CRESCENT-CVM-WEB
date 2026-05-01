@@ -849,7 +849,7 @@ def interpolate_path(
     return interpolated_ds, lat_points, lon_points
 
 
-def open_chunked_netcdf_s3(file, bucket=BUCKET_NAME["dev"], prefix=PREFIX["netcdf"]):
+def open_chunked_netcdf_s3(file, bucket=BUCKET_NAME[ACTIVE_ENVIRONMENT] prefix=PREFIX["netcdf"]):
     fs = fsspec.filesystem("s3", anon=False)
     path = f"s3://{bucket}/{prefix}{file}"
     of = fs.open(path)
