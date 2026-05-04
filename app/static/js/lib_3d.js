@@ -208,7 +208,7 @@ async function loadAuxConfig() {
 function populateDropdown() {
     console.log("populateDropdown called");
     if (!Array.isArray(auxLabel)) {
-        console.warn("auxLabel is not an array:", auxLabel);
+        console.warn(`auxLabel is not an array, it is a ${typeof auxLabel}.  `, auxLabel);
         return;
     }
 

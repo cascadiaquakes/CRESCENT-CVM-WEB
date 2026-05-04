@@ -81,7 +81,7 @@ LOGO_FILE = "static/images/Crescent_Logos_horizontal_transparent.png"
 
 # Print all environment variables, masking sensitive ones
 logger.info("[INFO] Environment Variables:")
-SENSITIVE_KEYWORDS = {"KEY", "SECRET", "TOKEN", "PASS", "CRED"}
+SENSITIVE_KEYWORDS = ["KEY", "SECRET", "TOKEN", "PASS", "CRED"]
 for key, value in os.environ.items():
     if any(sensitive in key.upper() for sensitive in SENSITIVE_KEYWORDS):
         env_string = f"{key}=***REDACTED***{value[-4:]}"
