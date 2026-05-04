@@ -179,6 +179,30 @@
             })
         });
 
+        viewer.scene.requestRenderMode = true;
+        viewer.scene.maximumRenderTimeChange = Infinity;
+
+        function disposeViewer() {
+            if (viewer && !viewer.isDestroyed()) {
+                try { viewer.dataSources.removeAll(); } catch (e) { }
+                try { viewer.entities.removeAll(); } catch (e) { }
+                try { viewer.scene.primitives.removeAll(); } catch (e) { }
+                try { viewer.scene.groundPrimitives.removeAll(); } catch (e) { }
+                try {
+                    const gl = viewer.scene.context && viewer.scene.context._gl;
+                    const ext = gl && gl.getExtension('WEBGL_lose_context');
+                    if (ext) {
+                        ext.loseContext();
+                    }
+                } catch (e) { }
+                viewer.destroy();
+            }
+        }
+
+        window.addEventListener('pagehide', disposeViewer);
+        window.addEventListener('beforeunload', disposeViewer);
+        window.addEventListener('unload', disposeViewer);
+
         // Bind updateNorthArrow to the postRender event
         viewer.scene.postRender.addEventListener(updateNorthArrow);
 
@@ -212,7 +236,6 @@
             viewer.scene.globe.depthTestAgainstTerrain = toggleTerrainOcclusionCheckbox.checked;
         });
 
-        viewer.scene.setTerrain(new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromIonAssetId(2426648)));
         const scene = viewer.scene;
         const globe = scene.globe;
         const camera = scene.camera;
@@ -232,7 +255,10 @@
             scene.light.direction = Cesium.Cartesian3.normalize(Cesium.Cartesian3.add(negativeNormal, camera.rightWC, surfaceNormal), scene.light.direction);
         });
 
-        globe.maximumScreenSpaceError = 1.0;
+        globe.maximumScreenSpaceError = 8.0;
+        globe.tileCacheSize = 100;
+        globe.preloadAncestors = false;
+        globe.preloadSiblings = false;
         viewer.scene.backgroundColor = new Cesium.Color(0.0, 0.0, 0.0, 0.0);
 
         viewer.scene.globe.baseColor = Cesium.Color.TRANSPARENT;
