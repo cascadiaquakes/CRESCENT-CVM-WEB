@@ -398,6 +398,7 @@
             viewer.scene.globe.depthTestAgainstTerrain = toggleTerrainOcclusionCheckbox.checked;
         });
 
+        viewer.scene.setTerrain(new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromIonAssetId(2426648)));
         const scene = viewer.scene;
         const globe = scene.globe;
         const camera = scene.camera;
