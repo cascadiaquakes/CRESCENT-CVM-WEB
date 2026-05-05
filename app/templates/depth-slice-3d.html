@@ -5,13 +5,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Depth Slice 3D</title>
-    <script src="https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Cesium.js"></script>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Cesium.js"></script>
     <script src="/static/js/lib_3d.js"></script>
     <script src="/static/config/project.js"></script>
     <script src="/static/config/repository_config.js"></script>
     <link rel="stylesheet" href="/static/css/depth-slice-3d.css" />
     <style>
-        @import url(https://cesium.com/downloads/cesiumjs/releases/1.116/Build/Cesium/Widgets/widgets.css);
+        @import url(https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Widgets/widgets.css);
     </style>
 </head>
 
@@ -179,6 +179,30 @@
             })
         });
 
+        viewer.scene.requestRenderMode = true;
+        viewer.scene.maximumRenderTimeChange = Infinity;
+
+        function disposeViewer() {
+            if (viewer && !viewer.isDestroyed()) {
+                try { viewer.dataSources.removeAll(); } catch (e) { }
+                try { viewer.entities.removeAll(); } catch (e) { }
+                try { viewer.scene.primitives.removeAll(); } catch (e) { }
+                try { viewer.scene.groundPrimitives.removeAll(); } catch (e) { }
+                try {
+                    const gl = viewer.scene.context && viewer.scene.context._gl;
+                    const ext = gl && gl.getExtension('WEBGL_lose_context');
+                    if (ext) {
+                        ext.loseContext();
+                    }
+                } catch (e) { }
+                viewer.destroy();
+            }
+        }
+
+        window.addEventListener('pagehide', disposeViewer);
+        window.addEventListener('beforeunload', disposeViewer);
+        window.addEventListener('unload', disposeViewer);
+
         // Bind updateNorthArrow to the postRender event
         viewer.scene.postRender.addEventListener(updateNorthArrow);
 
@@ -232,7 +256,10 @@
             scene.light.direction = Cesium.Cartesian3.normalize(Cesium.Cartesian3.add(negativeNormal, camera.rightWC, surfaceNormal), scene.light.direction);
         });
 
-        globe.maximumScreenSpaceError = 1.0;
+        globe.maximumScreenSpaceError = 8.0;
+        globe.tileCacheSize = 100;
+        globe.preloadAncestors = false;
+        globe.preloadSiblings = false;
         viewer.scene.backgroundColor = new Cesium.Color(0.0, 0.0, 0.0, 0.0);
 
         viewer.scene.globe.baseColor = Cesium.Color.TRANSPARENT;
