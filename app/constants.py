@@ -5,15 +5,15 @@
 # The Lambda funtion names.
 LAMBDA_FUNCTIONS = {
     "slice": {
-        "dev": "cvm-data-extractor-latest-extract-slice",
+        "dev": "cvm-data-extractor-dev-extract-slice",
         "crescent": "cvm-data-extractor-extract-slice",
     },
     "xsection": {
-        "dev": "cvm-data-extractor-latest-extract-xsection",
+        "dev": "cvm-data-extractor-dev-extract-xsection",
         "crescent": "cvm-data-extractor-extract-xsection",
     },
     "volume": {
-        "dev": "cvm-data-extractor-latest-extract-volume",
+        "dev": "cvm-data-extractor-dev-extract-volume",
         "crescent": "cvm-data-extractor-extract-volume",
     },
 }
