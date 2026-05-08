@@ -56,16 +56,17 @@ const boundaryMarker = ["line"];
 
 
 // CFM data
-const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_3d_lowres.geojson'];
-const cfmLabel = ['Cascadia Fault Surfaces'];
+// pinned to v0.1 review snapshot; do not retarget to main
+const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/9fa84b8cc9dea3e521429e0ac7aeb25449a29cb4/crescent_cfm_files/crescent_cfm_crustal_3d_5km.geojson'];   // 5km decimated; v0.1 has no _lowres variant
+const cfmLabel = ['CFM v0.1 (pre-release) Surfaces'];
 const cfmColor = [Cesium.Color.DARKMAGENTA];
 const cfmFillOpacity = [0.5];
 const cfmLineWidth = [2];
 const cfmMarker = ["rectangle"];
 
 // CFM Trace data
-const cfmTraceData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/main/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'];
-const cfmTraceLabel = ['Cascadia Fault Traces'];
+const cfmTraceData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/9fa84b8cc9dea3e521429e0ac7aeb25449a29cb4/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'];
+const cfmTraceLabel = ['CFM v0.1 (pre-release) Traces'];
 const cfmTraceColor = [Cesium.Color.CRIMSON];
 const cfmTraceFillOpacity = [0.5];
 const cfmTraceLineWidth = [2];
@@ -73,8 +74,8 @@ const cfmTraceMarker = ["line"];
 
 // Map labels to checkboxes on the HTML page.
 const dataSourceCheckboxMapping = {
-    'Cascadia Fault Traces': 'toggleCFMTraceCheckbox',
-    'Cascadia Fault Surfaces': 'toggleCFMCheckbox'
+    'CFM v0.1 (pre-release) Traces': 'toggleCFMTraceCheckbox',
+    'CFM v0.1 (pre-release) Surfaces': 'toggleCFMCheckbox'
 };
 
 // Legends
