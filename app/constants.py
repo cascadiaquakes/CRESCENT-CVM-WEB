@@ -1,6 +1,6 @@
-# TODO: the environment-specific config is known to the deployment tools (CDK). Consider
-# passing in the environment-specific config for lambda function names and bucket name from CDK
-# (as environment variables) instead of hardcoding it here.
+# TODO: Currently, the lambda function names have to be kept in-sync with the CDK app deployment config.
+# Consider passing in the environment-specific config for lambda function names and bucket name from CDK
+# instead of maintaining it in two places.
 
 # The Lambda funtion names.
 LAMBDA_FUNCTIONS = {

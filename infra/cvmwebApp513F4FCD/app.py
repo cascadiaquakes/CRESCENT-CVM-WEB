@@ -16,15 +16,18 @@ ECR_REGISTRY_DOMAIN_NAME = os.getenv("ECR_REGISTRY_DOMAIN_NAME",
 # NOTE: The `deployment-environment` MUST be provided at runtime via CDK context.
 # Example: `cdk synth --context deployment-environment=dev`
 
+# NOTE: the lambda function names are also defined inside the app itself (app/static/constants.py), 
+# so currently they need to be kept in sync between here and the app. In the future, the app
+# could be updated to read the function names from environment variables.
 deployment_environments_configs: dict[str, DeploymentEnvironmentConfig] = {
     "dev": DeploymentEnvironmentConfig(
         site_domain_name = "dev.cvm.cascadiaquakes.org",
         ecr_image_uri = os.getenv("ECR_IMAGE_URI",
                            default=f'{ECR_REGISTRY_DOMAIN_NAME}/{ECR_REPOSITORY_NAME}:dev-latest'),
         bucket_name = "cvm-s3-data-dev-us-east-2-aer1lu3eichu",
-        lambda_function_name_slice = "cvm-data-extractor-latest-extract-slice",
-        lambda_function_name_xsection = "cvm-data-extractor-latest-extract-xsection",
-        lambda_function_name_volume = "cvm-data-extractor-latest-extract-volume",
+        lambda_function_name_slice = "cvm-data-extractor-dev-extract-slice",
+        lambda_function_name_xsection = "cvm-data-extractor-dev-extract-xsection",
+        lambda_function_name_volume = "cvm-data-extractor-dev-extract-volume",
         runtime_environment_name = "dev"
     ),
     "prod": DeploymentEnvironmentConfig(
