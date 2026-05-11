@@ -57,7 +57,7 @@ const boundaryMarker = ["line"];
 
 // CFM data
 // pinned to v0.1 review snapshot; do not retarget to main
-const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/9fa84b8cc9dea3e521429e0ac7aeb25449a29cb4/crescent_cfm_files/crescent_cfm_crustal_3d_5km.geojson'];   // 5km decimated; v0.1 has no _lowres variant
+const cfmData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/stable/crescent_cfm_files/crescent_cfm_crustal_3d_5km.geojson'];   // 5km decimated; v0.1 has no _lowres variant
 const cfmLabel = ['CFM v0.1 (pre-release) Surfaces'];
 const cfmColor = [Cesium.Color.DARKMAGENTA];
 const cfmFillOpacity = [0.5];
@@ -65,7 +65,7 @@ const cfmLineWidth = [2];
 const cfmMarker = ["rectangle"];
 
 // CFM Trace data
-const cfmTraceData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/9fa84b8cc9dea3e521429e0ac7aeb25449a29cb4/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'];
+const cfmTraceData = ['https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/stable/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'];
 const cfmTraceLabel = ['CFM v0.1 (pre-release) Traces'];
 const cfmTraceColor = [Cesium.Color.CRIMSON];
 const cfmTraceFillOpacity = [0.5];

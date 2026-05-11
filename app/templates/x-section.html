@@ -209,7 +209,7 @@
     document.addEventListener('DOMContentLoaded', loadColormaps);
 
     // pinned to v0.1 review snapshot; do not retarget to main
-    const faultTraceUrl = 'https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/9fa84b8cc9dea3e521429e0ac7aeb25449a29cb4/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'
+    const faultTraceUrl = 'https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/stable/crescent_cfm_files/crescent_cfm_crustal_traces.geojson'
     var lat_min = 40;
     var lat_max = 49;
     var lat_avg = (lat_min + lat_max) / 2.0
@@ -303,7 +303,7 @@
 
     // Function to calculate and display intersections
     function calculateIntersections() {
-        fetch('https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/9fa84b8cc9dea3e521429e0ac7aeb25449a29cb4/crescent_cfm_files/crescent_cfm_crustal_traces.geojson')
+        fetch('https://raw.githubusercontent.com/cascadiaquakes/crescent-cfm/stable/crescent_cfm_files/crescent_cfm_crustal_traces.geojson')
             .then(response => response.json())
             .then(data => {
                 if (!window.intersectionMarkers) {
