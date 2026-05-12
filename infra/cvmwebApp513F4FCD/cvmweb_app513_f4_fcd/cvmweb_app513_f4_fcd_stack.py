@@ -96,6 +96,8 @@ class CvmwebApp513F4FcdStack(Stack):
           ],
         )
     fargateTaskAppLogGroupFdfbef61.cfn_options.deletion_policy = cdk.CfnDeletionPolicy.RETAIN
+    fargateTaskAppLogGroupFdfbef61.cfn_options.update_replace_policy = cdk.CfnDeletionPolicy.RETAIN
+
 
     fargateTaskExecutionRole2B907e8a = iam.CfnRole(self, 'FargateTaskExecutionRole2B907E8A',
           assume_role_policy_document = {
