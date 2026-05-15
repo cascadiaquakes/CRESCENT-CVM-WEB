@@ -60,30 +60,61 @@ CRESCENT-CVM-WEB/
 ### Prerequisites
 
 - Python 3.13
-- Docker (recommended for local development)
+- Docker (optional; recommended for a container-parity workflow)
 - AWS credentials with read access to the CVM S3 bucket and invoke access to the extraction Lambda functions (required for S3-backed routes and large-data extraction)
 - A [Cesium Ion](https://cesium.com/ion/) access token (served to the client by the `/get-token` endpoint)
+
+### Configure a local `.env` file
+
+Both the Docker and venv workflows read configuration from a `.env` file in the
+repository root. Create one with the variables described under
+[Environment Variables](#environment-variables); a minimal example:
+
+```bash
+ENVIRONMENT=dev
+CESIUM_KEYS={"cesium_access_token":"<your-cesium-ion-token>"}
+
+AWS_DEFAULT_REGION=us-east-2
+AWS_ACCESS_KEY_ID=<your-key-id>
+AWS_SECRET_ACCESS_KEY=<your-secret>
+# AWS_SESSION_TOKEN=<token>   # only needed for temporary/SSO credentials
+```
+
+`.env` is gitignored — do not commit it.
 
 ### Run Locally with Docker
 
 ```bash
+docker compose down # Only needed if the build is stale
 docker compose up --build
 ```
 
-The app will be available at <http://localhost:8000>.
+`docker-compose.yml` loads `.env` into the container automatically. The app will
+be available at <http://localhost:8000>.
 
 ### Run Locally without Docker
 
+Create and activate a virtual environment, install dependencies, then load
+`.env` into your shell before starting uvicorn (uvicorn does not auto-load
+`.env`):
+
 ```bash
+python3.13 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
+
+set -a; source .env; set +a       # export every variable in .env
 cd app
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+The app will be available at <http://localhost:8000>.
+
 ### Environment Variables
 
 - `ENVIRONMENT` — selects the deployment environment (`dev` or `crescent`). This controls which S3 bucket and Lambda function names from `app/constants.py` are used. Defaults to `dev`.
-- Standard AWS environment variables (`AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, or an attached IAM role) are required for S3 and Lambda access.
+- `CESIUM_KEYS` — JSON string of Cesium Ion access tokens served to the client by `/get-token`, of the form `{"cesium_access_token":"<token>"}`. To obtain a token, sign up or log in at <https://cesium.com/ion/> and open the **Access Tokens** tab in the dashboard — use the auto-created default token or create a new one. In deployed environments this is injected from AWS Secrets Manager; for local development, set it directly in `.env`.
+- AWS credentials — local development requires `AWS_REGION` plus either `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` (and `AWS_SESSION_TOKEN` for temporary credentials) in `.env`. In deployed environments these are supplied by the attached IAM role. If credentials are missing, boto3 will fall through to the EC2 instance-metadata service and stall with timeout errors on every S3 or Lambda call.
 
 ## Data
 
