@@ -7,339 +7,241 @@
 <script src="/static/config/project.js"></script>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider/distribute/nouislider.min.css">
+<script src="https://cdn.jsdelivr.net/npm/nouislider/distribute/nouislider.min.js"></script>
 <script src="/static/config/repository_config.js"></script>
 <style>
     @import url(https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Widgets/widgets.css);
 </style>
 
 {% endblock %}
-{% block description %}
-<div class="info-message">
-</div>
-<div id="description" style="display:none;">
-    <h3>CVM Repository Interface Guide</h3>
-    <p>
-        Welcome to the repository for the CRESCENT Community Velocity Model (CVM). This platform facilitates access to a
-        wide array of velocity models developed as part of the CRESCENT project. The CVM-Web interface offers advanced
-        visualization tools for model previews and tools for extracting model data. These models are compatible with the
-        Python 3 tools available from the
-        <a href="https://cascadiaquakes.github.io/cvm-tools-book/index.html" target="_blank"
-            style="color: #004F59;">CVM-Tools repository</a>.
-    </p>
 
-    <p>
-        To explore the models in the repository, click on any model listed below. Detailed metadata for that model will
-        be displayed, and the 3D map will show the model's boundaries along with current Community Fault Model (CFM)
-        data,
-        such as CRESCENT Cascadia fault traces, fault surfaces, the Cascadia subduction interface, and area seismicity.
-    </p>
-    <p> Use the <u>download</u> link in the model <b>Summary</b> to download the model's netCDF file. </p>
-    <p>
-        Click on <b>Show/Hide Filter & Model Coverage Comparison Controls</b> to:
-    <ul>
-        <li>display filters that allow you to narrow down the models based on
-            the area, depth, and parameters of interest. </li>
-        <li>select up to five models for comparison. The selected models will display their area of
-            coverage boundaries on the map, allowing you to visually compare the extent and overlap of each model. This
-            tool helps
-            in analyzing how different models represent geographical areas and their boundaries.</li>
-    </ul>
-    </p>
-    <p>
-        Click on <b>Show/Hide 2D Models</b> to:
-    <ul>
-        <li>display a list of the available 2D models. </li>
-        <li>click on any model to view metadata for that model
-            and display its surface on the 3D map.</li>
-    </ul>
-    </p>
-    <p>
-    <p><strong>Model Resolutions:</strong></p>
-    <p>
-        Each model has its own native resolution, which is described by the `geospatial` global attributes in the netCDF
-        file.
-        You can view the metadata, including resolution details, by clicking on any model listed below.
-    </p>
-    <p>
-        The horizontal resolution is determined by the <i>geospatial_lat_resolution</i> and
-        <i>geospatial_lon_resolution</i>
-        attributes,
-        which specify the spacing between grid points in the latitude and longitude directions, respectively. The
-        vertical
-        resolution is defined by the <i>geospatial_vertical_resolution</i> attribute, indicating the spacing in the
-        depth or
-        height
-        dimension.
-    </p>
-    <p>
-        The geographic extent of the model is outlined by the attributes <i>geospatial_lat_min</i>,
-        <i>geospatial_lat_max</i>,
-        <i>geospatial_lon_min</i>, <i>geospatial_lon_max</i>, as well as <i>geospatial_vertical_min</i> and
-        <i>geospatial_vertical_max</i>.
-        These
-        attributes define the model's boundaries in terms of latitude, longitude, and vertical dimensions.
-    </p>
-    <p>
-        For example, a model with a latitude resolution of 0.5°, a longitude resolution of 0.5°, and a vertical
-        resolution of 10
-        meters would have a grid with a horizontal resolution of 0.5° x 0.5° and a vertical resolution of 10 meters.
-        These
-        attributes ensure that the model's spatial resolution and extent are clearly defined for users.
-    </p>
-    </p>
+{% block body %}
+<div id="viewer2dWrapper">
+    <!-- Full-bleed map (iframe to CVM's /data/3d Cesium page) -->
+    <div id="mapContainer">
+        <iframe src="/data/3d" id="3dIframe"></iframe>
+    </div>
 
-    </p>
-    <p><strong>Visualization Tools:</strong></p>
-    <ul>
-        <li><a href="/vis/x-section-viewer" style="color: #004F59;">Cross-Section Viewer:</a> View and analyze vertical
-            cross-sections of the velocity models.</li>
-        <li><a href="/vis/depth-slice-viewer" style="color: #004F59;">Horizontal-Slice Viewer:</a> Generate horizontal
-            slices
-            of
-            the models.</li>
-        <li><a href="/vis/depth-profile-viewer" style="color: #004F59;">Depth-Profile Viewer:</a> Generate depth profile
-            plot at a given point from a model.</li>
-    </ul>
-    <p><strong>Data Extraction Tools:</strong></p>
-    <ul>
-        <li><a href="/data/volume-data" style="color: #004F59;">Volume Data:</a> Extract and download 3D volume data
-            from
-            the velocity models.</li>
-        <li><a href="/data/x-section-data" style="color: #004F59;">Cross-Section Data:</a> Retrieve data for specific
-            vertical cross-sections.</li>
-        <li><a href="/data/depth-slice-data" style="color: #004F59;">Depth Slice Data:</a> Access data for horizontal
-            slices
-            at varying depths.</li>
-    </ul>
-    <p>
-        <strong>Key features of the interface map include:</strong>
-    </p>
-    <ul>
-        <li><strong>Show/Hide Controls:</strong> Use this button to display or hide the map controls.</li>
-        <li><strong>CRESCENT Study Area:</strong> The boundaries of the CRESCENT study area are outlined in cyan,
-            demarcating the focus area of the study.</li>
-        <li><strong>3D Model Outline:</strong> The 3D outline of the selected CVM model is displayed in cyan, allowing
-            users
-            to visualize the spatial extent and orientation of the model within the study area.</li>
-        <li><strong>Selected Model Extent:</strong> The selected model extent is shown in blue and can be adjusted using
-            latitude, longitude, and depth (if available) sliders. Additionally, an Opacity Control slider is available
-            to adjust the
-            opacity of the model extent display, where 0 represents full transparency and 1 represents full opacity.
-            This
-            provides flexibility in visualizing underlying features.</li>
-        <li><strong>Earthquakes Visualization:</strong> The yellow dots on the map represent earthquakes with a
-            magnitude
-            greater than 4 that have occurred within the CRESCENT study area since 1970. The size of each yellow dot is
-            proportional to the earthquake's magnitude, with larger dots indicating stronger earthquakes. This
-            earthquake data
-            is sourced from the ANSS Comprehensive Earthquake Catalog (ComCat), which compiles seismic events from
-            various
-            global and regional networks. The data is obtained through the USGS FDSN Event Service, ensuring up-to-date
-            and
-            accurate information on seismic activity. For more details on ComCat, visit
-            <a href="https://earthquake.usgs.gov/data/comcat/">ANSS ComCat</a>, and for querying seismic data, visit the
-            <a href="https://earthquake.usgs.gov/fdsnws/event/1/">USGS FDSN Event Service</a>.
-        </li>
-        <li><strong>Imagery Layer:</strong> The imagery layer option (when checked) displays an imagery layer available
-            through Cesium, offering detailed and reliable backgrounds for the visualization of geological and
-            seismological
-            data. Users may select different imagery layers using the imagery selection tool located at the top right of
-            the
-            interface.</li>
-        <li><strong>Terrain Occlusion Checkbox:</strong> Since imagery layers displayed on the map (when selected) are
-            not
-            transparent, the Terrain Occlusion checkbox helps unhide the data displayed on the map. Enabling this
-            feature
-            helps to understand the spatial relationships between the terrain and the subsurface models.</li>
-        <li><strong>Feature Toggles:</strong> The interface includes checkboxes that allow users to turn on and off
-            various
-            features displayed on the map. This includes toggling the visibility of fault traces, earthquake data, and
-            other
-            model elements, providing flexibility in data visualization and analysis.</li>
-        <li><strong>Center View Button:</strong> The Center View button allows users to quickly center the map view on
-            the
-            CRESCENT study area or other areas of interest, making navigation easier and more efficient.</li>
-        <li><strong>Home View Button:</strong> The Home View button resets the map view to its initial default settings,
-            providing a convenient way to return to the original perspective and overview of the map.</li>
-        <li><strong>Distance Measuring Tool:</strong> The distance measuring tool, located under the map legend and can
-            be
-            activated by checking the <b>Measure Distance</b> checkbox. This tool allows users to click on the map to
-            select two points and measure the distance between them.
-            When the first point is clicked, a point is placed at that location, and the second click
-            places
-            the second point. After both points are selected, a line is drawn connecting them, and the
-            distance
-            between the points is calculated and displayed. The distance is shown in kilometers in a designated display
-            area. If
-            more points are clicked after the second point, the previous line and markers are cleared, and the process
-            starts over.
-            This tool is designed to provide quick and easy measurement of distances between two locations on the map,
-            with visual
-            feedback through markers and lines. Additionally, the user can reset the tool by using a checkbox, which
-            will clear the
-            markers and distance line for a new measurement.
-        </li>
-    </ul>
-</div>
-{% endblock %}
-{% block filter %}
-<div id="toggleFilterPanel" onclick="toggleFilterPanel()" class="filterToggleBtn">
-    <span style="color: red;">&#9654;&nbsp;</span>Show/Hide 3D Models Filters & Coverage Comparison Controls
-</div>
-<div id="filterPanel" style="display:none;">
-    <div id="filterContainer">
-        <div id="latLonFilters">
-            <h3>Filter Area (shown by &#9644;&nbsp;&#9644; on the map)</h3>
-            <table cellspacing="4" style="text-align: center; overflow: hidden; margin: 0;">
-                <tbody>
-                    <tr>
-                        <td style="text-align: center;background-color: white;">Max Lat.</td>
-                    </tr>
-                    <tr style="text-align: center;background-color: white;">
-                        <td><input id="lat_max" name="lat_max" type="number" step="0.01"
-                                style="display:block;margin:0 auto;width: 100px;"
-                                title="Northernmost latitude of selection rectangle. Min: -90, Max: 90"
-                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" />
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <table cellspacing="0" style="text-align: center; margin: auto;">
-                                <tbody>
-                                    <tr>
-                                        <td>Min Lon.</td>
-                                        <td><input id="lon_min" name="lon_min" type="number" step="0.01"
-                                                style="width: 100px;"
-                                                title="Westernmost longitude of selection rectangle. Min: -180, Max: 180"
-                                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" />
-                                        </td>
-                                        <td><input id="lon_max" name="lon_max" type="number" step="0.01"
-                                                style="width: 100px;"
-                                                title="Easternmost longitude of selection rectangle. Min: -180, Max: 180"
-                                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" />
-                                        </td>
-                                        <td>Max Lon.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr>
-                    <tr style="text-align: center;background-color: white;">
-                        <td><input id="lat_min" name="lat_min" type="number" step="0.01"
-                                style="display:block;margin:0 auto;width: 100px;"
-                                title="Southernmost latitude of selection rectangle. Min: -90, Max: 90"
-                                class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" /></td>
-                    </tr>
-                    <td style="text-align: center;background-color: white;">Min Lat:</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <div id="variableFilters">
-            <div id="depthFilters">
-                <h3>Filter Depth (km)</h3>
-                <table cellspacing="4" style="text-align: center; overflow: hidden; margin: 0;">
-                    <tbody>
-                        <tr style="background-color: white;">
-                            <td style="text-align: right;background-color: white;">Min Depth:</td>
-                            <td><input id="depth_min" name="depth_min" type="number" step="0.01"
-                                    style="display:block;margin:0 auto;width:100px;"
-                                    title="Minimum depth of selection in kilometers."
-                                    class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" /></td>
-                        </tr>
-                        <tr style="background-color: white;">
-                            <td style="text-align: right;background-color: white;">Max Depth:</td>
-                            <td><input id="depth_max" name="depth_max" type="number" step="0.01"
-                                    style="display:block;margin:0 auto;width: 100px;"
-                                    title="Maximum depth of selection in kilometers."
-                                    class="ui-inputfield ui-inputtext ui-widget ui-state-default ui-corner-all" /></td>
-                        </tr>
-                    </tbody>
-                </table>
+    <!-- Mobile toggle for sidebar -->
+    <button id="toggleSidebar" class="btn-toggle-sidebar" type="button" title="Show/Hide Controls">&#9776;</button>
+
+    <!-- Floating sidebar -->
+    <div id="sidebarPanel">
+
+        <!-- Models card -->
+        <div class="card-2d">
+            <div class="card-2d-title">CVM Models</div>
+
+            <div class="accordion-section open">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">3D Models</span>
+                </button>
+                <div class="accordion-body">
+                    <div class="model-table-wrap">
+                        <div id="fileTable"></div>
+                    </div>
+                </div>
             </div>
-            <h3>Filter Model Variable(s)</h3>
-            <select id="variableSelect" multiple="multiple" style="width:300px;">
-                <!-- Variables will be populated here -->
-            </select>
-        </div>
-        <div id="filterActions">
-            <button id="applyFilterBtn" type="button" onclick="filterTable()">Apply Filter</button>
-            <button id="clearFilterBtn" type="button" onclick="clearFilters()">Clear Filters</button>
-        </div>
 
-        <!-- New section for selection boxes -->
-        <div id="modelSelectionPanel" style="padding: 20px;">
-            <h4>Model Coverage Comparison (shown by &#9632;&nbsp;&#9632; on the map)</h4>
-            <div id="modelSelectionBoxes">
-                <!-- 6 selection boxes identified by corresponding colors -->
-                <select id="modelSelect1" class="modelSelect" style="background-color: red;">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect2" class="modelSelect" style="background-color: green;">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect3" class="modelSelect" style="background-color: blue;">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect4" class="modelSelect" style="background-color: yellow;">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect5" class="modelSelect" style="background-color: white">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect6" class="modelSelect" style="background-color: brown">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect7" class="modelSelect" style="background-color: purple">
-                    <option value="">Select a model</option>
-                </select>
-                <select id="modelSelect8" class="modelSelect" style="background-color: pink">
-                    <option value="">Select a model</option>
-                </select>
-                <button id="clearModelsBtn" class="clearModelsBtn">Clear Selected Models</button>
-
+            <div class="accordion-section">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">2D Models</span>
+                </button>
+                <div class="accordion-body">
+                    <div id="auxTableContainer"></div>
+                </div>
             </div>
         </div>
 
+        <!-- Filters card -->
+        <div class="card-2d">
+            <div class="card-2d-title">Filters</div>
+
+            <div class="accordion-section open">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Latitude (&deg;N)</span>
+                    <span class="accordion-range">
+                        <span id="lat_min_label">--</span> &ndash; <span id="lat_max_label">--</span>
+                    </span>
+                </button>
+                <div class="accordion-body">
+                    <div id="latitudeSlider" class="accordion-slider"></div>
+                    <input type="hidden" id="lat_min" name="lat_min" />
+                    <input type="hidden" id="lat_max" name="lat_max" />
+                </div>
+            </div>
+
+            <div class="accordion-section open">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Longitude (&deg;E)</span>
+                    <span class="accordion-range">
+                        <span id="lon_min_label">--</span> &ndash; <span id="lon_max_label">--</span>
+                    </span>
+                </button>
+                <div class="accordion-body">
+                    <div id="longitudeSlider" class="accordion-slider"></div>
+                    <input type="hidden" id="lon_min" name="lon_min" />
+                    <input type="hidden" id="lon_max" name="lon_max" />
+                </div>
+            </div>
+
+            <div class="accordion-section">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Depth (km)</span>
+                </button>
+                <div class="accordion-body">
+                    <div class="field-row">
+                        <label>Depth range</label>
+                        <div class="range-inputs">
+                            <input id="depth_min" name="depth_min" type="number" step="0.01"
+                                title="Minimum depth in km" />
+                            <span class="range-sep">to</span>
+                            <input id="depth_max" name="depth_max" type="number" step="0.01"
+                                title="Maximum depth in km" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-section">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Filter Variables</span>
+                </button>
+                <div class="accordion-body">
+                    <div class="field-row">
+                        <label>Ctrl/Cmd-click to multi-select</label>
+                        <select id="variableSelect" multiple size="6"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-buttons">
+                <button id="applyFilterBtn" type="button" class="btn-primary" onclick="filterTable()">Apply</button>
+                <button id="clearFilterBtn" type="button" class="btn-secondary" onclick="clearFilters()">Clear</button>
+            </div>
+        </div>
+
+        <!-- Coverage comparison card -->
+        <div class="card-2d">
+            <div class="card-2d-title">Coverage Comparison</div>
+
+            <div class="accordion-section">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Compare up to 8 models</span>
+                </button>
+                <div class="accordion-body">
+                    <div id="modelSelectionBoxes">
+                        <!-- Chip colors mirror cesiumColorList[1..8] in repository_config.js so
+                             the dot matches the outline drawn on the 3D map. -->
+                        <div class="modelSelectRow" style="--chip-color:#dc2626;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect1" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#16a34a;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect2" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#2563eb;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect3" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#eab308;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect4" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#f8fafc;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect5" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#92400e;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect6" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#7e22ce;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect7" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <div class="modelSelectRow" style="--chip-color:#ec4899;">
+                            <span class="modelSelectChip"></span>
+                            <select id="modelSelect8" class="modelSelect"><option value="">Select a model</option></select>
+                        </div>
+                        <button id="clearModelsBtn" type="button" class="clearModelsBtn">Clear Selected Models</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
-{% endblock %}
-{% block leftpanel %}
-<div id="fileListPanel">
-    <div id="fileTable"></div>
-    <div>&nbsp;</div>
-    <div id="auxTableContainer"></div>
-    <hr />
-    <div><br /><span id="mmodelname"></span>
-        <pre id="jsonContent">
-<h2 id="h2" style="color: maroon; display:none;">Click on a <strong>Model</strong> to view its metadata</h2>
-</pre>
+
+    <!-- Metadata side panel (slides in from right when a model is clicked) -->
+    <div class="metadata-panel" id="metadataPanel">
+        <div class="metadata-panel-header">
+            <h3 id="mmodelname">Model Metadata</h3>
+            <button type="button" class="btn-close-metadata" onclick="closeMetadataPanel()" aria-label="Close">&times;</button>
+        </div>
+        <div class="metadata-panel-body">
+            <div id="jsonContent">
+                <span id="cmodelname" style="display:none;"></span>
+                <span class="info-message">Click on a model to view its metadata.</span>
+            </div>
+        </div>
     </div>
+
+    <!-- Bottom-right toggle to open / close the metadata panel -->
+    <button type="button" class="btn-show-metadata" id="showMetadataBtn" onclick="toggleMetadataPanel()" title="Model metadata" aria-label="Model metadata">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>
+    </button>
 </div>
+
+{{ self.scripts() }}
 {% endblock %}
-{% block rightpanel %}
-<div id="contentPanel">
-    <span id="cmodelname" style="display:none;"></span>Model coverage &amp; CRESCENT Cascadia fault traces
-    <div id="results-panel" class="action_side" style="flex:0 0 67.5%;">
-        <iframe src="/data/3d" width="99.5%" height="1200px" id="3dIframe"></iframe>
-    </div>
-</div>
-{% endblock %}
+
 {% block scripts %}
 <script src="/static/js/shared.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script>
-        let
-            auxData,
-            auxLabel = [],
-            auxTitle,
-            auxCitation,
-            auxFillOpacity,
-            auxLineWidth,
-            auxDecimation,
-            auxMarker;
+    let
+        auxData,
+        auxLabel = [],
+        auxTitle,
+        auxCitation,
+        auxFillOpacity,
+        auxLineWidth,
+        auxDecimation,
+        auxMarker;
+
+    // --- UI helpers ---
+
+    function toggleAccordion(headerEl) {
+        const section = headerEl && headerEl.closest(".accordion-section");
+        if (section) section.classList.toggle("open");
+    }
+
+    function openMetadataPanel() {
+        document.getElementById("metadataPanel")?.classList.add("open");
+    }
+
+    function closeMetadataPanel() {
+        document.getElementById("metadataPanel")?.classList.remove("open");
+    }
+
+    function toggleMetadataPanel() {
+        document.getElementById("metadataPanel")?.classList.toggle("open");
+    }
 
     // Load auxiliary (2D) model config and build the 2D table
     async function loadAuxConfig() {
@@ -354,31 +256,74 @@
             auxLineWidth = data.auxLineWidth;
             auxDecimation = data.auxDecimation;
             auxMarker = data.auxMarker;
-
-            console.log("Aux config loaded:", auxLabel[0], auxData[0]);
             createAuxTable();
         } catch (error) {
             console.error("Error loading auxiliary config:", error);
         }
     }
 
-    // Run this once when DOM is ready
     window.addEventListener("DOMContentLoaded", loadAuxConfig);
 
-    // Populate latitude and longitude input boxes initially
     function populateLatLonInputs() {
         document.getElementById('lat_min').value = south;
         document.getElementById('lat_max').value = north;
         document.getElementById('lon_min').value = west;
         document.getElementById('lon_max').value = east;
+        const setLabel = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = (+v).toFixed(1) + '°'; };
+        setLabel('lat_min_label', south);
+        setLabel('lat_max_label', north);
+        setLabel('lon_min_label', west);
+        setLabel('lon_max_label', east);
     }
 
-    /**
-     * Generates HTML content from a given JSON object, handling nested structures recursively.
-     *
-     * @param {Object} jsonData - The JSON object to be converted into HTML.
-     * @returns {string} - The generated HTML content as a string.
-     */
+    // Lat/lon dual-thumb sliders. Range = study area bounds (south..north, west..east).
+    // The hidden #lat_min/#lat_max/#lon_min/#lon_max inputs are kept in sync so the
+    // existing filterTable() logic that reads them still works unchanged.
+    function initLatLonSliders() {
+        if (typeof noUiSlider === 'undefined') {
+            console.error('noUiSlider not loaded');
+            return;
+        }
+        const latEl = document.getElementById('latitudeSlider');
+        const lonEl = document.getElementById('longitudeSlider');
+
+        if (latEl && !latEl.noUiSlider) {
+            noUiSlider.create(latEl, {
+                start: [south, north],
+                connect: true,
+                range: { min: south, max: north },
+                step: 0.1,
+            });
+            latEl.noUiSlider.on('update', (values) => {
+                const lo = parseFloat(values[0]).toFixed(2);
+                const hi = parseFloat(values[1]).toFixed(2);
+                document.getElementById('lat_min').value = lo;
+                document.getElementById('lat_max').value = hi;
+                document.getElementById('lat_min_label').textContent = parseFloat(lo).toFixed(1) + '°';
+                document.getElementById('lat_max_label').textContent = parseFloat(hi).toFixed(1) + '°';
+            });
+            latEl.noUiSlider.on('change', filterTable);
+        }
+
+        if (lonEl && !lonEl.noUiSlider) {
+            noUiSlider.create(lonEl, {
+                start: [west, east],
+                connect: true,
+                range: { min: west, max: east },
+                step: 0.1,
+            });
+            lonEl.noUiSlider.on('update', (values) => {
+                const lo = parseFloat(values[0]).toFixed(2);
+                const hi = parseFloat(values[1]).toFixed(2);
+                document.getElementById('lon_min').value = lo;
+                document.getElementById('lon_max').value = hi;
+                document.getElementById('lon_min_label').textContent = parseFloat(lo).toFixed(1) + '°';
+                document.getElementById('lon_max_label').textContent = parseFloat(hi).toFixed(1) + '°';
+            });
+            lonEl.noUiSlider.on('change', filterTable);
+        }
+    }
+
     function createHtmlFromJson(jsonData) {
         function processJson(jsonData) {
             let htmlContent = '<div class="json-container">';
@@ -395,25 +340,11 @@
         return processJson(jsonData);
     }
 
-    // Toggle filter panel.
-    function toggleFilterPanel() {
-        const filterPanel = document.getElementById("filterPanel");
-        const button = document.getElementById("toggleFilterPanel");
-        if (filterPanel.style.display === "none") {
-            filterPanel.style.display = "block";
-            button.innerHTML = "<span style='color: red;'>&#9660;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls";
-        } else {
-            filterPanel.style.display = "none";
-            button.innerHTML = "<span style='color: red;'>&#9654;&nbsp;</span>Show/Hide Filter & Model Coverage Comparison Controls";
-        }
-    }
-
     // Extract unique variables from the 9th column of the table and populate the select dropdown
     async function extractAndPopulateVariables() {
         const rows = document.querySelectorAll('#fileTable tr');
         const variableSet = new Set();
 
-        // Fetch JSON file
         let variablesList = [];
         try {
             const response = await fetch('../static/config/variables.json');
@@ -422,46 +353,34 @@
             console.error('Error fetching variables JSON:', error);
         }
 
-        // Extract all unique variables from the 9th column of the table
         rows.forEach((row, index) => {
-            if (index === 0) return; // Skip the header row
-
+            if (index === 0) return;
             const lastColumnText = row.cells[8]?.textContent?.trim() || '';
             const variables = lastColumnText
                 .split('f(')[0]
                 .split(',')
                 .map(v => v.trim());
-
             variables.forEach(variable => {
                 if (variable) variableSet.add(variable);
             });
         });
 
         const variableSetArray = Array.from(variableSet);
-
-        // Step 1: Filter variablesList to remove any variables not in variableSet
         const filteredVariablesList = variablesList.filter(variable => variableSet.has(variable));
-
-        // Step 2: Append missing variables from variableSet that are not in filteredVariablesList
         variableSetArray.forEach(variable => {
             if (!filteredVariablesList.includes(variable)) {
                 filteredVariablesList.push(variable);
             }
         });
 
-        const finalVariablesList = filteredVariablesList;
-
         const variableSelect = document.getElementById('variableSelect');
         variableSelect.innerHTML = '';
-
-        finalVariablesList.forEach(variable => {
+        filteredVariablesList.forEach(variable => {
             const option = document.createElement('option');
             option.value = variable;
             option.textContent = variable;
             variableSelect.appendChild(option);
         });
-
-        $(variableSelect).select2();
     }
 
     async function filterTable() {
@@ -476,7 +395,6 @@
         const depth_max = parseFloat(document.getElementById('depth_max').value);
         const selectedVariables = $('#variableSelect').val() || [];
 
-        // Fetch variable mapping
         let variableMapping = {};
         try {
             const response = await fetch('../static/config/variables.json');
@@ -485,7 +403,6 @@
             console.error('Error fetching variable mapping JSON:', error);
         }
 
-        // Plot the area filter outline on the iframe's map
         const wholeAreaCondition = false;
         if (iframeDoc) {
             const iframeWindow = iframe.contentWindow;
@@ -497,16 +414,13 @@
         }
 
         const rows = document.querySelectorAll('#fileTable tr');
-
         rows.forEach((row, index) => {
-            if (index === 0) return; // Skip header
-
+            if (index === 0) return;
             const latMinVal = parseFloat(row.cells[3].textContent);
             const latMaxVal = parseFloat(row.cells[4].textContent);
             const lonMinVal = parseFloat(row.cells[5].textContent);
             const lonMaxVal = parseFloat(row.cells[6].textContent);
             const rowVariables = row.cells[8].textContent.split('f(')[0].split(',').map(v => v.trim());
-
             const minDepthVal = parseFloat(row.cells[9].textContent);
             const maxDepthVal = parseFloat(row.cells[10].textContent);
 
@@ -523,28 +437,24 @@
                     rowVariablesNormalized.some(rv => mappedValues.includes(rv));
             });
 
-            if (latLonCondition && depthCondition && variableCondition) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+            row.style.display = (latLonCondition && depthCondition && variableCondition) ? '' : 'none';
         });
     }
 
-    // Clear filters and reset to default values
     function clearFilters() {
-        document.getElementById('lat_min').value = south;
-        document.getElementById('lat_max').value = north;
-        document.getElementById('lon_min').value = west;
-        document.getElementById('lon_max').value = east;
+        const latEl = document.getElementById('latitudeSlider');
+        const lonEl = document.getElementById('longitudeSlider');
+        if (latEl && latEl.noUiSlider) latEl.noUiSlider.set([south, north]);
+        else { document.getElementById('lat_min').value = south; document.getElementById('lat_max').value = north; }
+        if (lonEl && lonEl.noUiSlider) lonEl.noUiSlider.set([west, east]);
+        else { document.getElementById('lon_min').value = west; document.getElementById('lon_max').value = east; }
         document.getElementById('depth_min').value = '';
         document.getElementById('depth_max').value = '';
-        $('#variableSelect').val(null).trigger('change');
-
+        const vSel = document.getElementById('variableSelect');
+        if (vSel) Array.from(vSel.options).forEach(o => o.selected = false);
         filterTable();
     }
 
-    // Fetch the file list, build table, variables, and model-selection dropdowns
     function loadFileListAndJSON(model) {
         const fileTable = document.getElementById('fileTable');
         if (!fileTable) {
@@ -552,80 +462,62 @@
             return;
         }
 
-        let summary = "-";
-        let filename = "-";
-
         function hideAllRadioButtonsExceptChecked() {
             const radios = fileTable.querySelectorAll('input[type="radio"]');
             radios.forEach(radio => {
                 if (radio.checked) {
                     radio.disabled = false;
                     radio.parentNode.style.opacity = 1;
-                    radio.parentNode.style.backgroundColor = '';
                 } else {
                     radio.disabled = true;
                     radio.parentNode.style.opacity = 0.5;
-                    radio.parentNode.style.backgroundColor = 'white';
                 }
             });
         }
 
-        // Change the iframe's selection
         function selectOptionInIframe(model) {
             const iframe = document.getElementById('3dIframe');
             const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
             const select = iframeDoc.getElementById('data-file');
-            let optionFound = false;
-
-            if (select) {
-                for (let i = 0; i < select.options.length; i++) {
-                    if (select.options[i].text === model) {
-                        select.selectedIndex = i;
-                        optionFound = true;
-                        const event = new Event('click');
-                        select.dispatchEvent(event);
-                        break;
-                    }
-                }
-
-                if (!optionFound) {
-                    alert('Error: Option not found');
-                }
-            } else {
-                alert('Error: Select element not found in iframe');
+            if (!select) {
+                console.warn('Select element not found in iframe');
+                return;
             }
+            for (let i = 0; i < select.options.length; i++) {
+                if (select.options[i].text === model) {
+                    select.selectedIndex = i;
+                    select.dispatchEvent(new Event('click'));
+                    return;
+                }
+            }
+            console.warn('Model option not found in iframe:', model);
         }
 
-        // Display file metadata.
         function display_metadata(model, fileName) {
             const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
             fetch(apiUrl)
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
+                    if (!response.ok) throw new Error('Network response was not ok');
                     return response.json();
                 })
                 .then(jsonData => {
-                    document.getElementById("mmodelname").innerHTML = model + " Metadata";
+                    document.getElementById("mmodelname").textContent = model + " Metadata";
                     document.getElementById("jsonContent").innerHTML = createHtmlFromJson(jsonData);
+                    openMetadataPanel();
                 })
                 .catch(error => {
-                    console.error('There was a problem with the fetch operation:', error);
+                    console.error('Error fetching metadata:', error);
                 });
         }
 
         fetch('/data/list_json_files_s3/' + model)
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
+                if (!response.ok) throw new Error('Network response was not ok');
                 return response.text();
             })
             .then(html => {
                 fileTable.innerHTML = html;
 
-                // Populate variables and model-selection dropdowns
                 extractAndPopulateVariables();
                 populateModelSelectionBoxes();
 
@@ -635,8 +527,6 @@
                     return;
                 }
 
-                const firstFileName = firstRow.querySelector('td:nth-child(8)').textContent.trim();
-                const firstFilePath = firstFileName + '.json';
                 const radio = fileTable.querySelector('input[type="radio"]');
                 if (radio) {
                     radio.checked = true;
@@ -644,73 +534,46 @@
                 }
 
                 let modelName = firstRow.querySelector('td:nth-child(2)').textContent.trim();
-                summary = firstRow.querySelector('td:nth-child(3)').textContent.trim();
-                let lat_min = firstRow.querySelector('td:nth-child(4)').textContent.trim();
-                let lat_max = firstRow.querySelector('td:nth-child(5)').textContent.trim();
-                let lon_min = firstRow.querySelector('td:nth-child(6)').textContent.trim();
-                let lon_max = firstRow.querySelector('td:nth-child(7)').textContent.trim();
-                filename = firstFileName;
-
                 const cmodelname = document.getElementById('cmodelname');
-                cmodelname.innerHTML = modelName;
-
-                // Optionally display initial metadata
-                //display_metadata(modelName, firstFilePath);
+                if (cmodelname) cmodelname.innerHTML = modelName;
 
                 fileTable.addEventListener('click', function (event) {
-                    const iframe = document.getElementById('3dIframe');
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                     const target = event.target;
-
                     if (target.tagName === 'TD' && target.parentNode.cells[1] === target) {
                         const rows = fileTable.querySelectorAll('tr');
                         rows.forEach(row => row.classList.remove('highlighted-row'));
-
                         target.parentNode.classList.add('highlighted-row');
 
                         modelName = target.parentNode.cells[1].textContent;
-                        summary = target.parentNode.cells[2].textContent;
-                        lat_min = target.parentNode.cells[3].textContent;
-                        lat_max = target.parentNode.cells[4].textContent;
-                        lon_min = target.parentNode.cells[5].textContent;
-                        lon_max = target.parentNode.cells[6].textContent;
-                        filename = target.parentNode.cells[7].textContent;
-
+                        const filename = target.parentNode.cells[7].textContent;
                         selectOptionInIframe(modelName);
-                        const fileName = filename + '.json';
                         const radio = target.parentNode.cells[0].querySelector('input[type="radio"]');
                         if (radio) {
                             radio.checked = true;
                             hideAllRadioButtonsExceptChecked();
                         }
-                        cmodelname.innerHTML = modelName;
-                        display_metadata(modelName, fileName);
+                        if (cmodelname) cmodelname.innerHTML = modelName;
+                        display_metadata(modelName, filename + '.json');
                     }
                 });
 
-                // Apply current filter after loading table
                 filterTable();
             })
             .catch(error => console.error('Error fetching file list:', error));
     }
 
-    // Populate the selection boxes with models from the table
     function populateModelSelectionBoxes() {
         const rows = document.querySelectorAll('#fileTable tr');
         const modelOptions = [];
-
         rows.forEach((row, index) => {
-            if (index === 0) return; // Skip header
+            if (index === 0) return;
             const modelName = row.cells[1].textContent.trim();
-            if (modelName) {
-                modelOptions.push(modelName);
-            }
+            if (modelName) modelOptions.push(modelName);
         });
 
         const modelSelects = document.querySelectorAll('.modelSelect');
         modelSelects.forEach((select, index) => {
             select.innerHTML = '';
-
             const defaultOption = document.createElement('option');
             defaultOption.value = '';
             defaultOption.textContent = 'Select a model';
@@ -724,7 +587,6 @@
             });
 
             select.setAttribute('data-previous-value', '');
-
             select.addEventListener('change', function () {
                 handleModelSelection(this, index + 1);
             });
@@ -740,28 +602,22 @@
                 alert(`The model "${selectedModel}" has already been selected. Please choose another model.`);
                 select.value = previouslySelectedModel;
             } else {
-                if (previouslySelectedModel) {
-                    enableModelOption(previouslySelectedModel);
-                }
+                if (previouslySelectedModel) enableModelOption(previouslySelectedModel);
                 findModelCoordinates(selectedModel, modelIndex);
                 select.setAttribute('data-previous-value', selectedModel);
                 disableSelectedModels();
             }
-        } else {
-            if (previouslySelectedModel) {
-                findModelCoordinates(previouslySelectedModel, -1);
-                enableModelOption(previouslySelectedModel);
-                select.setAttribute('data-previous-value', '');
-            }
+        } else if (previouslySelectedModel) {
+            findModelCoordinates(previouslySelectedModel, -1);
+            enableModelOption(previouslySelectedModel);
+            select.setAttribute('data-previous-value', '');
         }
     }
 
     function isModelAlreadySelected(model, currentSelect) {
         const modelSelects = document.querySelectorAll('.modelSelect');
         for (let select of modelSelects) {
-            if (select !== currentSelect && select.value === model) {
-                return true;
-            }
+            if (select !== currentSelect && select.value === model) return true;
         }
         return false;
     }
@@ -769,15 +625,11 @@
     function disableSelectedModels() {
         const modelSelects = document.querySelectorAll('.modelSelect');
         const selectedModels = Array.from(modelSelects).map(select => select.value);
-
         modelSelects.forEach(select => {
             const options = select.options;
             for (let i = 0; i < options.length; i++) {
-                if (selectedModels.includes(options[i].value) && options[i].value !== '') {
-                    options[i].disabled = true;
-                } else {
-                    options[i].disabled = false;
-                }
+                options[i].disabled =
+                    selectedModels.includes(options[i].value) && options[i].value !== '';
             }
         });
     }
@@ -787,26 +639,20 @@
         modelSelects.forEach(select => {
             const options = select.options;
             for (let i = 0; i < options.length; i++) {
-                if (options[i].value === model) {
-                    options[i].disabled = false;
-                }
+                if (options[i].value === model) options[i].disabled = false;
             }
         });
     }
 
     function findModelCoordinates(modelName, modelIndex) {
         const rows = document.querySelectorAll('#fileTable tr');
-
         rows.forEach((row, index) => {
             if (index === 0) return;
-
-            const currentModelName = row.cells[1].textContent.trim();
-            if (currentModelName === modelName) {
+            if (row.cells[1].textContent.trim() === modelName) {
                 const latMinVal = parseFloat(row.cells[3].textContent);
                 const latMaxVal = parseFloat(row.cells[4].textContent);
                 const lonMinVal = parseFloat(row.cells[5].textContent);
                 const lonMaxVal = parseFloat(row.cells[6].textContent);
-
                 displayCoordinates(latMinVal, latMaxVal, lonMinVal, lonMaxVal, modelName, modelIndex);
             }
         });
@@ -816,8 +662,7 @@
         const iframe = document.getElementById('3dIframe');
         const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
         if (iframeDoc) {
-            const iframeWindow = iframe.contentWindow;
-            iframeWindow.filterOutline(latMax, latMin, lonMax, lonMin, 8, modelName, modelIndex);
+            iframe.contentWindow.filterOutline(latMax, latMin, lonMax, lonMin, 8, modelName, modelIndex);
         }
     }
 
@@ -825,111 +670,78 @@
         const modelSelects = document.querySelectorAll('.modelSelect');
         modelSelects.forEach(select => {
             const previouslySelectedModel = select.getAttribute('data-previous-value');
-
             if (previouslySelectedModel) {
                 findModelCoordinates(previouslySelectedModel, -1);
                 enableModelOption(previouslySelectedModel);
             }
-
             select.value = '';
             select.setAttribute('data-previous-value', '');
             select.dispatchEvent(new Event('change'));
         });
     }
 
-    // Summarize the json file content (2D models)
     async function summarizeGeoJSON(fileName, label, title, reference, decimation) {
         try {
             const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
-
             const response = await fetch(apiUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const data = await response.json();
+            if (!data || data.type !== "FeatureCollection") throw new Error("Invalid GeoJSON file.");
 
-            if (!data || !data.type || data.type !== "FeatureCollection") {
-                throw new Error("Invalid GeoJSON file.");
-            }
-
-            const featureCount = data.features.length;
             const geometryTypes = new Set();
             const propertiesSet = new Set();
-
             data.features.forEach(feature => {
-                if (feature.geometry) {
-                    geometryTypes.add(feature.geometry.type);
-                }
-                if (feature.properties) {
-                    Object.keys(feature.properties).forEach(prop => propertiesSet.add(prop));
-                }
+                if (feature.geometry) geometryTypes.add(feature.geometry.type);
+                if (feature.properties) Object.keys(feature.properties).forEach(prop => propertiesSet.add(prop));
             });
 
-            const summary = `
-            <strong>2D Model File Name:</strong> ${fileName}<br>
-            <strong>Label:</strong> ${label}<br>
-            <strong>Title:</strong> ${title}<br>
-            <strong>Reference:</strong> <a href="${reference}" target="_blank">${reference}</a><br>
-            <strong>Decimation:</strong> ${decimation}<br>
-            <strong>Features:</strong> ${featureCount}<br>
-            <strong>Geometry Types:</strong> ${Array.from(geometryTypes).join(', ')}<br>
-            <strong>Properties:</strong> ${Array.from(propertiesSet).join(', ')}
-        `;
-
-            return summary;
+            const downloadUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
+            return `
+                <div class="json-container">
+                    <div><b>File:</b> ${fileName}</div>
+                    <div><b>Label:</b> ${label}</div>
+                    <div><b>Title:</b> ${title}</div>
+                    <div><b>Reference:</b> <a href="${reference}" target="_blank" rel="noopener">${reference}</a></div>
+                    <div><b>Decimation:</b> ${decimation}</div>
+                    <div><b>Features:</b> ${data.features.length}</div>
+                    <div><b>Geometry types:</b> ${Array.from(geometryTypes).join(', ')}</div>
+                    <div><b>Properties:</b> ${Array.from(propertiesSet).join(', ')}</div>
+                </div>
+                <a href="${downloadUrl}" download="${fileName}" class="modal-cta-btn" style="margin-top:14px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    <span>Download GeoJSON</span>
+                </a>
+            `;
         } catch (error) {
             console.error("Error reading GeoJSON file:", error);
             return `<span style="color: red;">Error: ${error.message}</span>`;
         }
     }
 
-    // Create the auxiliary (2D models) table.
     function createAuxTable() {
         const container = document.getElementById('auxTableContainer');
 
+        // The legacy toggle button is hidden via CSS (#2DModelToggle { display:none }),
+        // but we still create it for back-compat with anything that queries by id.
         const toggleButton = document.createElement('div');
         toggleButton.id = '2DModelToggle';
-        toggleButton.style = `
-        background-color: rgba(0, 79, 89, 0.8);
-        color: white;
-        font-size: 10pt;
-        text-align: left;
-        cursor: pointer;
-        padding: 5px;
-        margin-bottom: 5px;`;
-        toggleButton.innerHTML = `<span style="color: red;">&#9660;&nbsp;</span>Show/Hide 2D Models`;
 
         const auxTableWrapper = document.createElement('div');
         auxTableWrapper.id = 'auxTableWrapper';
-        auxTableWrapper.style = `
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #ccc;
-        margin-top: 5px;
-        display: block;`;
+        auxTableWrapper.style.display = 'block';
 
         const auxTable = document.createElement('table');
         auxTable.id = 'auxDataTable';
-        auxTable.style = `
-        font-size: 10pt;
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;`;
 
         const header = document.createElement('thead');
         const headerRow = document.createElement('tr');
-        const headers = ['2D Model', 'Title', 'Reference'];
-        headers.forEach(headerText => {
+        ['2D Model', 'Title', 'Reference'].forEach(headerText => {
             const th = document.createElement('th');
             th.textContent = headerText;
-            th.style = `
-            background-color: rgba(0, 79, 89, 0.8);
-            color: white;
-            font-size: 10pt;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 1;`;
             headerRow.appendChild(th);
         });
         header.appendChild(headerRow);
@@ -944,15 +756,17 @@
             modelCell.style.cursor = 'pointer';
             modelCell.onclick = async () => {
                 const rows = auxTable.querySelectorAll('tr');
-                rows.forEach(_row => _row.classList.remove('highlighted-row'));
-
+                rows.forEach(r => r.classList.remove('highlighted-row'));
                 row.classList.add('highlighted-row');
+
                 const dataFile = auxData[index];
                 const title = auxTitle[index];
                 const reference = auxCitation[index][1];
                 const decimation = auxDecimation[index];
                 const summary = await summarizeGeoJSON(dataFile, label, title, reference, decimation);
                 document.getElementById("jsonContent").innerHTML = summary;
+                document.getElementById("mmodelname").textContent = label + " Metadata";
+                openMetadataPanel();
 
                 const iframe = document.getElementById('3dIframe');
                 if (iframe && iframe.contentWindow) {
@@ -962,33 +776,23 @@
                         const optionToSelect = Array.from(selectDropdown.options).find(option => option.value == index);
                         if (optionToSelect) {
                             selectDropdown.value = optionToSelect.value;
-
-                            const changeEvent = new Event('change', { bubbles: true });
-                            selectDropdown.dispatchEvent(changeEvent);
-                        } else {
-                            console.warn(`Option with value ${index} not found in iframe dropdown.`);
+                            selectDropdown.dispatchEvent(new Event('change', { bubbles: true }));
                         }
-                    } else {
-                        console.error("Dropdown with ID 'select2dSurface' not found in iframe.");
                     }
-                } else {
-                    console.error("Iframe with ID '3dIframe' not accessible.");
                 }
             };
             modelCell.textContent = label;
             row.appendChild(modelCell);
 
             const titleCell = document.createElement('td');
-            const titleText = document.createTextNode(auxTitle[index] + " ");
-            titleCell.appendChild(titleText);
+            titleCell.appendChild(document.createTextNode(auxTitle[index] + " "));
 
             const fileName = auxData[index];
             const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
-            console.log(`Fetching geojson file ${fileName}: from ${apiUrl}`);
 
             const downloadLink = document.createElement('a');
             downloadLink.href = apiUrl;
-            downloadLink.textContent = "Download the GeoJSON file";
+            downloadLink.textContent = "Download GeoJSON";
             downloadLink.download = fileName;
             downloadLink.style.textDecoration = 'underline';
             downloadLink.style.marginLeft = '5px';
@@ -1009,29 +813,20 @@
 
         auxTable.appendChild(body);
         auxTableWrapper.appendChild(auxTable);
-
         container.appendChild(toggleButton);
         container.appendChild(auxTableWrapper);
-
-        toggleButton.addEventListener('click', () => {
-            const isVisible = auxTableWrapper.style.display === 'block';
-            auxTableWrapper.style.display = isVisible ? 'none' : 'block';
-            toggleButton.innerHTML = isVisible
-                ? `<span style="color: red;">&#9654;&nbsp;</span>Show/Hide 2D Models`
-                : `<span style="color: red;">&#9660;&nbsp;</span>Show/Hide 2D Models`;
-        });
     }
 
-    // Single load handler for the main page
+    // Sidebar toggle (mobile)
+    document.getElementById("toggleSidebar")?.addEventListener("click", function () {
+        document.getElementById("sidebarPanel")?.classList.toggle("hidden");
+    });
+
     window.addEventListener("load", () => {
         populateLatLonInputs();
+        initLatLonSliders();
         loadFileListAndJSON("-");
-        const h2 = document.getElementById("h2");
-        if (h2) h2.style.display = "block";
-        const clearModelsBtn = document.getElementById('clearModelsBtn');
-        if (clearModelsBtn) {
-            clearModelsBtn.addEventListener('click', clearAllModels);
-        }
+        document.getElementById('clearModelsBtn')?.addEventListener('click', clearAllModels);
     });
 </script>
 {% endblock %}

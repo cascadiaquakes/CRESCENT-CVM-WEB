@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CFM 3D Viewer</title>
-    <link rel="stylesheet" href="/static/css/view3d.css">
+    <link rel="stylesheet" href="/static/css/view3d.css?v=4">
 
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Cesium.js"></script>
     <script src="/static/js/lib_3d.js"></script>
@@ -138,6 +138,13 @@
         </div>
     </div>
 
+    <!-- Live lat/lon readout under the legend pill. -->
+    <div class="coord-readout">
+        <span id="coordLat">--</span>
+        <span style="opacity:0.6;">,</span>
+        <span id="coordLon">--</span>
+    </div>
+
     <script>
         let
             auxData,
@@ -175,6 +182,22 @@
 
         viewer.scene.requestRenderMode = true;
         viewer.scene.maximumRenderTimeChange = Infinity;
+
+        // Live lat/lon readout under the legend pill (mirrors CPAL / EQ viewer).
+        (function attachCoordReadout() {
+            const coordLatEl = document.getElementById('coordLat');
+            const coordLonEl = document.getElementById('coordLon');
+            if (!coordLatEl || !coordLonEl) return;
+            const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+            handler.setInputAction(function (movement) {
+                const cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+                if (cartesian) {
+                    const carto = Cesium.Cartographic.fromCartesian(cartesian);
+                    coordLatEl.textContent = Cesium.Math.toDegrees(carto.latitude).toFixed(3);
+                    coordLonEl.textContent = Cesium.Math.toDegrees(carto.longitude).toFixed(3);
+                }
+            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        })();
 
         function disposeViewer() {
             if (viewer && !viewer.isDestroyed()) {

@@ -1,177 +1,280 @@
 @import url(https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Widgets/widgets.css);
 
+/* Iframe-friendly: no margins, no scrollbars, body is the canvas. */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
 .cesium-selection-wrapper {
     display: none !important;
 }
 
 #cesiumContainer {
+    position: absolute;
+    inset: 0;
     width: 100%;
-    height: calc(85vh - 60px);
-    float: left;
-    position: relative;
+    height: 100%;
 }
 
+/* Legacy decorative blocks no longer used in the floating-map layout. */
+#logoContainer,
+#legend,
+#mapControls > b,
+#fileSelection {
+    display: none !important;
+}
+
+/* The wrapping #mapControls contains the legend pills, distance control,
+   and (now hidden) logo. It is a transparent overlay; the children
+   position themselves over the map. */
+#mapControls {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+#mapControls > * {
+    pointer-events: auto;
+}
+
+/* Combined legend pill: primary + auxiliary, bottom-center over the map. */
+#legendContainer,
+#auxLegendContainer {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 999px;
+    padding: 4px 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    font-size: 10.5px;
+    color: #334155;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 12px;
+    max-width: calc(100vw - 60px);
+    overflow-x: auto;
+    overflow-y: hidden;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    scrollbar-width: none;
+}
+
+#legendContainer::-webkit-scrollbar,
+#auxLegendContainer::-webkit-scrollbar {
+    display: none;
+}
+
+#legendContainer {
+    bottom: 44px;
+}
+
+#auxLegendContainer {
+    bottom: 78px;
+}
+
+/* Live lat/lon readout (dark pill below the legend, mirrors CPAL/EQ/GF). */
+.coord-readout {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.85);
+    color: #ffffff;
+    padding: 4px 14px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+}
+
+#legendContainer:empty,
+#auxLegendContainer:empty {
+    display: none;
+}
+
+.legendItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.legendColor {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Distance measure control: top-right small card. */
 #distanceControl {
     position: absolute;
-    bottom: 20px;
-    left: 10px;
-    z-index: 1;
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 0px;
-    border-radius: 5px;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #334155;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+#distanceControl label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    cursor: pointer;
 }
 
 #distanceDisplay {
-    margin-bottom: 5px;
+    margin-top: 4px;
+    color: #475569;
+    font-weight: 400;
 }
 
 #clearButton {
     margin-right: 10px;
 }
 
-#fileSelection {
-    position: absolute;
-    bottom: 100px;
-    left: 10px;
-    z-index: 1;
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 50px;
-}
-
-#logoContainer {
-    position: absolute;
-    bottom: 20px;
-    right: 10px;
-    z-index: 1;
-}
-
-#logoContainer img {
-    width: 200px;
-}
-
-#legendContainer {
-    width: auto;
-    float: left;
-    padding: 00px;
-    position: absolute;
-    bottom: 160px;
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 5px;
-}
-
-#auxLegendContainer {
-    width: auto;
-    float: left;
-    padding: 0px;
-    position: absolute;
-    bottom: 80px;
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 5px;
-}
-
-.legendItem {
-    margin-bottom: 10px;
-    display: inline-block;
-    margin-right: 20px;
-}
-
-.legendColor {
-    width: 20px;
-    height: 20px;
-    display: inline-block;
-    margin-right: 5px;
-}
-
-.checkboxRow {
-    display: flex;
-    flex-wrap: wrap;
-}
-
-.checkboxRow label {
-    margin-right: 10px;
-}
-
-#controlContainer {
-    position: absolute;
-    top: 50px;
-    left: 10px;
-    z-index: 100;
-    padding: 10px;
-    background-color: #ffffff;
-    border: 1px solid #cccccc;
-    border-radius: 5px;
-    cursor: pointer;
-    display: block;
-}
-
+/* Top-left "Show/Hide Controls" toggle pill. */
 #toggleButton {
     position: absolute;
-    font-size: 9;
-    top: 10px;
-    left: 10px;
+    top: 12px;
+    left: 12px;
     z-index: 100;
-    padding: 5px;
-    background-color: #004F59;
-    color: white;
-    border-radius: 15px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.95);
+    color: #0b4a53;
+    border-radius: 999px;
     cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
 }
 
+/* Controls panel (below the toggle, when expanded). */
 #controlContainer {
-    background-color: rgba(255, 255, 255, 0.7);
-    z-index: 1000;
+    position: absolute;
+    top: 48px;
+    left: 12px;
+    z-index: 100;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 12px;
+    font-size: 11px;
+    color: #334155;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    max-width: 320px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 
 #toggleGlobeContainer,
-#toggleSubductionInterface,
+#toggleCFMTraceInterface,
+#toggleBoundaryInterface,
 #eqcontrols,
 #toggleTerrainOcclusion {
     margin-bottom: 10px;
 }
 
-#eqcontrols {
-    background-color: transparent;
+#controlContainer label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
+}
+
+#controlContainer button {
+    background: #0b4a53;
+    color: #fff;
+    border: 0;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-right: 4px;
+}
+
+#controlContainer button:hover {
+    background: #0f5e69;
+}
+
+#controlContainer input[type="text"] {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+#controlContainer hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 8px 0;
 }
 
 .sliderContainer {
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .sliderLabel {
-    margin-right: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 500;
 }
 
+.sliderContainer input[type="range"] {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* North arrow widget */
 #northArrow {
     position: absolute;
-    top: 20px;
-    right: 300px;
-    width: 50px;
-    height: 50px;
+    top: 12px;
+    right: 220px;
+    width: 40px;
+    height: 40px;
     background-image: url('/static/images/north_white.png');
     background-size: contain;
+    background-repeat: no-repeat;
     pointer-events: none;
-    z-index: 10000;
-    /* Prevent the arrow from interfering with map interaction */
+    z-index: 50;
 }
 
-#legend {
-
-    position: absolute;
-    top: 150px;
-    right: 10px;
-    width: 150px;
-    height: 150px;
-    color: gray;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 10px;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-    z-index: 10000;
-}
-
-#toggleSubductionInterface label {
-    vertical-align: top;
-    margin-right: 10px;
-    /* Optional: Adjust the space between label and select box */
+/* Hide Cesium's default top-right toolbar (home, layers, etc.) -- our
+   controls live in #controlContainer and the floating sidebar above. */
+.cesium-viewer-toolbar {
+    display: none !important;
 }
