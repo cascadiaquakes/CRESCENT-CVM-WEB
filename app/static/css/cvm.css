@@ -1,18 +1,34 @@
-/* General styles */
+/* ================================================================ */
+/* CVM-Web shared styles                                              */
+/* Base layout (header, About modal, container, description, filter, */
+/* left-right, footer) shared by every page that extends             */
+/* cvm_page_v1.html. Landing-page-specific rules live in              */
+/* repository.css; per-viewer rules in their own *.css files.        */
+/* ================================================================ */
+
+/* ── General ── */
 body,
+html {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #334155;
+}
+
 input,
 button,
 select,
 option {
-    font-family: 'Arial', sans-serif;
-    font-size: 12pt;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 13px;
 }
 
 .container {
-    width: 95%;
-    max-width: 2000px;
-    margin: 0 auto;
-    padding: 10px 20px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 .left-right {
@@ -21,189 +37,1004 @@ option {
     justify-content: space-between;
 }
 
-/* Top menu and banner */
-.top-menu {
-    background-color: white;
-    color: black;
-    padding: 15px 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-}
-
-.top-banner {
-    display: flex;
-    justify-content: space-between;
+/* ── Header (matches CFM / EQ / CPAL viewer pattern) ── */
+.app-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    background: linear-gradient(to right, #004F59, #007F8B);
-    padding: 10px 0;
+    background: #0b4a53;
+    padding: 0 24px;
+    height: 100px;
     width: 100%;
+    box-sizing: border-box;
+    color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
-/* Logo and working group name */
-.logo-container {
+.header-left {
     display: flex;
     align-items: center;
-    margin-left: 20px;
+    gap: 16px;
+    min-width: 0;
 }
 
-.logo img {
-    width: 150px;
-    height: auto;
-    margin-right: 10px;
-}
-
-.working-group-name {
-    font-size: 24px;
-    margin: 0 24px;
-    font-weight: bold;
-    color: white;
-    justify-content: center;
-    align-items: center;
-    /* Same color as menu items */
-}
-
-.working-group-name:link,
-.working-group-name:visited,
-.working-group-name:hover,
-.working-group-name:active {
-    color: white;
-    text-decoration: none;
-    /* This removes the underline if it's a link */
-}
-
-/* Menu items */
-.menu-items {
-    list-style-type: none;
-    margin: 0;
-    padding: 0;
+.header-left a {
     display: flex;
-}
-
-.menu-items li {
-    margin-right: 10px;
-}
-
-.menu-items li:last-child {
-    margin-right: 0;
-}
-
-.menu-items a {
-    color: white;
+    align-items: center;
     text-decoration: none;
-    font-size: 14px;
 }
 
-/* Navigation bar */
-.navbar {
-    margin-right: 20px;
+.header-logo {
+    height: 80px;
+    width: auto;
+    object-fit: contain;
 }
 
+.header-center {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 16px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+    .header-center {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 900px) {
+    .header-logo {
+        height: 60px;
+    }
+    .header-center {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 720px) {
+    .header-logo {
+        height: 48px;
+    }
+    .header-center {
+        font-size: 18px;
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 600px) {
+    .header-center {
+        display: none;
+    }
+}
+
+/* ── Navigation ── */
 .nav-menu {
-    list-style-type: none;
+    list-style: none;
     padding: 0;
     margin: 0;
     display: flex;
-    justify-content: center;
+    gap: 2px;
 }
 
 .nav-item {
     position: relative;
-    padding: 15px 20px;
     cursor: pointer;
-    color: white;
-    text-decoration: none;
-    transition: background-color 0.3s, color 0.3s;
-}
-
-.nav-item:hover,
-.dropdown li:hover {
-    background: rgba(255, 255, 255, 0.1);
 }
 
 .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     color: white;
     text-decoration: none;
-    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: rgba(200, 240, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: background 0.2s;
 }
 
 .nav-link:hover {
-    color: #ffeb3b;
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
 }
 
-/* Dropdown */
+.nav-link.nav-icon {
+    padding: 6px 9px;
+}
+
+.nav-link.nav-icon svg {
+    display: block;
+}
+
+.chevron {
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+
+.nav-item:hover > .nav-link > .chevron {
+    transform: rotate(180deg);
+}
+
+/* ── Dropdowns ── */
 .dropdown {
     display: none;
     position: absolute;
-    background: rgba(0, 79, 89, 0.5);
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
-    z-index: 1;
-    min-width: 160px;
     top: 100%;
     left: 0;
+    min-width: 200px;
+    background: #004F59;
+    border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    padding: 4px 0;
+    z-index: 1000;
+    list-style: none;
 }
 
-.nav-item:hover>.dropdown {
+.nav-item:hover > .dropdown {
     display: block;
 }
 
 .dropdown li {
     position: relative;
-    padding: 12px;
-    text-align: left;
 }
 
 .dropdown li a {
+    display: block;
     color: white;
     text-decoration: none;
-    font-weight: bold;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    transition: background 0.15s;
 }
 
 .dropdown li a:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
 }
 
-/* Override nested dropdown for "About" */
-.dropdown .dropdown {
+/* ── About modal ── */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 14px;
+    width: 640px;
+    max-width: 92vw;
+    max-height: 85vh;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #0b4a53;
+    color: #fff;
+}
+
+.modal-header-bar h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 22px;
+    cursor: pointer;
+    line-height: 1;
+    opacity: 0.8;
+}
+
+.modal-close:hover {
+    opacity: 1;
+}
+
+.modal-body-content {
+    padding: 20px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #334155;
+}
+
+.modal-body-content h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #0b4a53;
+    margin: 12px 0 6px;
+}
+
+.modal-body-content h4:first-child {
+    margin-top: 0;
+}
+
+.modal-body-content hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 14px 0;
+}
+
+.modal-body-content ul {
+    padding-left: 18px;
+    margin: 6px 0;
+}
+
+.modal-body-content li {
+    margin-bottom: 4px;
+}
+
+.modal-body-content a {
+    color: #0b4a53;
+    font-weight: 600;
+}
+
+/* Prominent CTA button inside the About modal (e.g. Contribution link). */
+.modal-cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 4px;
+    padding: 9px 16px;
+    background: #0b4a53;
+    color: #ffffff !important;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.05s;
+}
+
+.modal-cta-btn:hover {
+    background: #0f5e69;
+    color: #ffffff !important;
+}
+
+.modal-cta-btn:active {
+    transform: translateY(1px);
+}
+
+.modal-cta-btn svg {
+    flex-shrink: 0;
+}
+
+/* ── Info message ── */
+.info-message {
+    color: maroon;
+    font-weight: bold;
+}
+
+/* ── Description / filter blocks (used by viewer + data sub-pages) ── */
+.description,
+.filter {
+    padding: 10px 20px;
+}
+
+.description {
+    background-color: #eee;
+}
+
+.filter {
+    background-color: #fff;
+}
+
+/* ── Footer ── */
+.footer {
+    clear: both;
+    background-color: #004F59;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+}
+
+/* ================================================================ */
+/* Repository (landing) page: full-bleed map + floating sidebar      */
+/* These rules are only active on /vis/ (index.html), which overrides */
+/* the body block to inject #viewer2dWrapper.                         */
+/* ================================================================ */
+
+#viewer2dWrapper {
+    position: absolute;
+    top: 100px;
     left: 0;
-    /* Remove offset to the right */
-    top: 100%;
+    right: 0;
+    bottom: 0;
+    overflow: hidden;
+}
 
-    /* Ensures the nested dropdown also opens down */
-    .chevron {
-        margin-left: 5px;
-        transition: transform 0.3s;
+/* When the viewer wrapper is present, the page itself should not scroll. */
+body:has(#viewer2dWrapper) {
+    overflow: hidden;
+}
+
+#mapContainer {
+    position: absolute;
+    inset: 0;
+}
+
+#mapContainer iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+/* Floating sidebar over the map (left side) */
+#sidebarPanel {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    bottom: 12px;
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 10;
+    overflow-y: auto;
+    pointer-events: none;
+    scrollbar-width: none;
+}
+
+#sidebarPanel::-webkit-scrollbar {
+    display: none;
+}
+
+#sidebarPanel > * {
+    pointer-events: auto;
+}
+
+#sidebarPanel.hidden {
+    display: none;
+}
+
+.btn-toggle-sidebar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 20;
+    display: none;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Floating card (matches CFM .card-2d) */
+.card-2d {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.card-2d-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+/* Accordion section inside cards */
+.accordion-section {
+    border: 1px solid #e8ecf0;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.accordion-section:last-child {
+    margin-bottom: 0;
+}
+
+.accordion-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.accordion-header:hover {
+    background: #f1f5f9;
+}
+
+.accordion-arrow {
+    font-size: 10px;
+    color: #64748b;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+.accordion-section:not(.open) .accordion-arrow {
+    transform: rotate(-90deg);
+}
+
+.accordion-label {
+    flex: 1;
+    white-space: nowrap;
+}
+
+.accordion-body {
+    padding: 8px 12px 12px;
+    background: #ffffff;
+}
+
+.accordion-section:not(.open) .accordion-body {
+    display: none;
+}
+
+/* Form rows / inputs / range-inputs inside the sidebar */
+.field-row {
+    margin-bottom: 12px;
+}
+
+.field-row:last-child {
+    margin-bottom: 0;
+}
+
+.field-row label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 5px;
+}
+
+.range-inputs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.range-inputs input[type="number"] {
+    width: 78px;
+}
+
+.range-sep {
+    color: #94a3b8;
+    font-size: 12px;
+}
+
+.accordion-body input[type="number"],
+.accordion-body select {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.accordion-body select {
+    width: 100%;
+    cursor: pointer;
+}
+
+.accordion-body input[type="number"]:focus,
+.accordion-body select:focus {
+    outline: none;
+    border-color: #0b4a53;
+    box-shadow: 0 0 0 3px rgba(11, 74, 83, 0.15);
+}
+
+/* Apply / Clear filter button row */
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.btn-primary,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.btn-primary {
+    background: #0b4a53;
+    color: #ffffff;
+    flex: 1;
+}
+
+.btn-primary:hover {
+    background: #0f5e69;
+}
+
+.btn-secondary {
+    background: #f1f5f9;
+    color: #0b4a53;
+    border-color: #cbd5e1;
+    flex: 1;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.btn-primary:active,
+.btn-secondary:active {
+    transform: translateY(1px);
+}
+
+/* 3D / 2D model tables: clean list look (no headers, single column,
+   left-aligned). Click a row to see full details in the metadata panel. */
+.model-table-wrap {
+    max-height: 280px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.model-table-wrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    line-height: 1.3;
+    table-layout: fixed;
+}
+
+/* Hide the server-generated table header. The 3D file-list endpoint emits
+   a bare <tr> with inline background-color and <th> cells (no <thead>
+   wrapper), so we must hide the row itself, not just its cells. */
+.model-table-wrap thead,
+.model-table-wrap th,
+.model-table-wrap tr:has(> th) {
+    display: none !important;
+}
+
+.model-table-wrap tbody td {
+    padding: 6px 10px !important;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    color: #334155 !important;
+    font-size: 12px !important;
+    line-height: 1.25;
+    text-align: left !important;
+    text-decoration: none !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    background: transparent !important;
+}
+
+.model-table-wrap tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.model-table-wrap tbody td a {
+    text-decoration: none;
+    color: #334155;
+    font-weight: 500;
+}
+
+.model-table-wrap tbody tr:hover {
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.model-table-wrap tbody tr:hover td a {
+    color: #0b4a53;
+}
+
+.model-table-wrap tr.highlighted-row {
+    background-color: rgba(11, 74, 83, 0.10) !important;
+}
+
+.model-table-wrap tr.highlighted-row td a {
+    color: #0b4a53;
+    font-weight: 600;
+}
+
+/* 3D table: show only the model name. The radio cell (col 1) is hidden but
+   the DOM node remains, so loadFileListAndJSON's `cells[0]` lookup for
+   selection state still works. Columns 3+ live in the metadata panel. */
+#fileTable th:nth-child(1),
+#fileTable td:nth-child(1),
+#fileTable th:nth-child(n+3),
+#fileTable td:nth-child(n+3) {
+    display: none !important;
+}
+
+/* 2D table: same clean treatment. Hide Title (col 2) and Reference (col 3);
+   their content is included in the summary that opens in the metadata panel. */
+#auxTableWrapper {
+    max-height: 240px !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px;
+    margin: 0 !important;
+    background: #ffffff;
+}
+
+#auxTableWrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px !important;
+    line-height: 1.3;
+    table-layout: fixed;
+}
+
+#auxTableWrapper thead,
+#auxTableWrapper th {
+    display: none !important;
+}
+
+#auxTableWrapper tbody td {
+    padding: 6px 10px !important;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    text-align: left !important;
+    background: transparent !important;
+    color: #334155;
+    line-height: 1.25;
+}
+
+#auxTableWrapper tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+#auxTableWrapper tbody tr:hover {
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+#auxTableWrapper tbody tr.highlighted-row {
+    background-color: rgba(11, 74, 83, 0.10) !important;
+}
+
+#auxTableWrapper tbody td:nth-child(n+2) {
+    display: none;
+}
+
+#auxTableWrapper tbody td:nth-child(1) {
+    text-decoration: none !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+#auxTableWrapper tbody tr:hover td:nth-child(1),
+#auxTableWrapper tbody tr.highlighted-row td:nth-child(1) {
+    color: #0b4a53;
+    font-weight: 500;
+}
+
+/* Hide the legacy "Show/Hide 2D Models" toggle button that the JS
+   prepends to #auxTableContainer; the accordion header is the toggle now. */
+#2DModelToggle {
+    display: none !important;
+}
+
+/* Coverage comparison: white selects with a small colored chip indicator */
+#modelSelectionBoxes {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modelSelectRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modelSelectChip {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--chip-color, #cbd5e1);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.modelSelect {
+    appearance: none;
+    flex: 1;
+    width: 100%;
+    font-size: 11px;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #0f172a;
+    cursor: pointer;
+}
+
+.clearModelsBtn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px;
+    background: #f1f5f9;
+    color: #0b4a53;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.clearModelsBtn:hover {
+    background: #e2e8f0;
+}
+
+/* Variable multi-select: native scrollable list inside the accordion */
+#variableSelect {
+    width: 100% !important;
+    min-height: 130px;
+    padding: 4px;
+    font-size: 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    overflow-y: auto;
+}
+
+#variableSelect option {
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+#variableSelect option:checked {
+    background: #0b4a53 linear-gradient(0deg, #0b4a53, #0b4a53);
+    color: #ffffff;
+}
+
+/* noUiSlider styling (matches CFM / CPAL pattern) */
+.accordion-slider {
+    margin: 8px 4px 4px;
+}
+
+.noUi-target {
+    height: 5px !important;
+    border: none !important;
+    background: #e2e8f0 !important;
+    border-radius: 4px !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08) !important;
+}
+
+.noUi-connect {
+    background: linear-gradient(to right, #0b4a53, #0d6e7a) !important;
+    border-radius: 4px !important;
+}
+
+.noUi-handle {
+    border-radius: 50% !important;
+    width: 14px !important;
+    height: 14px !important;
+    right: -7px !important;
+    top: -5px !important;
+    background: #fff !important;
+    border: 3px solid #0b4a53 !important;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2) !important;
+    cursor: grab !important;
+    transition: box-shadow 0.15s, transform 0.15s !important;
+}
+
+.noUi-handle:hover {
+    box-shadow: 0 2px 8px rgba(11, 74, 83, 0.35) !important;
+    transform: scale(1.1) !important;
+}
+
+.noUi-handle:active {
+    cursor: grabbing !important;
+    transform: scale(1.15) !important;
+}
+
+.noUi-handle::before,
+.noUi-handle::after {
+    display: none !important;
+}
+
+/* Accordion range badge (min - max display in section header) */
+.accordion-range {
+    font-size: 10px;
+    font-weight: 700;
+    color: #0b4a53;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    margin-left: auto;
+}
+
+/* Metadata side panel (slides in from the right when a model is clicked) */
+.metadata-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: min(540px, 92vw);
+    background: #ffffff;
+    box-shadow: -6px 0 24px rgba(0, 0, 0, 0.15);
+    z-index: 15;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    overflow: hidden;
+}
+
+.metadata-panel.open {
+    transform: translateX(0);
+}
+
+.metadata-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+.metadata-panel-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0b4a53;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-close-metadata {
+    background: none;
+    border: 0;
+    color: #64748b;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.btn-close-metadata:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #0b4a53;
+}
+
+.metadata-panel-body {
+    overflow-y: auto;
+    flex: 1;
+    padding: 14px 18px;
+    font-size: 12px;
+    line-height: 1.55;
+    color: #334155;
+}
+
+.metadata-panel-body .json-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    padding: 6px 0;
+    border-left: 3px solid #e2e8f0;
+    padding-left: 10px;
+    margin: 4px 0;
+}
+
+.metadata-panel-body .json-container b {
+    color: #0b4a53;
+}
+
+/* Bottom-right button that re-opens the metadata panel if user closed it */
+.btn-show-metadata {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 200;
+    width: 44px;
+    height: 44px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+    cursor: pointer;
+    color: #0b4a53;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-show-metadata:hover {
+    background: #f8fafc;
+}
+
+.btn-show-metadata svg {
+    width: 22px;
+    height: 22px;
+}
+
+/* The legacy filter toggle / description / footer blocks are not used on
+   the redesigned landing page. They still exist for other CVM sub-pages. */
+#viewer2dWrapper ~ .container .description,
+#viewer2dWrapper ~ .container .filter,
+#viewer2dWrapper ~ .container .left-right,
+#viewer2dWrapper ~ .container .footer {
+    display: none;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+    #sidebarPanel {
+        width: 320px;
+    }
+}
+
+@media (max-width: 720px) {
+    #sidebarPanel {
+        width: calc(100% - 24px);
     }
 
-    .nav-item:hover .chevron {
-        transform: rotate(180deg);
+    .btn-toggle-sidebar {
+        display: block;
     }
 
-    /* Info message */
-    .info-message {
-        color: maroon;
-        font-weight: bold;
+    #sidebarPanel.hidden {
+        display: none;
     }
-
-    /* Descriptions and filter styles */
-    .description,
-    .filter {
-        padding: 10px 20px;
-    }
-
-    .description {
-        background-color: #eee;
-    }
-
-    .filter {
-        background-color: #fff;
-    }
-
-    /* Footer */
-    .footer {
-        clear: both;
-        background-color: #004F59;
-        color: white;
-        padding: 10px 20px;
-        text-align: center;
-    }
+}
