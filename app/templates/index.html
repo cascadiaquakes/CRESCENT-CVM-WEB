@@ -37,8 +37,13 @@
                 <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
                     <span class="accordion-arrow">&#9660;</span>
                     <span class="accordion-label">3D Models</span>
+                    <span id="compareBadge" class="compare-badge" style="display:none;">
+                        <span id="compareCount">0</span>/8 comparing
+                        <button type="button" class="compare-clear-link" onclick="event.stopPropagation(); clearAllCompare();">Clear</button>
+                    </span>
                 </button>
                 <div class="accordion-body">
+                    <p class="compare-hint">Click the dot on the right of any row to outline that model on the map (up to 8 at once).</p>
                     <div class="model-table-wrap">
                         <div id="fileTable"></div>
                     </div>
@@ -128,8 +133,141 @@
             </div>
         </div>
 
-        <!-- Coverage comparison card -->
+        <!-- Analysis card: unified by geometry (Volume / Cross-Section /
+             Horizontal-Slice / Depth-Profile). Each row exposes the actions
+             that are valid for that geometry (Plot, Extract, or both).
+             Opens the right-side tool panel. -->
         <div class="card-2d">
+            <div class="card-2d-title">Plot &amp; Export Data</div>
+            <p class="export-helper">Pick a geometry, then plot it or download the data from the selected velocity model.</p>
+            <div class="analysis-rows">
+
+                <div class="analysis-row">
+                    <div class="analysis-row-info">
+                        <div class="analysis-row-icon" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                                <line x1="12" y1="22.08" x2="12" y2="12"/>
+                            </svg>
+                        </div>
+                        <div class="analysis-row-text">
+                            <div class="analysis-row-name">Volume</div>
+                            <div class="analysis-row-sub">3D subvolume</div>
+                        </div>
+                    </div>
+                    <div class="analysis-row-actions">
+                        <button type="button" class="btn-analysis" onclick="openToolPanel('/data/volume-data', 'Volume Extraction')" title="Extract sub-volume data">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Extract
+                        </button>
+                    </div>
+                </div>
+
+                <div class="analysis-row">
+                    <div class="analysis-row-info">
+                        <div class="analysis-row-icon" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+                                <line x1="12" y1="22" x2="12" y2="15.5"/>
+                                <polyline points="22 8.5 12 15.5 2 8.5"/>
+                                <line x1="2" y1="15.5" x2="12" y2="8.5"/>
+                                <line x1="12" y1="2" x2="12" y2="8.5"/>
+                            </svg>
+                        </div>
+                        <div class="analysis-row-text">
+                            <div class="analysis-row-name">Cross-Section</div>
+                            <div class="analysis-row-sub">Vertical slice</div>
+                        </div>
+                    </div>
+                    <div class="analysis-row-actions">
+                        <button type="button" class="btn-analysis btn-analysis-primary" onclick="openToolPanel('/vis/x-section-viewer', 'Cross-Section Plot')" title="Plot a cross-section">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M3 17l6-6 4 4 8-8"/>
+                                <path d="M14 7h7v7"/>
+                            </svg>
+                            Plot
+                        </button>
+                        <button type="button" class="btn-analysis" onclick="openToolPanel('/data/x-section-data', 'Cross-Section Extraction')" title="Extract cross-section data">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Extract
+                        </button>
+                    </div>
+                </div>
+
+                <div class="analysis-row">
+                    <div class="analysis-row-info">
+                        <div class="analysis-row-icon" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="3" y1="6" x2="21" y2="6"/>
+                                <line x1="3" y1="12" x2="21" y2="12"/>
+                                <line x1="3" y1="18" x2="21" y2="18"/>
+                            </svg>
+                        </div>
+                        <div class="analysis-row-text">
+                            <div class="analysis-row-name">Horizontal-Slice</div>
+                            <div class="analysis-row-sub">Slice at constant depth</div>
+                        </div>
+                    </div>
+                    <div class="analysis-row-actions">
+                        <button type="button" class="btn-analysis btn-analysis-primary" onclick="openToolPanel('/vis/horizontal-slice-viewer', 'Horizontal-Slice Plot')" title="Plot a horizontal slice">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M3 17l6-6 4 4 8-8"/>
+                                <path d="M14 7h7v7"/>
+                            </svg>
+                            Plot
+                        </button>
+                        <button type="button" class="btn-analysis" onclick="openToolPanel('/data/depth-slice-data', 'Depth-Slice Extraction')" title="Extract depth-slice data">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Extract
+                        </button>
+                    </div>
+                </div>
+
+                <div class="analysis-row">
+                    <div class="analysis-row-info">
+                        <div class="analysis-row-icon" aria-hidden="true">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="3" x2="12" y2="21"/>
+                                <circle cx="12" cy="6" r="2"/>
+                                <circle cx="12" cy="12" r="2"/>
+                                <circle cx="12" cy="18" r="2"/>
+                            </svg>
+                        </div>
+                        <div class="analysis-row-text">
+                            <div class="analysis-row-name">Depth-Profile</div>
+                            <div class="analysis-row-sub">1D profile at a point</div>
+                        </div>
+                    </div>
+                    <div class="analysis-row-actions">
+                        <button type="button" class="btn-analysis btn-analysis-primary" onclick="openToolPanel('/vis/depth-profile-viewer', 'Depth-Profile Plot')" title="Plot a depth profile">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M3 17l6-6 4 4 8-8"/>
+                                <path d="M14 7h7v7"/>
+                            </svg>
+                            Plot
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Coverage Comparison moved inline: each 3D Models row has a toggle
+             dot on the right edge (see addCompareToggles() in scripts). -->
+        <div class="card-2d" style="display:none;">
             <div class="card-2d-title">Coverage Comparison</div>
 
             <div class="accordion-section">
@@ -194,6 +332,21 @@
         </div>
     </div>
 
+    <!-- Tool side panel (slides in from right; hosts the Export Data and
+         Interactive Plots forms inline as an iframe so the user does not
+         leave the map view). Mutex with the metadata panel. -->
+    <div class="tool-panel" id="toolPanel">
+        <div class="tool-panel-header">
+            <h3 id="toolPanelTitle">Tool</h3>
+            <div class="tool-panel-actions">
+                <button type="button" class="btn-close-tool" onclick="closeToolPanel()" aria-label="Close">&times;</button>
+            </div>
+        </div>
+        <div class="tool-panel-body">
+            <iframe id="toolPanelFrame" title="Tool" frameborder="0"></iframe>
+        </div>
+    </div>
+
     <!-- Bottom-right toggle to open / close the metadata panel -->
     <button type="button" class="btn-show-metadata" id="showMetadataBtn" onclick="toggleMetadataPanel()" title="Model metadata" aria-label="Model metadata">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -231,7 +384,90 @@
         if (section) section.classList.toggle("open");
     }
 
+    // --- Inline coverage comparison (per-row toggle dots) ---
+    // Mirrors cesiumColorList[1..8] in repository_config.js. Slot 0 is unused.
+    const COMPARE_COLORS = ['', '#dc2626', '#16a34a', '#2563eb', '#eab308',
+                            '#f8fafc', '#92400e', '#7e22ce', '#ec4899'];
+    const compareSelections = []; // [{name, slot}]
+
+    function nextFreeSlot() {
+        const used = new Set(compareSelections.map(s => s.slot));
+        for (let i = 1; i <= 8; i++) if (!used.has(i)) return i;
+        return -1;
+    }
+
+    function updateCompareCount() {
+        const badge = document.getElementById('compareBadge');
+        const count = document.getElementById('compareCount');
+        if (!badge || !count) return;
+        count.textContent = compareSelections.length;
+        badge.style.display = compareSelections.length > 0 ? 'inline-flex' : 'none';
+    }
+
+    function toggleModelComparison(modelName, toggleEl) {
+        const idx = compareSelections.findIndex(s => s.name === modelName);
+        if (idx >= 0) {
+            compareSelections.splice(idx, 1);
+            toggleEl.classList.remove('active');
+            toggleEl.style.removeProperty('--chip-color');
+            findModelCoordinates(modelName, -1);
+        } else {
+            const slot = nextFreeSlot();
+            if (slot === -1) {
+                alert('You can compare up to 8 models at once. Clear one first.');
+                return;
+            }
+            compareSelections.push({ name: modelName, slot });
+            toggleEl.style.setProperty('--chip-color', COMPARE_COLORS[slot]);
+            toggleEl.classList.add('active');
+            findModelCoordinates(modelName, slot);
+        }
+        updateCompareCount();
+    }
+
+    function clearAllCompare() {
+        compareSelections.slice().forEach(s => findModelCoordinates(s.name, -1));
+        compareSelections.length = 0;
+        document.querySelectorAll('.compare-toggle.active').forEach(el => {
+            el.classList.remove('active');
+            el.style.removeProperty('--chip-color');
+        });
+        updateCompareCount();
+    }
+
+    function addCompareToggles() {
+        const rows = document.querySelectorAll('#fileTable tr');
+        rows.forEach((row, i) => {
+            if (i === 0) return;
+            if (!row.cells || !row.cells[1]) return;
+            if (row.querySelector('.compare-toggle')) return;
+            const nameCell = row.cells[1];
+            const modelName = nameCell.textContent.trim();
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'compare-toggle';
+            toggle.title = 'Toggle in coverage comparison';
+            toggle.setAttribute('aria-label', 'Compare ' + modelName);
+            toggle.innerHTML = '<span class="compare-toggle-dot"></span>';
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                toggleModelComparison(modelName, toggle);
+            });
+            // Re-apply state if this model was already in compareSelections
+            // (e.g. after a table refresh from filterTable).
+            const existing = compareSelections.find(s => s.name === modelName);
+            if (existing) {
+                toggle.classList.add('active');
+                toggle.style.setProperty('--chip-color', COMPARE_COLORS[existing.slot]);
+            }
+            nameCell.appendChild(toggle);
+        });
+    }
+
     function openMetadataPanel() {
+        // Mutex with the tool panel.
+        if (typeof closeToolPanel === "function") closeToolPanel();
         document.getElementById("metadataPanel")?.classList.add("open");
     }
 
@@ -241,6 +477,57 @@
 
     function toggleMetadataPanel() {
         document.getElementById("metadataPanel")?.classList.toggle("open");
+    }
+
+    // Forwarded from the tool-panel iframe (e.g. /data/volume-data's
+    // "Sync volume to map" button). Draws the requested sub-volume rectangle
+    // on the main 3D Cesium map so the user sees the effect of their inputs
+    // without leaving the page.
+    window.addEventListener("message", function (event) {
+        if (event.origin !== window.location.origin) return;
+        const msg = event.data || {};
+        if (msg.type !== "syncVolumeToMainMap") return;
+        const d = msg.data || {};
+        const iframe = document.getElementById("3dIframe");
+        if (!iframe || !iframe.contentWindow || typeof iframe.contentWindow.filterOutline !== "function") return;
+        const latMin = parseFloat(d["start-lat"]);
+        const latMax = parseFloat(d["end-lat"]);
+        const lonMin = parseFloat(d["start-lng"]);
+        const lonMax = parseFloat(d["end-lng"]);
+        if ([latMin, latMax, lonMin, lonMax].some(v => isNaN(v))) return;
+        // filterOutline(cornerN, cornerS, cornerE, cornerW, lw, polylineId, colorIndex)
+        // colorIndex 3 = BLUE in repository_config.js's cesiumColorList.
+        iframe.contentWindow.filterOutline(latMax, latMin, lonMax, lonMin, 4, "subVolumeOutline", 3);
+        // Cesium runs requestRenderMode=true; tell it to redraw now so the
+        // outline appears immediately instead of waiting for a mouse move.
+        try {
+            if (iframe.contentWindow.viewer && iframe.contentWindow.viewer.scene) {
+                iframe.contentWindow.viewer.scene.requestRender();
+            }
+        } catch (e) { /* iframe may not be ready */ }
+    });
+
+    // --- Tool panel (hosts Export Data + Interactive Plots iframes) ---
+    function openToolPanel(url, title) {
+        // Mutex with the metadata panel.
+        closeMetadataPanel();
+        const panel = document.getElementById("toolPanel");
+        const frame = document.getElementById("toolPanelFrame");
+        const heading = document.getElementById("toolPanelTitle");
+        const openNew = document.getElementById("toolPanelOpenNew");
+        if (!panel || !frame) return;
+        if (heading) heading.textContent = title || "Tool";
+        if (openNew) openNew.href = url;
+        frame.src = url;
+        panel.classList.add("open");
+    }
+
+    function closeToolPanel() {
+        const panel = document.getElementById("toolPanel");
+        const frame = document.getElementById("toolPanelFrame");
+        if (panel) panel.classList.remove("open");
+        // Defer the src clear so the slide-out animation stays smooth.
+        setTimeout(() => { if (frame) frame.src = "about:blank"; }, 280);
     }
 
     // Load auxiliary (2D) model config and build the 2D table
@@ -520,6 +807,7 @@
 
                 extractAndPopulateVariables();
                 populateModelSelectionBoxes();
+                addCompareToggles();
 
                 const firstRow = fileTable.querySelector('tr:nth-child(2)');
                 if (!firstRow) {

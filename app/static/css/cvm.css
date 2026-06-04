@@ -37,6 +37,18 @@ option {
     justify-content: space-between;
 }
 
+/* When the page is loaded inside the repository's tool-panel iframe, drop
+   the outer chrome so the tool content fills the panel. The class is added
+   by a small script in cvm_page_v1.html that checks window.parent. */
+html.embedded .app-header,
+html.embedded #aboutOverlay {
+    display: none !important;
+}
+
+html.embedded body {
+    padding-top: 0 !important;
+}
+
 /* ── Header (matches CFM / EQ / CPAL viewer pattern) ── */
 .app-header {
     display: grid;
@@ -822,6 +834,215 @@ body:has(#viewer2dWrapper) {
     background: #e2e8f0;
 }
 
+/* Inline coverage comparison: per-row toggle dot + badge in accordion header.
+   Replaces the standalone Coverage Comparison card. */
+.compare-badge {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 2px 8px;
+    background: rgba(11, 74, 83, 0.10);
+    border: 1px solid rgba(11, 74, 83, 0.18);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #0b4a53;
+    letter-spacing: 0.3px;
+    text-transform: none;
+}
+
+.compare-clear-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    margin: 0 0 0 4px;
+    color: #0b4a53;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.compare-clear-link:hover {
+    color: #0f5e69;
+}
+
+.compare-hint {
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: #64748b;
+    font-style: italic;
+    margin: 0 0 8px 0;
+}
+
+.compare-toggle {
+    float: right;
+    margin-left: 8px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.compare-toggle:hover {
+    background: rgba(11, 74, 83, 0.08);
+}
+
+.compare-toggle-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    background: transparent;
+    box-sizing: border-box;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.compare-toggle.active .compare-toggle-dot {
+    background: var(--chip-color, #0b4a53);
+    border-color: var(--chip-color, #0b4a53);
+    transform: scale(1.1);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.95), 0 0 0 3px var(--chip-color, #0b4a53);
+}
+
+/* Analysis card: unified by geometry. Each row has the geometry label and
+   the actions available for it (Plot, Extract, or both). */
+.export-helper {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #64748b;
+    font-style: italic;
+    margin: 0 0 10px 0;
+}
+
+.analysis-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.analysis-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e8ecf0;
+    border-radius: 10px;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.analysis-row:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.analysis-row-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.analysis-row-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+    background: rgba(11, 74, 83, 0.10);
+    color: #0b4a53;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.analysis-row-icon svg {
+    width: 14px;
+    height: 14px;
+}
+
+.analysis-row-text {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.analysis-row-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+    /* Allow long geometry names (e.g. "Horizontal-Slice") to wrap to a
+       second line instead of getting cut off. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.analysis-row-sub {
+    font-size: 10.5px;
+    color: #64748b;
+    line-height: 1.3;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    margin-top: 1px;
+}
+
+.analysis-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.btn-analysis {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 9px;
+    background: #ffffff;
+    color: #0b4a53;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
+}
+
+.btn-analysis:hover {
+    background: #f1f5f9;
+    border-color: #0b4a53;
+}
+
+.btn-analysis:active {
+    transform: translateY(1px);
+}
+
+.btn-analysis.btn-analysis-primary {
+    background: #0b4a53;
+    color: #ffffff;
+    border-color: #0b4a53;
+}
+
+.btn-analysis.btn-analysis-primary:hover {
+    background: #0f5e69;
+    border-color: #0f5e69;
+}
+
+.btn-analysis svg {
+    flex-shrink: 0;
+}
+
 /* Variable multi-select: native scrollable list inside the accordion */
 #variableSelect {
     width: 100% !important;
@@ -979,6 +1200,105 @@ body:has(#viewer2dWrapper) {
 
 .metadata-panel-body .json-container b {
     color: #0b4a53;
+}
+
+/* Tool side panel (hosts Export Data + Interactive Plots iframes). */
+.tool-panel {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: min(720px, 60vw);
+    background: #ffffff;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.18);
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    overflow: hidden;
+}
+
+.tool-panel.open {
+    transform: translateX(0);
+}
+
+.tool-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    background: linear-gradient(to bottom, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+    box-shadow: inset 4px 0 0 #0b4a53;
+    flex-shrink: 0;
+}
+
+.tool-panel-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #0b4a53;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tool-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.tool-panel-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: #64748b;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+}
+
+.tool-panel-link:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: #0b4a53;
+}
+
+.btn-close-tool {
+    background: none;
+    border: 0;
+    color: #64748b;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-close-tool:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #0b4a53;
+}
+
+.tool-panel-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+}
+
+.tool-panel-body iframe {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #ffffff;
 }
 
 /* Bottom-right button that re-opens the metadata panel if user closed it */
