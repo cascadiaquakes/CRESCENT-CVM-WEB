@@ -3,6 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/depth-slice.css" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=2" />
 {%endblock%}
 {% block description%}
 <!--
@@ -162,122 +163,125 @@
     <div id="form"></div>
     <div id="main-container" class="action_side">
         <div>Depth-Slice Data Extractor</div>
+        <p class="form-subtitle">Define the slice's latitude/longitude bounds and depth, set interpolation, choose your variable and output format, then sync the slice to the map.</p>
         <div class="action_inner">
-            <!-- Form for x-section parameters input -->
-            <form action="/data/extract-slice-data-s3" oninput="updateURL()" id="dynamicForm"><!-- image-form-->
+            <form action="/data/extract-slice-data-s3" oninput="updateURL()" id="dynamicForm">
 
-                <div style="width: 100%;display: flex;flex-direction: row;justify-content: center; font-weight: bold">
-                    <label for="data-file">Depth Model:</label>
+                <div class="form-card model-card">
+                    <div class="form-card-title">Depth Model</div>
                     <select id="data-file" name="data_file"></select>
                 </div>
+
                 <div class="form-container">
 
-                    <div class="form-column">
-                        <div style="font-weight: bold">Latitude:</div>
-
-                        <div class=" form-input">
-                            <label for="start-lat">&nbsp; Min.:</label>
+                    <div class="form-card">
+                        <div class="form-card-title">Latitude</div>
+                        <div class="form-input">
+                            <label for="start-lat">Min.</label>
                             <input type="text" id="start-lat" name="start_lat">
                         </div>
                         <div class="form-input">
-                            <label for="end-lat">&nbsp; Max.:</label>
+                            <label for="end-lat">Max.</label>
                             <input type="text" id="end-lat" name="end_lat">
                         </div>
+                    </div>
 
-                        <div style="font-weight: bold;">Longitude:</div>
+                    <div class="form-card">
+                        <div class="form-card-title">Longitude</div>
                         <div class="form-input">
-                            <label for="start-lng">&nbsp; Min.:</label>
+                            <label for="start-lng">Min.</label>
                             <input type="text" id="start-lng" name="start_lng">
                         </div>
-
                         <div class="form-input">
-                            <label for="end-lng">&nbsp; Max.:</label>
+                            <label for="end-lng">Max.</label>
                             <input type="text" id="end-lng" name="end_lng">
                         </div>
-
                     </div>
-                    <div class="form-column">
 
+                    <div class="form-card">
+                        <div class="form-card-title">Slice</div>
                         <div class="form-input">
-                            <label for="start-depth" v>&nbsp; Depth (km):</label>
+                            <label for="start-depth">Depth (km)</label>
                             <input type="text" id="start-depth" name="start_depth">
                         </div>
-
                         <div class="form-input">
-                            <label for="interpolation-method">Interpolation:</label>
+                            <label for="interpolation-method">Interp.</label>
                             <select id="interpolation-method" name="interpolation_method">
                                 <option value="none" selected>None</option>
                                 <option value="linear">Linear</option>
                                 <option value="nearest">Nearest neighbor</option>
                                 <option value="cubic">Cubic</option>
-
                             </select>
                         </div>
                         <div class="form-input">
-                            <label for="lng-points">#&nbsp;longitude&nbsp;samples:</label>
+                            <label for="lng-points"># lon</label>
                             <input type="text" id="lng-points" name="lng_points" value="100">
                         </div>
                         <div class="form-input">
-                            <label for="lat-points">#&nbsp;latitude&nbsp;samples:</label>
+                            <label for="lat-points"># lat</label>
                             <input type="text" id="lat-points" name="lat_points" value="100">
                         </div>
-                        <div class="form-input">
-                            <label for="subscribeCheckbox">&#128274; settings:</label>
+                        <div class="form-input lock-row">
+                            <label for="lock">Lock bounds</label>
                             <input type="checkbox" id="lock" name="lock">
                         </div>
-
                     </div>
-                    <div class="form-column">
+
+                    <div class="form-card">
+                        <div class="form-card-title">Output</div>
                         <div class="form-input">
-                            <label for="variables">Variable(s):</label>
-                            <select id="variables" name="variables" multiple required>
-
-                            </select>
-
+                            <label for="variables">Variable(s)</label>
+                            <select id="variables" name="variables" multiple required></select>
                             <input type="hidden" id="variables_hidden" name="variables_hidden">
-
                         </div>
-                        <div class="form-input"><!--</div>style="display:none;">-->
-                            <label for="units">Output units:</label>
+                        <div class="form-input">
+                            <label for="units">Units</label>
                             <select name="units" id="units">
                                 <option value="mks" selected>km.kg.sec</option>
                                 <option value="cgs">m.g.sec</option>
                             </select>
                         </div>
                         <div class="form-input">
-                            <label for="output-format">Output format:</label>
+                            <label for="output-format">Format</label>
                             <select id="output-format" name="output_format">
                                 <option value="csv">CSV</option>
                                 <option value="geocsv">GeoCSV</option>
                                 <option value="netcdf" selected>netCDF</option>
                                 <option value="hdf5">HDF5</option>
                             </select>
-                            <div class="form-input">
-                                <div id="notes"></div>
-                            </div>
                         </div>
-
-
                     </div>
 
                 </div>
 
-                <!-- Submission button -->
-                <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
-                    <button type="button" id="sync-to-iframe" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Sync slice to
-                        map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <button type="button" id="metadata-button" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px; display: none;">Metadata</button><!--&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <input type="submit" value="Generate URL" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">-->
+                <!-- Action card: Sync + Reset + status -->
+                <div class="form-card action-card">
+                    <div class="form-actions">
+                        <button type="button" id="sync-to-iframe" class="button">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="23 4 23 10 17 10"/>
+                                <polyline points="1 20 1 14 7 14"/>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                            <span>Sync to map</span>
+                        </button>
+                        <button type="button" id="reset-form" class="button-secondary" title="Restore the model's default bounds">Reset</button>
+                    </div>
+                    <div class="sync-status" id="syncStatus">
+                        <span class="sync-status-dot" aria-hidden="true"></span>
+                        <span class="sync-status-text">Changes not yet applied to the map</span>
+                    </div>
                 </div>
-                <!-- Display loading message and results dynamically -->
-                <hr />
-                <label for="requestUrl">Submit Data Request (click to send, edit form to modify URL):</label>
-                <div id="generatedUrl" style="width:100%;font-size: 8pt; height: auto;">
-                    <a id="dynamicLink" href="" target="_blank"
-                        style="word-break: break-word; white-space: normal;"></a>
+
+                <!-- Submit Data Request card -->
+                <div class="form-card">
+                    <div class="request-url-header">
+                        <div class="form-card-title">Submit data request <span class="title-hint">(click to send, edit form to modify URL)</span></div>
+                        <button type="button" id="copyRequestUrl" class="button-copy" onclick="copyRequestUrl()">Copy URL</button>
+                    </div>
+                    <div id="generatedUrl">
+                        <a id="dynamicLink" href="" target="_blank"></a>
+                    </div>
                 </div>
                 <!--<br /><br />
                 <div id="dataLoadingMessage" style="display: none;">...requesting</div>-->
@@ -722,6 +726,17 @@
                     //document.getElementById('end-depth').value = parseFloat(document.getElementById('end-depth').value);
                 }
                 updateURL();
+
+                // Snapshot defaults for Reset.
+                if (!locked) {
+                    modelDefaults = {
+                        'start-lat': document.getElementById('start-lat').value,
+                        'end-lat': document.getElementById('end-lat').value,
+                        'start-lng': document.getElementById('start-lng').value,
+                        'end-lng': document.getElementById('end-lng').value,
+                        'start-depth': document.getElementById('start-depth').value,
+                    };
+                }
                 /* MB
                 if (!locked) {
                     leftMarker.remove();
@@ -790,10 +805,58 @@
         observer.observe(document.body, config);
     });
 
-    // Show metadata button
-    document.getElementById('metadata-button').addEventListener('click', display_metadata);
-    window.addEventListener('load', function () {
-    })
+    // Snapshot of the active model's natural bounds for the Reset button.
+    let modelDefaults = {};
+
+    function resetForm() {
+        for (const [k, v] of Object.entries(modelDefaults)) {
+            const el = document.getElementById(k);
+            if (el && v !== undefined && v !== null) el.value = v;
+        }
+        const syncBtn = document.getElementById('sync-to-iframe');
+        if (syncBtn) syncBtn.style.color = 'red';
+        if (typeof updateURL === 'function') updateURL();
+    }
+
+    function copyRequestUrl() {
+        const link = document.getElementById('dynamicLink');
+        if (!link) return;
+        const url = link.href || link.textContent || '';
+        if (!url) return;
+        navigator.clipboard.writeText(url).then(() => {
+            const btn = document.getElementById('copyRequestUrl');
+            if (!btn) return;
+            const original = btn.textContent;
+            btn.textContent = 'Copied';
+            btn.classList.add('is-copied');
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.classList.remove('is-copied');
+            }, 1400);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const resetBtn = document.getElementById('reset-form');
+        if (resetBtn) resetBtn.addEventListener('click', resetForm);
+
+        const syncBtn = document.getElementById('sync-to-iframe');
+        const status = document.getElementById('syncStatus');
+        const statusText = status ? status.querySelector('.sync-status-text') : null;
+        if (syncBtn && status && statusText) {
+            const updateStatus = () => {
+                const inline = (syncBtn.getAttribute('style') || '').toLowerCase();
+                const unsynced = inline.includes('color: red');
+                status.classList.toggle('is-unsynced', unsynced);
+                status.classList.toggle('is-synced', !unsynced);
+                statusText.textContent = unsynced
+                    ? 'Changes not yet applied to the map'
+                    : 'In sync with the map';
+            };
+            updateStatus();
+            new MutationObserver(updateStatus).observe(syncBtn, { attributes: true, attributeFilter: ['style'] });
+        }
+    });
 
     // The first time request URL creation.
     window.onload = function () {
