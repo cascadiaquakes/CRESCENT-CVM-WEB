@@ -26,6 +26,19 @@
     </script>
 
     {% block style %}{% endblock %}
+
+    <script>
+        // When this page is loaded inside the repository's right-side tool
+        // panel iframe, drop the outer chrome (header, About modal trigger)
+        // so the content uses the full panel area.
+        (function () {
+            try {
+                if (window.parent && window.parent !== window) {
+                    document.documentElement.classList.add('embedded');
+                }
+            } catch (e) { /* cross-origin; ignore */ }
+        })();
+    </script>
 </head>
 
 <body>
@@ -50,22 +63,6 @@
                             <polyline points="9 22 9 12 15 12 15 22"/>
                         </svg>
                     </a>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">Visualization <span class="chevron">&#9660;</span></a>
-                    <ul class="dropdown">
-                        <li><a href="/vis/x-section-viewer">Cross-Section</a></li>
-                        <li><a href="/vis/horizontal-slice-viewer">Horizontal-Slice</a></li>
-                        <li><a href="/vis/depth-profile-viewer">Depth-Profile</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link">Data <span class="chevron">&#9660;</span></a>
-                    <ul class="dropdown">
-                        <li><a href="/data/volume-data">Volume Extraction</a></li>
-                        <li><a href="/data/x-section-data">Cross-Section</a></li>
-                        <li><a href="/data/depth-slice-data">Depth-Slice</a></li>
-                    </ul>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link" id="aboutBtn">About</a>

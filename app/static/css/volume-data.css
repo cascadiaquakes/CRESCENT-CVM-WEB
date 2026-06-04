@@ -1,0 +1,595 @@
+/* ================================================================ */
+/* Volume Data extraction page                                       */
+/* Modernizes the legacy 90s form (Inter font, card sections, modern */
+/* inputs / buttons). When the page is loaded inside the parent's    */
+/* tool panel iframe (html.embedded), the right-side duplicate map   */
+/* is hidden and the form fills the panel.                           */
+/* ================================================================ */
+
+/* -------- Embedded mode (inside the repository's tool panel) -------- */
+
+html.embedded body {
+    background: #ffffff;
+}
+
+html.embedded .container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+}
+
+html.embedded .description,
+html.embedded .filter,
+html.embedded .footer {
+    display: none !important;
+}
+
+html.embedded .left-right {
+    display: block;
+}
+
+html.embedded #contentPanel,
+html.embedded #fileListPanel #form {
+    display: none !important;
+}
+
+html.embedded #fileListPanel {
+    width: 100% !important;
+    flex: none !important;
+    float: none !important;
+    border: 0 !important;
+    background: #ffffff !important;
+    padding: 8px 0 16px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+}
+
+/* Form lives directly on the panel surface (no floating-card look). The
+   four cute cards (Latitude / Longitude / Depth / Output) carry the
+   visual structure. */
+html.embedded #main-container {
+    position: relative;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 18px 22px;
+    overflow: visible;
+}
+
+/* Subtitle that explains the tool. Sits above the cards, no border or fill
+   so it reads as a small intro note. Left/right edges align with the cards
+   below it. */
+.form-subtitle {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: #64748b;
+    margin: 0 0 12px;
+    padding: 0 20px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    font-style: italic;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+html.embedded #main-container {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 0;
+}
+
+/* -------- Form modernization (applies on both standalone + embedded) -------- */
+
+#main-container {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    color: #0f172a;
+}
+
+#main-container > div:first-child {
+    /* The "Sub-Volume Data Extractor" label */
+    display: none;
+}
+
+/* Kill the legacy dev-debug border from x-section.css (.action_inner had
+   `border: 1px solid black` with comment "Just to show the div borders"). */
+#main-container .action_inner {
+    background: transparent !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#main-container,
+#main-container .action_side {
+    border: 0 !important;
+    margin: 0 !important;
+}
+
+#dynamicForm,
+#image-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+}
+
+/* Non-grid cards (Depth Model, Action, Download, Submit) get 20px horizontal
+   inset to match the 4 middle cards. The middle cards are pushed inward by
+   inherited `padding: 20px` on .form-container (from the legacy x-section.css),
+   and the user wants the outer cards to align with that visual rhythm without
+   us touching the middle cards' position. */
+#dynamicForm > .form-card,
+#image-form > .form-card {
+    box-sizing: border-box;
+    margin-left: 20px;
+    margin-right: 20px;
+    width: calc(100% - 40px);
+}
+
+/* Depth Model card: single full-width section. */
+.model-card #data-file,
+.model-card select#data-file {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 13px;
+    color: #0f172a;
+    cursor: pointer;
+    box-sizing: border-box;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* Title field inside the model card (plot viewers have it) */
+.model-card .form-input input[type="text"] {
+    width: 100%;
+}
+
+/* Action card holds the Sync / Reset buttons and the sync status indicator */
+.action-card {
+    gap: 10px;
+}
+
+/* Small italic hint inside a card title (e.g. on the Submit data request). */
+.title-hint {
+    font-weight: 500;
+    color: #94a3b8;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+/* Legacy <hr> separator and prior section labels: no longer needed since
+   every section is now its own card. */
+#dynamicForm hr,
+#dynamicForm > label,
+#dynamicForm label[for="download-container"],
+.request-url-header > label {
+    display: none;
+}
+
+/* Form cards grid: 2-column responsive layout. Four cards total
+   (Latitude, Longitude, Depth, Output) each with rounded corners,
+   subtle background, and a clear section title at the top. */
+.form-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    gap: 12px !important;
+    margin: 0 !important;
+    padding-top: 4px !important;
+}
+
+.form-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e8ecf0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-width: 0;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.form-card-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #0b4a53;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 0 0 6px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e8ecf0;
+}
+
+/* Legacy .form-column rules from prior pass — keep a defensive override so
+   the old class doesn't carry through if it ever reappears. */
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+}
+
+/* Section headers (Latitude / Longitude / Depth) — typography carries the
+   hierarchy. No bullets, no chunky underlines. Bold uppercase teal label
+   with generous tracking. */
+.form-column > div[style*="font-weight: bold"] {
+    font-weight: 700 !important;
+    font-size: 10px !important;
+    color: #0b4a53 !important;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 0 0 4px 0;
+    padding: 0;
+    border: 0;
+}
+
+.form-column > div[style*="font-weight: bold"] ~ div[style*="font-weight: bold"] {
+    margin-top: 18px;
+}
+
+#dynamicForm > div:first-child label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #0b4a53;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin: 0;
+}
+
+/* Download / Submit URL labels — same typographic treatment. */
+#dynamicForm label[for="download-container"],
+.request-url-header label {
+    color: #0b4a53 !important;
+    font-size: 10px !important;
+    letter-spacing: 1.2px !important;
+}
+
+.form-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-input label {
+    flex-shrink: 0;
+    font-size: 11.5px;
+    color: #475569;
+    min-width: 70px;
+    font-weight: 500;
+}
+
+.form-input input[type="text"],
+.form-input input[type="number"],
+.form-input select {
+    flex: 1;
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #ffffff;
+    font-size: 12.5px;
+    color: #0f172a;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-input input[type="text"]:focus,
+.form-input input[type="number"]:focus,
+.form-input select:focus {
+    outline: none;
+    border-color: #0b4a53;
+    box-shadow: 0 0 0 3px rgba(11, 74, 83, 0.15);
+}
+
+.form-input select[multiple] {
+    min-height: 90px;
+    padding: 4px;
+}
+
+.form-input select[multiple] option {
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+
+.form-input select[multiple] option:checked {
+    background: #0b4a53 linear-gradient(0deg, #0b4a53, #0b4a53);
+    color: #ffffff;
+}
+
+.form-input input[type="checkbox"] {
+    accent-color: #0b4a53;
+    width: 14px;
+    height: 14px;
+}
+
+/* The "Lock bounds" row gets a distinct pill treatment so it reads as a
+   toggle rather than a form field. */
+.lock-row {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: #f8fafc;
+    border: 1px solid #e8ecf0;
+    border-radius: 999px;
+    width: fit-content;
+    margin-top: 4px;
+}
+
+.lock-row label {
+    min-width: 0 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    margin: 0 !important;
+}
+
+.lock-row input[type="checkbox"] {
+    accent-color: #0b4a53;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+}
+
+#notes {
+    font-size: 11px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* Button row */
+.action-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 6px 0 4px;
+}
+
+.form-actions {
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding: 0;
+    flex-wrap: wrap;
+    display: flex !important;
+}
+
+#sync-to-iframe svg {
+    margin-right: 2px;
+}
+
+/* Sync status indicator below the button row. */
+.sync-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #475569;
+}
+
+.sync-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+    flex-shrink: 0;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.sync-status.is-synced .sync-status-dot {
+    background: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.18);
+}
+
+.sync-status.is-synced .sync-status-text {
+    color: #15803d;
+}
+
+.sync-status.is-unsynced .sync-status-dot {
+    background: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
+    animation: syncPulse 1.6s ease-in-out infinite;
+}
+
+.sync-status.is-unsynced .sync-status-text {
+    color: #b91c1c;
+}
+
+@keyframes syncPulse {
+    0%, 100% { box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18); }
+    50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0.10); }
+}
+
+#dynamicForm .button,
+#image-form .button,
+#image-form input[type="submit"],
+#sync-to-iframe {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    background: #0b4a53 !important;
+    color: #ffffff !important;
+    border: 1px solid #0b4a53 !important;
+    border-radius: 8px !important;
+    padding: 7px 14px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    width: auto !important;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+#dynamicForm .button:hover,
+#image-form .button:hover,
+#image-form input[type="submit"]:hover,
+#sync-to-iframe:hover {
+    background: #0f5e69 !important;
+    border-color: #0f5e69 !important;
+}
+
+#dynamicForm .button:active,
+#image-form .button:active,
+#image-form input[type="submit"]:active,
+#sync-to-iframe:active {
+    transform: translateY(1px);
+}
+
+/* Defensive: if the (unused) Metadata button ever reappears, keep it hidden. */
+#metadata-button {
+    display: none !important;
+}
+
+/* Secondary action (Reset): outline button, picks up the same hover */
+.button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    color: #0b4a53;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+.button-secondary:hover {
+    background: #f1f5f9;
+    border-color: #0b4a53;
+}
+
+.button-secondary:active {
+    transform: translateY(1px);
+}
+
+/* The "Sync volume to map" red-color signal — bg flip when unsynced */
+#sync-to-iframe[style*="color: red"] {
+    color: #ffffff !important;
+    background: #b91c1c !important;
+    border-color: #b91c1c !important;
+}
+
+#sync-to-iframe[style*="color: red"]:hover {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+}
+
+/* Divider before the Download / Submit blocks */
+#dynamicForm hr {
+    border: none;
+    border-top: 1px solid #f1f5f9;
+    margin: 14px 0 6px 0;
+}
+
+#dynamicForm label[for="download-container"],
+#dynamicForm label[for="requestUrl"] {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin: 10px 0 6px 0;
+}
+
+#download-container,
+#generatedUrl {
+    font-size: 11.5px !important;
+    color: #334155;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    line-height: 1.5;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+#download-container a,
+#generatedUrl a {
+    color: #0b4a53;
+    font-weight: 500;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    display: inline;
+}
+
+#download-container a:hover,
+#generatedUrl a:hover {
+    color: #0f5e69;
+}
+
+/* Friendly placeholder text used when direct S3 download is unavailable. */
+.placeholder-text {
+    color: #64748b;
+    font-style: italic;
+}
+
+/* Header row for the Submit Data Request card: title on the left, Copy
+   URL button on the right. */
+.request-url-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0;
+}
+
+.request-url-header .form-card-title {
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin: 0;
+}
+
+.button-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #ffffff;
+    color: #0b4a53;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+.button-copy:hover {
+    background: #f1f5f9;
+    border-color: #0b4a53;
+}
+
+.button-copy.is-copied {
+    background: #0b4a53;
+    color: #ffffff;
+    border-color: #0b4a53;
+}

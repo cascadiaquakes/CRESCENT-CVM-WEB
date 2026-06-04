@@ -3,6 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/volume.css" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=2" />
 {%endblock%}
 {% block description%}
 <div id="description" style="display:none;">
@@ -181,145 +182,140 @@
     <div id="form"></div>
     <div id="main-container" class="action_side">
         <div>Cross-Section Viewer</div>
+        <p class="form-subtitle">Define the section endpoints, choose depth bounds, variable, colormap, plot size, then sync to map and click Plot.</p>
         <div class="action_inner">
 
-            <!-- Form for x-section parameters input -->
             <form action="/visualize-xsection-3d-s3" method="post" id="image-form">
                 <input type="hidden" id="intersection-coords" name="intersection_coords" value="">
 
-                <div style="width: 100%;display: flex;flex-direction: row;justify-content: center; font-weight: bold">
-                    <label for="data-file">Depth Model:</label>
+                <div class="form-card model-card">
+                    <div class="form-card-title">Depth Model</div>
                     <select id="data-file" name="data_file"></select>
+                    <div class="form-input">
+                        <label for="title">Plot title</label>
+                        <input type="text" id="title" name="title">
+                        <input type="text" id="grid-ref" name="grid_ref" style="display:none" value="latitude_longitude">
+                    </div>
                 </div>
-                <div style="width: 100%;display: flex;flex-direction: row;justify-content: center; font-weight: bold">
-                    <label for="title">Plot title:</label>
-                    <input type="text" id="title" name="title" style="width: 50%;">
-                    <input type="text" id="grid-ref" name="grid_ref" style="display:none" value="latitude_longitude">
-                </div>
+
                 <div class="form-container">
 
-                    <div class="form-column">
-                        <div style="font-weight: bold">Left</div>
-
-                        <div class=" form-input">
-                            <label for="start-lat">&nbsp; Latitude:</label>
+                    <div class="form-card">
+                        <div class="form-card-title">Left</div>
+                        <div class="form-input">
+                            <label for="start-lat">Latitude</label>
                             <input type="text" id="start-lat" name="start_lat">
                         </div>
                         <div class="form-input">
-                            <label for="start-lng">&nbsp; Longitude:</label>
+                            <label for="start-lng">Longitude</label>
                             <input type="text" id="start-lng" name="start_lng">
                         </div>
-                        <div style="font-weight: bold;">Right</div>
+                    </div>
 
+                    <div class="form-card">
+                        <div class="form-card-title">Right</div>
                         <div class="form-input">
-                            <label for="end-lat">&nbsp; Latitude:</label>
+                            <label for="end-lat">Latitude</label>
                             <input type="text" id="end-lat" name="end_lat">
                         </div>
                         <div class="form-input">
-                            <label for="end-lng">&nbsp; Longitude:</label>
+                            <label for="end-lng">Longitude</label>
                             <input type="text" id="end-lng" name="end_lng">
                         </div>
-                        <div class="form-input">
-                            <label for="units" style="font-weight: bold">Units:</label>
-                            <select name="units" id="units">
-                                <option value="mks">km.kg.sec</option>
-                                <option value="cgs">m.g.sec</option>
-                            </select>
-                        </div>
-                        <div class="form-input">
-                            <div id="notes"></div>
-                        </div>
-
                     </div>
-                    <div class="form-column">
-                        <div style="font-weight: bold">Depth</div>
+
+                    <div class="form-card">
+                        <div class="form-card-title">Depth (km)</div>
                         <div class="form-input">
-                            <label for="start-depth">&nbsp; Min.:</label>
+                            <label for="start-depth">Min.</label>
                             <input type="text" id="start-depth" name="start_depth">
                         </div>
                         <div class="form-input">
-                            <label for="end-depth">&nbsp; Max.:</label>
+                            <label for="end-depth">Max.</label>
                             <input type="text" id="end-depth" name="end_depth">
                         </div>
                         <div class="form-input">
-                            <label for="vertical-exaggeration"
-                                style="font-weight: bold;">Vertical&nbsp;exaggeration:</label>
+                            <label for="vertical-exaggeration">Vert. exag</label>
                             <input type="text" id="vertical-exaggeration" name="vertical_exaggeration" value="2">
                         </div>
-
                         <div class="form-input">
-                            <label for="interpolation-method" style="font-weight: bold;">Interpolation:</label>
+                            <label for="interpolation-method">Interp.</label>
                             <select id="interpolation-method" name="interpolation_method">
                                 <option value="linear">Linear</option>
                                 <option value="nearest">Nearest neighbor</option>
                             </select>
                         </div>
                         <div class="form-input">
-                            <label for="num-points"
-                                style="font-weight: bold;"><sup><b>*</b></sup>N&nbsp;Surface&nbsp;samples</label>
+                            <label for="num-points">N samples</label>
                             <input type="text" id="num-points" name="num_points" value="100">
                         </div>
                         <div class="form-input">
-                            <label for="lock" style="font-weight: bold">&#128274; settings:</label>
+                            <label for="units">Units</label>
+                            <select name="units" id="units">
+                                <option value="mks">km.kg.sec</option>
+                                <option value="cgs">m.g.sec</option>
+                            </select>
+                        </div>
+                        <div class="form-input lock-row">
+                            <label for="lock">Lock bounds</label>
                             <input type="checkbox" id="lock" name="lock">
                         </div>
                     </div>
 
-                    <div class="form-column">
+                    <div class="form-card">
+                        <div class="form-card-title">Output</div>
                         <div class="form-input">
-                            <label for="plot-variable" style="font-weight: bold;">Variable: <span id="var-warning"
-                                    style="color:red;"></span></label>
-                            <select id="plot-variable" name="plot_variable">
-
-                            </select>
+                            <label for="plot-variable">Variable</label>
+                            <select id="plot-variable" name="plot_variable"></select>
                         </div>
                         <div class="form-input">
-                            <label for="start-value">&nbsp; Min. value:</label>
+                            <label for="start-value">Min. val</label>
                             <input type="text" id="start-value" name="start_value" value="auto">
                         </div>
                         <div class="form-input">
-                            <label for="end-value">&nbsp; Max. value:</label>
+                            <label for="end-value">Max. val</label>
                             <input type="text" id="end-value" name="end_value" value="auto">
                         </div>
                         <div class="form-input">
-                            <label for="colormap" style="font-weight: bold;">Colormap:</label><span
-                                id="var-warning"></span>
-                            <select id="colormap" name="colormap">
-                            </select>
+                            <label for="colormap">Colormap</label>
+                            <select id="colormap" name="colormap"></select>
                         </div>
-                        <div style="font-weight: bold">Plot Size (in.):</div>
                         <div class="form-input">
-                            <label for="image-width">&nbsp; Width:</label>
+                            <label for="image-width">Width (in)</label>
                             <input type="text" id="image-width" name="image_width" value="7">
-                            </select>
-
                         </div>
                         <div class="form-input">
-                            <label for="image-height">&nbsp; Height:</label>
+                            <label for="image-height">Height (in)</label>
                             <input type="text" id="image-height" name="image_height" value="10">
-                            </select>
-                        </div>
-                        <div style="clear: both;">
                         </div>
                         <div class="form-input" style="display:none;">
-                            <label for="chunk-string">&nbsp; Chunks:</label>
+                            <label for="chunk-string">Chunks</label>
                             <input type="text" id="chunk-string" name="chunk_string" value="-">
                         </div>
-
                     </div>
 
                 </div>
-                <!-- Submission button -->
-                <div class="form-input" style="width: 100%;display: flex;flex-direction: row;justify-content: center;">
-                    <button type="button" id="sync-to-iframe" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Sync x-section
-                        to
-                        map</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <button type="button" id="metadata-button" class="button"
-                        style="width: 100px; width: 20%;border-radius: 15px;">Metadata</button>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <input type="submit" value="Plot" class="button" id="submit"
-                        style="width: 100px; width: 20%;border-radius: 15px;">
+
+                <!-- Action card -->
+                <div class="form-card action-card">
+                    <div class="form-actions">
+                        <button type="button" id="sync-to-iframe" class="button">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <polyline points="23 4 23 10 17 10"/>
+                                <polyline points="1 20 1 14 7 14"/>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                            <span>Sync to map</span>
+                        </button>
+                        <input type="submit" value="Plot" class="button button-primary-action" id="submit">
+                    </div>
+                    <div class="sync-status" id="syncStatus">
+                        <span class="sync-status-dot" aria-hidden="true"></span>
+                        <span class="sync-status-text">Changes not yet applied to the map</span>
+                    </div>
                 </div>
+                <span id="var-warning" style="display:none;"></span>
+                <button type="button" id="metadata-button" class="button" style="display: none;">Metadata</button>
         </div>
         </form>
     </div>
@@ -821,10 +817,28 @@
     });
 
 
-    // Show metadata button
+    // Show metadata button (kept hidden; legacy listener for safety)
     document.getElementById('metadata-button').addEventListener('click', display_metadata);
-    window.addEventListener('load', function () {
-    })
+
+    // Wire the sync-status indicator to the sync button's color signal.
+    document.addEventListener('DOMContentLoaded', function () {
+        const syncBtn = document.getElementById('sync-to-iframe');
+        const status = document.getElementById('syncStatus');
+        const statusText = status ? status.querySelector('.sync-status-text') : null;
+        if (syncBtn && status && statusText) {
+            const updateStatus = () => {
+                const inline = (syncBtn.getAttribute('style') || '').toLowerCase();
+                const unsynced = inline.includes('color: red');
+                status.classList.toggle('is-unsynced', unsynced);
+                status.classList.toggle('is-synced', !unsynced);
+                statusText.textContent = unsynced
+                    ? 'Changes not yet applied to the map'
+                    : 'In sync with the map';
+            };
+            updateStatus();
+            new MutationObserver(updateStatus).observe(syncBtn, { attributes: true, attributeFilter: ['style'] });
+        }
+    });
 
 </script>
 
