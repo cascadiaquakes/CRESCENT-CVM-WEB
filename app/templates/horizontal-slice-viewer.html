@@ -3,7 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/depth-slice.css" />
-<link rel="stylesheet" href="/static/css/volume-data.css?v=2" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=6" />
 
 {%endblock%}
 {% block description%}
@@ -196,10 +196,10 @@
 {%endblock%}
 {% block leftpanel%}
 <div id="fileListPanel">
-    <div id="form">
-        <div id="main-container" class="action_side">
-            <div>Horizontal-Slice Viewer</div>
-            <p class="form-subtitle">Define the slice bounds (Lower Left / Upper Right), depth, interpolation, variable, colormap, plot size, then sync to map and click Plot.</p>
+    <div id="form"></div>
+    <div id="main-container" class="action_side">
+        <div>Horizontal-Slice Viewer</div>
+        <p class="form-subtitle">Define the slice bounds (Lower Left / Upper Right), depth, interpolation, variable, colormap, plot size, then sync to map and click Plot.</p>
             <div class="action_inner">
                 <form action="/visualize-depth-slice-s3" method="post" id="image-form">
 
@@ -327,6 +327,7 @@
                                 </svg>
                                 <span>Sync to map</span>
                             </button>
+                            <button type="button" id="reset-form" class="button-secondary" title="Restore the model's default bounds">Reset</button>
                             <input type="submit" value="Plot" class="button button-primary-action">
                         </div>
                         <div class="sync-status" id="syncStatus">
@@ -334,10 +335,8 @@
                             <span class="sync-status-text">Changes not yet applied to the map</span>
                         </div>
                     </div>
-                    <button type="button" id="metadata-button" class="button" style="display:none;">Metadata</button>
             </div>
             </form>
-        </div>
     </div>
     <!-- Display loading message and results dynamically -->
     <div id="loadingMessage">Working...</div>
@@ -426,6 +425,18 @@
                 type: 'syncFromParent',
                 data
             }, window.location.origin);
+
+            // Forward to the main /vis/ page so the slice rectangle draws
+            // on the main Cesium map immediately.
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'syncToolToMainMap',
+                        geometry: 'rectangle',
+                        data
+                    }, window.location.origin);
+                }
+            } catch (e) { /* cross-origin; ignore */ }
         }
 
         function selectOptionByText(optionText) {
@@ -733,6 +744,9 @@
                         }
                     }
                 }
+
+                // Snapshot the model's natural bounds for the Reset button.
+                if (typeof captureDefaults === 'function') captureDefaults();
                 /* MB
                 if (!locked) {
                     leftMarker.remove();
@@ -849,11 +863,31 @@
     // There are changes, change the sync button's text color to red.
     document.getElementById("sync-to-iframe").style.color = "red";
 
-    // Show metadata button (kept hidden; legacy listener for safety)
-    document.getElementById('metadata-button').addEventListener('click', display_metadata);
+    // Metadata button removed; guard the legacy listener in case other JS expects it.
+    document.getElementById('metadata-button')?.addEventListener('click', display_metadata);
 
-    // Wire the sync-status indicator to the sync button's color signal.
+    // Reset button: snapshot the form when a model loads, restore on click.
+    let modelDefaults = {};
+    function captureDefaults() {
+        const ids = ['start-lat', 'end-lat', 'start-lng', 'end-lng', 'start-depth'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) modelDefaults[id] = el.value;
+        });
+    }
+    function resetForm() {
+        for (const [k, v] of Object.entries(modelDefaults)) {
+            const el = document.getElementById(k);
+            if (el && v !== undefined && v !== null) el.value = v;
+        }
+        document.getElementById('sync-to-iframe')?.click();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        const resetBtn = document.getElementById('reset-form');
+        if (resetBtn) resetBtn.addEventListener('click', resetForm);
+        setTimeout(captureDefaults, 1500);
+
         const syncBtn = document.getElementById('sync-to-iframe');
         const status = document.getElementById('syncStatus');
         const statusText = status ? status.querySelector('.sync-status-text') : null;

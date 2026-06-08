@@ -43,7 +43,11 @@ html.embedded #fileListPanel {
     padding: 8px 0 16px !important;
     margin: 0 !important;
     box-sizing: border-box !important;
+    /* Kill the legacy inner scroll: let the iframe's window be the only
+       scrolling container so users don't see two scrollbars stacked. */
+    height: auto !important;
     overflow-x: hidden !important;
+    overflow-y: visible !important;
 }
 
 /* Form lives directly on the panel surface (no floating-card look). The
@@ -74,6 +78,165 @@ html.embedded #main-container {
     font-style: italic;
     width: 100%;
     box-sizing: border-box;
+}
+
+/* Small tip-style text shown below the action card (e.g. N samples hint).
+   Aligned to the same 20px inset as the cards. */
+.form-footnote {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #64748b;
+    margin: 6px 0 0;
+    padding: 0 20px;
+    font-style: italic;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Compare-with multi-select inside the Output card.
+   Stack the label above the select so the select gets the card's full
+   width -- the inline label-then-control layout would truncate long
+   model names like "Cascadia_ANTRayleighpv_Delph2018". */
+.compare-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 4px !important;
+}
+
+.compare-row label {
+    min-width: 0 !important;
+    font-weight: 600 !important;
+}
+
+.compare-row select[multiple] {
+    width: 100%;
+    min-height: 110px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    padding: 4px;
+    font-size: 11.5px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    box-sizing: border-box;
+}
+
+.compare-row select[multiple] option {
+    padding: 4px 8px;
+    border-radius: 3px;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.compare-row select[multiple] option:checked {
+    background: #0b4a53 linear-gradient(0deg, #0b4a53, #0b4a53);
+    color: #ffffff;
+}
+
+/* Single-model legacy plot panel (#results-panel) -- inherit the same 20px
+   inset as the cards above so the image and the download buttons line up. */
+html.embedded #results-panel {
+    width: auto !important;
+    padding: 0 !important;
+    margin: 16px 20px 0 !important;
+    box-sizing: border-box;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+/* The plot image itself sits in a subtle white card for visual rhythm.
+   Visibility is controlled by JS (display:none initially, display:block
+   when a single-model plot is rendered, display:none when compare mode
+   takes over). Do NOT force display here or compare mode will leak the
+   legacy image underneath the comparison stack. */
+html.embedded #dynamicPlot {
+    max-width: 100% !important;
+    height: auto !important;
+    background: #ffffff !important;
+    border: 1px solid #e8ecf0 !important;
+    border-radius: 12px !important;
+    padding: 10px !important;
+    box-sizing: border-box;
+    margin: 0 !important;
+}
+
+/* Download Plot / Download Data buttons -- match the action-card button
+   style (teal solid) and sit just under the plot card. JS toggles their
+   visibility; don't force display here so the buttons remain hidden until
+   a plot is actually rendered. */
+html.embedded #downloadPlotButton,
+html.embedded #downloadDataButton {
+    background: #0b4a53 !important;
+    color: #ffffff !important;
+    border: 1px solid #0b4a53 !important;
+    border-radius: 8px !important;
+    padding: 7px 14px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 10px 6px 0 0 !important;
+    cursor: pointer;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    box-shadow: none !important;
+    vertical-align: top;
+}
+
+html.embedded #downloadPlotButton:hover,
+html.embedded #downloadDataButton:hover {
+    background: #0f5e69 !important;
+    border-color: #0f5e69 !important;
+}
+
+/* The legacy <br/> between the buttons forces a vertical stack; suppress
+   those so the two download buttons sit side-by-side under the plot. */
+html.embedded #results-panel > br {
+    display: none !important;
+}
+
+/* Stacked comparison plot cards (shown when 2+ models are plotted at once) */
+.compare-results {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 16px 20px 0;
+}
+
+.compare-plot-card {
+    background: #ffffff;
+    border: 1px solid #e8ecf0;
+    border-radius: 12px;
+    padding: 12px 14px;
+}
+
+.compare-plot-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.compare-plot-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0b4a53;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.compare-plot-img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-radius: 6px;
+}
+
+.compare-plot-err {
+    font-size: 12px;
+    color: #b91c1c;
+    font-style: italic;
 }
 
 html.embedded #main-container {

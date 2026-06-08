@@ -3,7 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/volume.css" />
-<link rel="stylesheet" href="/static/css/volume-data.css?v=2" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=7" />
 {%endblock%}
 {% block description%}
 <div id="description" style="display:none;">
@@ -264,6 +264,10 @@
 
                     <div class="form-card">
                         <div class="form-card-title">Output</div>
+                        <div class="form-input compare-row">
+                            <label for="compare-models">Compare with</label>
+                            <select id="compare-models" multiple size="4" title="Ctrl/Cmd-click to pick extra models. The same geometry is plotted against each."></select>
+                        </div>
                         <div class="form-input">
                             <label for="plot-variable">Variable</label>
                             <select id="plot-variable" name="plot_variable"></select>
@@ -307,6 +311,7 @@
                             </svg>
                             <span>Sync to map</span>
                         </button>
+                        <button type="button" id="reset-form" class="button-secondary" title="Restore the model's default bounds">Reset</button>
                         <input type="submit" value="Plot" class="button button-primary-action" id="submit">
                     </div>
                     <div class="sync-status" id="syncStatus">
@@ -315,15 +320,10 @@
                     </div>
                 </div>
                 <span id="var-warning" style="display:none;"></span>
-                <button type="button" id="metadata-button" class="button" style="display: none;">Metadata</button>
         </div>
         </form>
     </div>
-    <div><sup><b>*</b></sup><small>Select "N Surface samples" to accurately visualize the model. Click on
-            the
-            "Model
-            metadata" button for information on
-            the model parameters.</small></div><br />
+    <p class="form-footnote">Tip: increase N&nbsp;samples for a smoother cross-section.</p>
     <!-- Display loading message and results dynamically -->
     <div id="loadingMessage">Working...</div>
     <div id="jsonContent"></div>
@@ -420,6 +420,18 @@
                 type: 'syncFromParent',
                 data
             }, window.location.origin);
+
+            // Forward to the main /vis/ page so the cross-section line
+            // draws on the main Cesium map immediately.
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'syncToolToMainMap',
+                        geometry: 'line',
+                        data
+                    }, window.location.origin);
+                }
+            } catch (e) { /* cross-origin; ignore */ }
 
             // Synced to iframe. Reset the button color back to light gray.
             document.getElementById("sync-to-iframe").style.color = "lightgray"
@@ -518,57 +530,185 @@
 
 
 
-    // Function to handle form submission
-    function handleSubmit(event) {
+    // Mirror the main #data-file options into the Compare-with multi-select.
+    // Called whenever the main dropdown is refreshed.
+    function syncCompareModels() {
+        const primary = document.getElementById('data-file');
+        const compare = document.getElementById('compare-models');
+        if (!primary || !compare) return;
+        const primaryValue = primary.value;
+        // Preserve the user's current compare selections so they don't lose them.
+        const currentlySelected = new Set(
+            Array.from(compare.selectedOptions).map(o => o.value)
+        );
+        compare.innerHTML = '';
+        Array.from(primary.options).forEach(opt => {
+            if (!opt.value || opt.value === primaryValue) return; // skip primary + placeholder
+            const o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.text;
+            if (currentlySelected.has(opt.value)) o.selected = true;
+            compare.appendChild(o);
+        });
+    }
+
+    // Poll until the primary dropdown is populated, then mirror its options
+    // into the Compare-with multi-select. Polling beats a fixed setTimeout
+    // because loadDropdown's network call may take longer than expected.
+    function tryPopulateCompare(retries) {
+        if (retries === undefined) retries = 30;
+        const primary = document.getElementById('data-file');
+        if (primary && primary.options.length > 1) {
+            syncCompareModels();
+            return;
+        }
+        if (retries > 0) setTimeout(() => tryPopulateCompare(retries - 1), 300);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        tryPopulateCompare();
+        const primary = document.getElementById('data-file');
+        if (primary) primary.addEventListener('change', syncCompareModels);
+    });
+
+    async function plotSingleModel(form, modelValue) {
+        const formData = new FormData(form);
+        formData.set('data_file', modelValue);
+        const response = await fetch(form.action, { method: 'POST', body: formData });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+    }
+
+    function ensureCompareContainer() {
+        let container = document.getElementById('compareResults');
+        if (container) return container;
+        container = document.createElement('div');
+        container.id = 'compareResults';
+        container.className = 'compare-results';
+        const dp = document.getElementById('dynamicPlot');
+        if (dp && dp.parentNode) {
+            dp.parentNode.insertBefore(container, dp);
+        } else {
+            document.body.appendChild(container);
+        }
+        return container;
+    }
+
+    function renderCompareResults(results) {
+        const container = ensureCompareContainer();
+        container.innerHTML = '';
+        const dp = document.getElementById('dynamicPlot');
+        if (dp) dp.style.display = 'none';
+
+        // Single-model: keep using the legacy #dynamicPlot for backward compat.
+        if (results.length === 1 && results[0].image) {
+            const r = results[0];
+            const imageUrl = `data:image/png;base64,${r.image}`;
+            if (dp) {
+                dp.src = imageUrl;
+                dp.style.display = 'block';
+                dp.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+            // Wire the existing download buttons to the single result.
+            wireDownloadButtons(r);
+            return;
+        }
+
+        // Multi-model: stack each plot in its own card.
+        results.forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'compare-plot-card';
+
+            const titleRow = document.createElement('div');
+            titleRow.className = 'compare-plot-title-row';
+            const title = document.createElement('div');
+            title.className = 'compare-plot-title';
+            title.textContent = r.model;
+            titleRow.appendChild(title);
+
+            if (r.image) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'button-copy';
+                btn.textContent = 'Download PNG';
+                btn.addEventListener('click', () => downloadBase64(r.image, r.model + '_xsection.png', 'image/png'));
+                titleRow.appendChild(btn);
+            }
+            card.appendChild(titleRow);
+
+            if (r.image) {
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${r.image}`;
+                img.alt = r.model + ' cross-section';
+                img.className = 'compare-plot-img';
+                card.appendChild(img);
+            } else {
+                const err = document.createElement('div');
+                err.className = 'compare-plot-err';
+                err.textContent = 'Failed to generate plot for this model.';
+                card.appendChild(err);
+            }
+            container.appendChild(card);
+        });
+        container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    function wireDownloadButtons(result) {
+        const dlBtn = document.getElementById('downloadPlotButton');
+        const dlData = document.getElementById('downloadDataButton');
+        if (dlBtn) {
+            dlBtn.style.display = 'inline';
+            dlBtn.onclick = () => downloadBase64(result.image, (result.model || 'model') + '_xsection_plot.png', 'image/png');
+        }
+        if (dlData && result.csv_data) {
+            dlData.style.display = 'inline';
+            dlData.onclick = () => downloadBase64(result.csv_data, (result.model || 'model') + '_xsection_data.csv', 'text/csv');
+        }
+    }
+
+    function downloadBase64(b64, filename, mime) {
+        const a = document.createElement('a');
+        a.href = `data:${mime};base64,${b64}`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
         const loadingElement = document.getElementById('loadingMessage');
-        loadingElement.style.display = 'block'; // Show the loading message
-
+        if (loadingElement) loadingElement.style.display = 'block';
         const jsonContent = document.getElementById('jsonContent');
-        jsonContent.style.display = 'none'; // Show the loading message
+        if (jsonContent) jsonContent.style.display = 'none';
 
-        event.preventDefault(); // Prevent the default form submission
-        var form = event.target; // Get the form element
-        var url = form.action; // Get the action URL of the form
-        var formData = new FormData(form); // Create FormData object from the form data
-        // Make a POST request to the CGI script
-        fetch(url, {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                const imageUrl = `data:image/png;base64,${data.image}`;
-                const dynamicPlotElement = document.getElementById('dynamicPlot');
-                dynamicPlotElement.src = imageUrl;
-                dynamicPlotElement.style.display = 'block';
+        const form = event.target;
+        const primary = document.getElementById('data-file');
+        const primaryText = primary.options[primary.selectedIndex].text;
+        const primaryValue = primary.value;
 
-                // Scroll to the dynamicPlot div
-                dynamicPlotElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                document.getElementById('downloadPlotButton').addEventListener('click', () => {
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = imageUrl;
-                    downloadLink.download = model + '_xsection_plot.png';
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                });
-                document.getElementById('downloadPlotButton').style.display = 'inline';
-                document.getElementById('downloadDataButton').style.display = 'inline;'
+        const compareSelect = document.getElementById('compare-models');
+        const compareModels = compareSelect
+            ? Array.from(compareSelect.selectedOptions)
+                .map(o => ({ value: o.value, text: o.text }))
+                .filter(m => m.value && m.value !== primaryValue)
+            : [];
 
-                document.getElementById('downloadDataButton').addEventListener('click', () => {
-                    const csvData = `data:text/csv;base64,${data.csv_data}`;
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = csvData;
-                    downloadLink.download = model + '_xsection_data.csv';
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                });
-                document.getElementById('downloadDataButton').style.display = 'inline';
-                loadingElement.style.display = 'none';
-            })
-            .catch(error => console.error('Error fetching plot and data:', error));
+        const allModels = [{ value: primaryValue, text: primaryText }, ...compareModels];
 
+        const results = [];
+        for (const m of allModels) {
+            try {
+                const data = await plotSingleModel(form, m.value);
+                results.push({ model: m.text, image: data.image, csv_data: data.csv_data });
+            } catch (e) {
+                console.error('Plot failed for', m.text, e);
+                results.push({ model: m.text, error: true });
+            }
+        }
+
+        renderCompareResults(results);
+        if (loadingElement) loadingElement.style.display = 'none';
     }
 
     // Add event listener to the form for submit event
@@ -704,6 +844,9 @@
                         }
                     }
                 }
+
+                // Snapshot the model's natural bounds for the Reset button.
+                if (typeof captureDefaults === 'function') captureDefaults();
                 /* MB
                 if (!locked) {
                     leftMarker.remove();
@@ -817,11 +960,33 @@
     });
 
 
-    // Show metadata button (kept hidden; legacy listener for safety)
-    document.getElementById('metadata-button').addEventListener('click', display_metadata);
+    // Metadata button removed; guard the legacy listener in case other JS expects it.
+    document.getElementById('metadata-button')?.addEventListener('click', display_metadata);
+
+    // Reset button: snapshot the form when a model loads, restore on click.
+    let modelDefaults = {};
+    function captureDefaults() {
+        const ids = ['start-lat', 'end-lat', 'start-lng', 'end-lng', 'start-depth', 'end-depth'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) modelDefaults[id] = el.value;
+        });
+    }
+    function resetForm() {
+        for (const [k, v] of Object.entries(modelDefaults)) {
+            const el = document.getElementById(k);
+            if (el && v !== undefined && v !== null) el.value = v;
+        }
+        document.getElementById('sync-to-iframe')?.click();
+    }
 
     // Wire the sync-status indicator to the sync button's color signal.
     document.addEventListener('DOMContentLoaded', function () {
+        const resetBtn = document.getElementById('reset-form');
+        if (resetBtn) resetBtn.addEventListener('click', resetForm);
+        // Capture defaults once the form has been initially populated.
+        setTimeout(captureDefaults, 1500);
+
         const syncBtn = document.getElementById('sync-to-iframe');
         const status = document.getElementById('syncStatus');
         const statusText = status ? status.querySelector('.sync-status-text') : null;

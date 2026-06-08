@@ -3,7 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/volume.css" />
-<link rel="stylesheet" href="/static/css/volume-data.css?v=2" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=6" />
 {%endblock%}
 {% block description%}
 <div id="description" style="display:none;">
@@ -280,6 +280,7 @@
                             </svg>
                             <span>Sync to map</span>
                         </button>
+                        <button type="button" id="reset-form" class="button-secondary" title="Restore the model's default bounds">Reset</button>
                         <input type="submit" value="Plot" class="button button-primary-action">
                     </div>
                     <div class="sync-status" id="syncStatus">
@@ -287,15 +288,9 @@
                         <span class="sync-status-text">Changes not yet applied to the map</span>
                     </div>
                 </div>
-                <button type="button" id="metadata-button" class="button" style="display:none;">Metadata</button>
         </div>
         </form>
     </div>
-    <div><sup><b>*</b></sup><small>Select "N Surface samples" to accurately visualize the model. Click on
-            the
-            "Model
-            metadata" button for information on
-            the model parameters.</small></div><br />
     <!-- Display loading message and results dynamically -->
     <div id="loadingMessage">Working...</div>
     <div id="jsonContent"></div>
@@ -387,6 +382,18 @@
                 type: 'syncFromParent',
                 data
             }, window.location.origin);
+
+            // Forward to the main /vis/ page so a point marker draws at the
+            // depth-profile location on the main Cesium map immediately.
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'syncToolToMainMap',
+                        geometry: 'point',
+                        data
+                    }, window.location.origin);
+                }
+            } catch (e) { /* cross-origin; ignore */ }
 
             // Synced to iframe. Reset the button color back to light gray.
             document.getElementById("sync-to-iframe").style.color = "lightgray"
@@ -672,13 +679,14 @@
                     updateRectangle();
                     // Event listener for left marker drag event
                     leftMarker.on('dragend', updateRectangle);
- 
+
                     // Event listener for right marker drag event
                     rightMarker.on('dragend', updateRectangle);
                 }
                 */
 
-
+                // Snapshot the model's natural bounds for the Reset button.
+                if (typeof captureDefaults === 'function') captureDefaults();
             })
             .catch(error => console.error('Error fetching the JSON file:', error));
     }
@@ -766,11 +774,31 @@
     });
 
 
-    // Show metadata button (kept hidden; legacy listener for safety)
-    document.getElementById('metadata-button').addEventListener('click', display_metadata);
+    // Metadata button removed; guard the legacy listener in case other JS expects it.
+    document.getElementById('metadata-button')?.addEventListener('click', display_metadata);
 
-    // Wire the sync-status indicator to the sync button's color signal.
+    // Reset button: snapshot the form when a model loads, restore on click.
+    let modelDefaults = {};
+    function captureDefaults() {
+        const ids = ['start-lat', 'start-lng', 'start-depth', 'end-depth'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) modelDefaults[id] = el.value;
+        });
+    }
+    function resetForm() {
+        for (const [k, v] of Object.entries(modelDefaults)) {
+            const el = document.getElementById(k);
+            if (el && v !== undefined && v !== null) el.value = v;
+        }
+        document.getElementById('sync-to-iframe')?.click();
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
+        const resetBtn = document.getElementById('reset-form');
+        if (resetBtn) resetBtn.addEventListener('click', resetForm);
+        setTimeout(captureDefaults, 1500);
+
         const syncBtn = document.getElementById('sync-to-iframe');
         const status = document.getElementById('syncStatus');
         const statusText = status ? status.querySelector('.sync-status-text') : null;
