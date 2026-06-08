@@ -3,7 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/depth-slice.css" />
-<link rel="stylesheet" href="/static/css/volume-data.css?v=2" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=3" />
 {%endblock%}
 {% block description%}
 <!--
@@ -350,6 +350,18 @@
                 type: 'syncFromParent',
                 data
             }, window.location.origin);
+
+            // Forward to the main /vis/ page so the depth-slice rectangle
+            // draws on the main Cesium map immediately.
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'syncToolToMainMap',
+                        geometry: 'rectangle',
+                        data
+                    }, window.location.origin);
+                }
+            } catch (e) { /* cross-origin; ignore */ }
 
             // Sync to iframe, can return the sync button color to normal
             document.getElementById("sync-to-iframe").style.color = "lightgray";
@@ -813,9 +825,8 @@
             const el = document.getElementById(k);
             if (el && v !== undefined && v !== null) el.value = v;
         }
-        const syncBtn = document.getElementById('sync-to-iframe');
-        if (syncBtn) syncBtn.style.color = 'red';
         if (typeof updateURL === 'function') updateURL();
+        document.getElementById('sync-to-iframe')?.click();
     }
 
     function copyRequestUrl() {

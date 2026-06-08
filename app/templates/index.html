@@ -479,32 +479,82 @@
         document.getElementById("metadataPanel")?.classList.toggle("open");
     }
 
-    // Forwarded from the tool-panel iframe (e.g. /data/volume-data's
-    // "Sync volume to map" button). Draws the requested sub-volume rectangle
-    // on the main 3D Cesium map so the user sees the effect of their inputs
-    // without leaving the page.
+    // Forwarded from any tool-panel iframe ("Sync to map" button). Draws the
+    // requested geometry (rectangle, line, or point) on the main 3D Cesium
+    // map so the user sees the effect of their inputs without leaving the
+    // page. Each tool passes geometry: 'rectangle' | 'line' | 'point'.
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin) return;
         const msg = event.data || {};
-        if (msg.type !== "syncVolumeToMainMap") return;
+        // Back-compat: volume previously sent type 'syncVolumeToMainMap'.
+        if (msg.type !== "syncToolToMainMap" && msg.type !== "syncVolumeToMainMap") return;
         const d = msg.data || {};
         const iframe = document.getElementById("3dIframe");
-        if (!iframe || !iframe.contentWindow || typeof iframe.contentWindow.filterOutline !== "function") return;
+        if (!iframe || !iframe.contentWindow) return;
+        const viewer = iframe.contentWindow.viewer;
+        const Cesium = iframe.contentWindow.Cesium;
+        if (!viewer || !Cesium) return;
+
         const latMin = parseFloat(d["start-lat"]);
         const latMax = parseFloat(d["end-lat"]);
         const lonMin = parseFloat(d["start-lng"]);
         const lonMax = parseFloat(d["end-lng"]);
-        if ([latMin, latMax, lonMin, lonMax].some(v => isNaN(v))) return;
-        // filterOutline(cornerN, cornerS, cornerE, cornerW, lw, polylineId, colorIndex)
-        // colorIndex 3 = BLUE in repository_config.js's cesiumColorList.
-        iframe.contentWindow.filterOutline(latMax, latMin, lonMax, lonMin, 4, "subVolumeOutline", 3);
-        // Cesium runs requestRenderMode=true; tell it to redraw now so the
-        // outline appears immediately instead of waiting for a mouse move.
+        const geometry = msg.geometry || "rectangle";
+
+        // Reuse a single outline entity id per geometry kind so successive
+        // Syncs replace the previous outline rather than stacking.
+        const ENTITY_ID = "toolSyncOutline";
+        const existing = viewer.entities.getById(ENTITY_ID);
+        if (existing) viewer.entities.remove(existing);
+
         try {
-            if (iframe.contentWindow.viewer && iframe.contentWindow.viewer.scene) {
-                iframe.contentWindow.viewer.scene.requestRender();
+            if (geometry === "rectangle") {
+                if ([latMin, latMax, lonMin, lonMax].some(v => isNaN(v))) return;
+                // Use the iframe's existing helper for rectangles (dashed cyan look).
+                if (typeof iframe.contentWindow.filterOutline === "function") {
+                    iframe.contentWindow.filterOutline(latMax, latMin, lonMax, lonMin, 4, ENTITY_ID, 3);
+                }
+            } else if (geometry === "line") {
+                const startLat = parseFloat(d["start-lat"]);
+                const startLng = parseFloat(d["start-lng"]);
+                const endLat = parseFloat(d["end-lat"]);
+                const endLng = parseFloat(d["end-lng"]);
+                if ([startLat, startLng, endLat, endLng].some(v => isNaN(v))) return;
+                viewer.entities.add({
+                    id: ENTITY_ID,
+                    polyline: {
+                        positions: Cesium.Cartesian3.fromDegreesArray([startLng, startLat, endLng, endLat]),
+                        width: 5,
+                        material: new Cesium.PolylineDashMaterialProperty({
+                            color: Cesium.Color.BLUE,
+                            dashLength: 16.0
+                        })
+                    }
+                });
+            } else if (geometry === "point") {
+                const lat = parseFloat(d["start-lat"]);
+                const lng = parseFloat(d["start-lng"]);
+                if (isNaN(lat) || isNaN(lng)) return;
+                viewer.entities.add({
+                    id: ENTITY_ID,
+                    position: Cesium.Cartesian3.fromDegrees(lng, lat),
+                    point: {
+                        pixelSize: 12,
+                        color: Cesium.Color.BLUE,
+                        outlineColor: Cesium.Color.WHITE,
+                        outlineWidth: 2
+                    }
+                });
             }
-        } catch (e) { /* iframe may not be ready */ }
+            // Cesium runs requestRenderMode=true; schedule a few render
+            // frames so the entity actually shows without needing the user
+            // to mouse over the map.
+            const scheduleRender = () => { if (viewer.scene) viewer.scene.requestRender(); };
+            scheduleRender();
+            requestAnimationFrame(scheduleRender);
+            setTimeout(scheduleRender, 50);
+            setTimeout(scheduleRender, 200);
+        } catch (e) { /* iframe may not be fully initialised */ }
     });
 
     // --- Tool panel (hosts Export Data + Interactive Plots iframes) ---
