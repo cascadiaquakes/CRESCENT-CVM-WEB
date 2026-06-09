@@ -8,7 +8,10 @@ const cvmAreaFillOpacity = [0.1];
 Cesium.Ion.defaultAccessToken = "your_access_token";
 
 // Initial view settings
-const initialFlyTO = [-132.76, 39.84, 1500000]; // Increase the altitude value to zoom out
+// Camera positioned south-west of the study area, looking north-east at a
+// tilt. Altitude raised so all four study-area corners (NW/NE/SE/SW)
+// frame the initial view instead of zooming in on the southern portion.
+const initialFlyTO = [-132.76, 39.84, 2700000];
 const initialHeading = 48.65;
 const initialPitch = -75;
 const initialRoll = 0.3;
