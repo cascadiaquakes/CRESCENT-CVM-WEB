@@ -3,7 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/volume.css" />
-<link rel="stylesheet" href="/static/css/volume-data.css?v=7" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=11" />
 {%endblock%}
 {% block description%}
 <div id="description" style="display:none;">
@@ -267,6 +267,8 @@
                         <div class="form-input compare-row">
                             <label for="compare-models">Compare with</label>
                             <select id="compare-models" multiple size="4" title="Ctrl/Cmd-click to pick extra models. The same geometry is plotted against each."></select>
+                            <small class="compare-empty" id="compareEmpty" style="display:none;"></small>
+                            <small class="compare-hint">Picking 1 or more locks the color scale across all panels (the primary model is probed first, then Min/Max are filled in above). Override Min/Max manually for a custom range.</small>
                         </div>
                         <div class="form-input">
                             <label for="plot-variable">Variable</label>
@@ -530,26 +532,67 @@
 
 
 
-    // Mirror the main #data-file options into the Compare-with multi-select.
-    // Called whenever the main dropdown is refreshed.
-    function syncCompareModels() {
+    // Populate the Compare-with multi-select with models that contain the
+    // currently-selected Variable. Fetches a fresh list from the backend
+    // (already supports ?required_variable=) instead of mirroring the
+    // primary dropdown, so Vs-vs-Vp incompatibility never reaches the user.
+    async function syncCompareModels() {
         const primary = document.getElementById('data-file');
         const compare = document.getElementById('compare-models');
         if (!primary || !compare) return;
         const primaryValue = primary.value;
-        // Preserve the user's current compare selections so they don't lose them.
+        const variableEl = document.getElementById('plot-variable');
+        const variableName = variableEl && variableEl.value ? variableEl.value : '';
+
+        // Preserve current selections so the user doesn't lose them on refresh.
         const currentlySelected = new Set(
             Array.from(compare.selectedOptions).map(o => o.value)
         );
+
+        let html = '';
+        try {
+            if (variableName) {
+                const r = await fetch(`/data/models_drop_down_s3?required_variable=${encodeURIComponent(variableName)}`);
+                if (r.ok) html = await r.text();
+            }
+        } catch (e) {
+            console.warn('[compare] could not fetch filtered model list', e);
+        }
+
+        if (!html) {
+            // Fallback: mirror the primary dropdown if the filtered fetch failed.
+            html = primary.innerHTML;
+        }
+
+        // Parse the option HTML to filter out the primary and apply selection state.
+        const tmp = document.createElement('select');
+        tmp.innerHTML = html;
         compare.innerHTML = '';
-        Array.from(primary.options).forEach(opt => {
-            if (!opt.value || opt.value === primaryValue) return; // skip primary + placeholder
+        Array.from(tmp.options).forEach(opt => {
+            if (!opt.value || opt.value === primaryValue) return;
             const o = document.createElement('option');
             o.value = opt.value;
             o.textContent = opt.text;
             if (currentlySelected.has(opt.value)) o.selected = true;
             compare.appendChild(o);
         });
+
+        // Show or hide the empty-state explanation under the select.
+        const emptyEl = document.getElementById('compareEmpty');
+        if (emptyEl) {
+            if (compare.options.length === 0 && variableName) {
+                emptyEl.textContent =
+                    `No other models contain the '${variableName}' variable. ` +
+                    `Pick a different Variable below to find compatible models, ` +
+                    `or compare against a model that shares this variable.`;
+                emptyEl.style.display = 'block';
+                compare.style.display = 'none';
+            } else {
+                emptyEl.textContent = '';
+                emptyEl.style.display = 'none';
+                compare.style.display = '';
+            }
+        }
     }
 
     // Poll until the primary dropdown is populated, then mirror its options
@@ -568,12 +611,37 @@
     document.addEventListener('DOMContentLoaded', () => {
         tryPopulateCompare();
         const primary = document.getElementById('data-file');
-        if (primary) primary.addEventListener('change', syncCompareModels);
+        const variable = document.getElementById('plot-variable');
+        // Manual primary swap: re-sync, but delay slightly so the variable
+        // dropdown gets repopulated with the new model's variables first.
+        if (primary) primary.addEventListener('change', () => setTimeout(syncCompareModels, 500));
+        // Manual variable change (user picks Vp vs Vs etc.).
+        if (variable) variable.addEventListener('change', syncCompareModels);
+        // Programmatic variable change (when the model swap finishes loading
+        // and rebuilds the variable <select>'s options). The change event
+        // does NOT fire for code-driven updates, so watch the DOM.
+        if (variable) {
+            new MutationObserver(() => syncCompareModels()).observe(variable, { childList: true });
+        }
     });
 
-    async function plotSingleModel(form, modelValue) {
+    // Derive a clean human-readable title from a .nc filename so each panel
+    // in compare mode shows the actual model name, not the primary's title.
+    function modelLabelFromFilename(fileName) {
+        if (!fileName) return '';
+        let base = fileName.split('/').pop();
+        base = base.replace(/\.nc$/i, '').replace(/\.r0\.\d+$/i, '');
+        return base;
+    }
+
+    async function plotSingleModel(form, modelValue, modelText) {
         const formData = new FormData(form);
         formData.set('data_file', modelValue);
+        // Force the matplotlib title to the model being plotted, so each
+        // compare panel is labelled with the correct model name instead of
+        // inheriting the primary model's title field.
+        const label = modelText || modelLabelFromFilename(modelValue);
+        if (label) formData.set('title', label);
         const response = await fetch(form.action, { method: 'POST', body: formData });
         if (!response.ok) throw new Error('HTTP ' + response.status);
         return response.json();
@@ -642,6 +710,19 @@
                 img.alt = r.model + ' cross-section';
                 img.className = 'compare-plot-img';
                 card.appendChild(img);
+            } else if (r.noData) {
+                const empty = document.createElement('div');
+                empty.className = 'compare-plot-empty';
+                let msg = 'No data along this section in this model.';
+                if (r.coverage) {
+                    const c = r.coverage;
+                    const fmt = (v) => (v === undefined || v === null || isNaN(v))
+                        ? '?'
+                        : (Math.round(v * 10) / 10);
+                    msg += ` Coverage: lat ${fmt(c.latMin)}°–${fmt(c.latMax)}°, lon ${fmt(c.lonMin)}°–${fmt(c.lonMax)}°.`;
+                }
+                empty.textContent = msg;
+                card.appendChild(empty);
             } else {
                 const err = document.createElement('div');
                 err.className = 'compare-plot-err';
@@ -675,6 +756,132 @@
         document.body.removeChild(a);
     }
 
+    // --- Color-scale locking helpers (compare mode) ---
+    // Sensible default ranges per variable in case CSV-probing fails (e.g.
+    // server returns no csv_data, header columns differ from expected, etc.)
+    const VARIABLE_DEFAULT_RANGE = {
+        'vs': { min: 2.0, max: 5.5 },
+        'vp': { min: 4.0, max: 8.5 },
+        'density': { min: 2.0, max: 3.5 },
+        'rho': { min: 2.0, max: 3.5 },
+    };
+
+    function getDefaultRangeForVariable(variableName) {
+        const v = (variableName || '').toLowerCase().trim();
+        if (VARIABLE_DEFAULT_RANGE[v]) return VARIABLE_DEFAULT_RANGE[v];
+        for (const key of Object.keys(VARIABLE_DEFAULT_RANGE)) {
+            if (v.includes(key)) return VARIABLE_DEFAULT_RANGE[key];
+        }
+        return null;
+    }
+
+    function decodeBase64Csv(b64) {
+        if (!b64 || typeof b64 !== 'string') return null;
+        try { return atob(b64); } catch (e) { return null; }
+    }
+
+    // Columns that are clearly coordinates / indices, never the variable values.
+    const NON_VALUE_HINTS = ['lat', 'lon', 'depth', 'distance', 'east', 'north', 'utm', 'index', 'idx', ' x', ' y', ' z'];
+
+    function findVariableRangeInCsv(csvText, variableName) {
+        if (!csvText) return null;
+        const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return null;
+        const header = lines[0].split(',').map(s => s.trim());
+        console.log('[compare] CSV header:', header, 'looking for variable:', variableName);
+        const v = (variableName || '').toLowerCase();
+
+        // Prefer exact match, then substring match.
+        let colIdx = header.findIndex(h => h.toLowerCase() === v);
+        if (colIdx === -1 && v) colIdx = header.findIndex(h => h.toLowerCase().includes(v));
+        // If still not found, pick the first column that isn't a coordinate/index.
+        if (colIdx === -1) {
+            colIdx = header.findIndex(h => {
+                const lh = ' ' + h.toLowerCase() + ' ';
+                return !NON_VALUE_HINTS.some(hint => lh.includes(hint));
+            });
+        }
+        // Final fallback: last column.
+        if (colIdx === -1) colIdx = header.length - 1;
+        console.log('[compare] picked column', colIdx, '=', header[colIdx]);
+
+        let min = Infinity, max = -Infinity;
+        for (let i = 1; i < lines.length; i++) {
+            const cells = lines[i].split(',');
+            if (cells.length <= colIdx) continue;
+            const x = parseFloat(cells[colIdx]);
+            if (!isNaN(x) && isFinite(x)) {
+                if (x < min) min = x;
+                if (x > max) max = x;
+            }
+        }
+        if (min === Infinity || max === -Infinity) {
+            console.warn('[compare] no numeric values found in CSV column', header[colIdx]);
+            return null;
+        }
+        return {
+            min: Math.round(min * 100) / 100,
+            max: Math.round(max * 100) / 100,
+        };
+    }
+
+    function userSetExplicitRange() {
+        const sv = document.getElementById('start-value');
+        const ev = document.getElementById('end-value');
+        if (!sv || !ev) return false;
+        const a = sv.value, b = ev.value;
+        if (!a || !b || a === 'auto' || b === 'auto') return false;
+        return !isNaN(parseFloat(a)) && !isNaN(parseFloat(b));
+    }
+
+    // Returns true if the plot response has zero usable numeric rows for the
+    // requested variable -- i.e. the section line didn't pass through this
+    // model's coverage. Used to render a "No data" message instead of a
+    // blank plot image.
+    function isPlotEmpty(b64CsvData, variableName) {
+        if (!b64CsvData) return true;
+        const csvText = decodeBase64Csv(b64CsvData);
+        if (!csvText) return true;
+        const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return true;
+        const header = lines[0].split(',').map(s => s.trim());
+        const v = (variableName || '').toLowerCase();
+        let colIdx = header.findIndex(h => h.toLowerCase() === v);
+        if (colIdx === -1 && v) colIdx = header.findIndex(h => h.toLowerCase().includes(v));
+        if (colIdx === -1) colIdx = header.length - 1;
+        for (let i = 1; i < lines.length; i++) {
+            const cells = lines[i].split(',');
+            if (cells.length <= colIdx) continue;
+            const x = parseFloat(cells[colIdx]);
+            if (!isNaN(x) && isFinite(x)) return false;
+        }
+        return true;
+    }
+
+    // Cache so we don't re-fetch the same metadata repeatedly across
+    // Compare runs.
+    const __coverageCache = {};
+    async function fetchModelCoverage(fileName) {
+        if (!fileName) return null;
+        if (__coverageCache[fileName]) return __coverageCache[fileName];
+        try {
+            const jsonFile = fileName.replace(/\.nc$/i, '.json');
+            const r = await fetch(`/data/fetch_json_s3?file_name=${encodeURIComponent(jsonFile)}`);
+            if (!r.ok) return null;
+            const data = await r.json();
+            const cov = {
+                latMin: data.geospatial_lat_min,
+                latMax: data.geospatial_lat_max,
+                lonMin: data.geospatial_lon_min,
+                lonMax: data.geospatial_lon_max,
+            };
+            __coverageCache[fileName] = cov;
+            return cov;
+        } catch (e) {
+            return null;
+        }
+    }
+
     async function handleSubmit(event) {
         event.preventDefault();
         const loadingElement = document.getElementById('loadingMessage');
@@ -697,14 +904,82 @@
         const allModels = [{ value: primaryValue, text: primaryText }, ...compareModels];
 
         const results = [];
-        for (const m of allModels) {
-            try {
-                const data = await plotSingleModel(form, m.value);
-                results.push({ model: m.text, image: data.image, csv_data: data.csv_data });
-            } catch (e) {
-                console.error('Plot failed for', m.text, e);
-                results.push({ model: m.text, error: true });
+        const compareMode = compareModels.length > 0;
+
+        try {
+            // Always plot the primary first. If we are in compare mode and the
+            // user has NOT manually set Min/Max, parse the primary's CSV to find
+            // the variable's data range, fill the form so the rest plot with the
+            // same colormap range, then re-plot the primary too so its colors
+            // line up with the others.
+            const primaryData = await plotSingleModel(form, primaryValue, primaryText);
+
+            let rangeLocked = false;
+            if (compareMode && !userSetExplicitRange()) {
+                const variableEl = document.getElementById('plot-variable');
+                const variableName = variableEl ? variableEl.value : '';
+                console.log('[compare] primaryData keys:', Object.keys(primaryData), 'variable:', variableName);
+
+                // Try the CSV-probing path first (most accurate -- the actual
+                // data range used by this specific model on this geometry).
+                let range = null;
+                const csvText = decodeBase64Csv(primaryData.csv_data);
+                if (csvText) {
+                    range = findVariableRangeInCsv(csvText, variableName);
+                    if (range) console.log('[compare] CSV-derived range:', range);
+                } else {
+                    console.warn('[compare] no csv_data on primary response');
+                }
+
+                // Fallback: variable-name-based defaults so we still lock the
+                // colormap across panels even when CSV probing fails.
+                if (!range) {
+                    range = getDefaultRangeForVariable(variableName);
+                    if (range) console.log('[compare] using default range for', variableName, range);
+                }
+
+                if (range && range.max > range.min) {
+                    document.getElementById('start-value').value = range.min;
+                    document.getElementById('end-value').value = range.max;
+                    rangeLocked = true;
+                } else {
+                    console.warn('[compare] could not determine a range; falling back to per-panel auto');
+                }
             }
+
+            if (rangeLocked) {
+                // Re-plot the primary with the locked range so every panel
+                // (including this one) uses the exact same colormap scale.
+                try {
+                    const lockedPrimary = await plotSingleModel(form, primaryValue, primaryText);
+                    results.push({ model: primaryText, image: lockedPrimary.image, csv_data: lockedPrimary.csv_data });
+                } catch (e) {
+                    // Fall back to the auto-range render if the locked re-plot fails.
+                    results.push({ model: primaryText, image: primaryData.image, csv_data: primaryData.csv_data });
+                }
+            } else {
+                results.push({ model: primaryText, image: primaryData.image, csv_data: primaryData.csv_data });
+            }
+
+            // Plot the rest (with whatever Min/Max are now in the form).
+            const variableForCheck = document.getElementById('plot-variable')?.value || '';
+            for (const m of compareModels) {
+                try {
+                    const data = await plotSingleModel(form, m.value, m.text);
+                    if (isPlotEmpty(data.csv_data, variableForCheck)) {
+                        const coverage = await fetchModelCoverage(m.value);
+                        results.push({ model: m.text, noData: true, coverage });
+                    } else {
+                        results.push({ model: m.text, image: data.image, csv_data: data.csv_data });
+                    }
+                } catch (e) {
+                    console.error('Plot failed for', m.text, e);
+                    results.push({ model: m.text, error: true });
+                }
+            }
+        } catch (e) {
+            console.error('Primary plot failed:', e);
+            results.push({ model: primaryText, error: true });
         }
 
         renderCompareResults(results);

@@ -912,17 +912,142 @@ async def visualize_depth_profiles_s3(request: Request):
             data_to_plot.values
         )  # Assuming data_to_plot is a 2D array-like structure
 
-        plt.plot(x_values, y_values, linestyle="--", marker="o", color=color)
+        primary_label = (title or items_dict.get("data_file", "primary")).rsplit("/", 1)[-1]
+        primary_label = primary_label.replace(".nc", "")
+        plt.plot(
+            x_values,
+            y_values,
+            linestyle="--",
+            marker="o",
+            color=color,
+            label=primary_label,
+        )
         # Invert the y-axis (depth increasing downward)
         plt.gca().set_aspect("auto")
         plt.gca().invert_yaxis()
 
+        # Overlay compare models on the same axes (depth-profile only — shared x/y).
+        # Each is processed independently so a failure on one doesn't kill the plot.
+        # Skipped models are collected with a reason + coverage so the UI can explain
+        # to the user why a requested model isn't on the plot.
+        compare_files_str = items_dict.get("compare_files", "").strip()
+        overlay_count = 0
+        skipped_models = []
+        if compare_files_str:
+            compare_list = [f.strip() for f in compare_files_str.split(",") if f.strip()]
+            compare_colors = [
+                "#d62728", "#2ca02c", "#9467bd", "#ff7f0e",
+                "#8c564b", "#e377c2", "#17becf", "#bcbd22",
+            ]
+            for idx, cf in enumerate(compare_list):
+                cf_label = cf.rsplit("/", 1)[-1].replace(".nc", "")
+                cf_coverage = None
+                try:
+                    cf_data = open_chunked_from_netcdf_s3(cf, data_chunks)
+                    cf_attrs = cf_data.attrs
+                    cf_coverage = {
+                        "latMin": cf_attrs.get("geospatial_lat_min"),
+                        "latMax": cf_attrs.get("geospatial_lat_max"),
+                        "lonMin": cf_attrs.get("geospatial_lon_min"),
+                        "lonMax": cf_attrs.get("geospatial_lon_max"),
+                    }
+                    if plot_var not in cf_data.variables:
+                        logger.warning(f"compare: skip {cf} - missing variable {plot_var}")
+                        skipped_models.append({
+                            "model": cf_label,
+                            "reason": f"Model doesn't contain '{plot_var}'.",
+                            "coverage": cf_coverage,
+                        })
+                        cf_data.close()
+                        continue
+                    cf_depth_unit, cf_depth_factor = unit_conversion_factor(
+                        cf_data["depth"].attrs["units"], units
+                    )
+                    cf_var_unit, cf_var_factor = unit_conversion_factor(
+                        cf_data[plot_var].attrs["units"], units
+                    )
+                    if cf_depth_factor is None or cf_var_factor is None:
+                        logger.warning(f"compare: skip {cf} - unit conversion failed")
+                        skipped_models.append({
+                            "model": cf_label,
+                            "reason": "Couldn't convert this model's units to match.",
+                            "coverage": cf_coverage,
+                        })
+                        cf_data.close()
+                        continue
+                    cf_down_factor = -1
+                    if cf_data["depth"].attrs.get("positive") == "up":
+                        cf_down_factor = 1
+                    cf_data["depth"] = cf_data["depth"] * cf_depth_factor
+                    cf_data = (
+                        cf_data.where(
+                            (cf_data.depth >= float(depth[0]))
+                            & (cf_data.depth <= float(depth[1])),
+                            drop=True,
+                        )
+                        * cf_var_factor
+                    )
+                    cf_meta = cf_data.attrs
+                    cf_extracted = extract_values(
+                        cf_data,
+                        start[0],
+                        start[1],
+                        depth,
+                        grid_ref=cf_meta.get("grid_ref", "latitude_longitude"),
+                        interpolation_method=interp_type,
+                        utm_zone=cf_meta.get("utm_zone", 10),
+                        ellipsoid=cf_meta.get("ellipsoid", "WGS84"),
+                    )
+                    cf_to_plot = cf_extracted[plot_var]
+                    cf_to_plot["depth"] = cf_to_plot["depth"] * cf_down_factor
+                    cf_x = cf_to_plot.values
+                    cf_y = cf_to_plot["depth"].values
+                    if cf_x is None or len(cf_x) == 0 or np.isnan(cf_x).all():
+                        logger.warning(f"compare: skip {cf} - no data at point")
+                        skipped_models.append({
+                            "model": cf_label,
+                            "reason": "No data at this point in this model (outside its coverage).",
+                            "coverage": cf_coverage,
+                        })
+                        cf_data.close()
+                        continue
+                    cf_color = compare_colors[idx % len(compare_colors)]
+                    plt.plot(
+                        cf_x,
+                        cf_y,
+                        linestyle="-",
+                        marker=".",
+                        color=cf_color,
+                        label=cf_label,
+                        alpha=0.85,
+                    )
+                    overlay_count += 1
+                    cf_data.close()
+                    del cf_data, cf_extracted, cf_to_plot
+                except Exception as cf_err:
+                    logger.warning(f"compare: failed to plot {cf}: {cf_err}")
+                    skipped_models.append({
+                        "model": cf_label,
+                        "reason": f"Failed to plot ({type(cf_err).__name__}).",
+                        "coverage": cf_coverage,
+                    })
+                    continue
+
+        if overlay_count > 0:
+            plt.legend(loc="best", fontsize=8, framealpha=0.85)
+
         if chunk_string:
             time_to_here = time.time()
             elapsed_time = f"netCDF on S3: {time_to_here - start_time :.2f} s chunk: {data_chunks} {data_grid_ref}"
-            plt.title(f"{title} ")  # {elapsed_time}")
+            if overlay_count > 0:
+                plt.title(f"Profile comparison ({overlay_count + 1} models)")
+            else:
+                plt.title(f"{title} ")  # {elapsed_time}")
         else:
-            plt.title(title)
+            if overlay_count > 0:
+                plt.title(f"Profile comparison ({overlay_count + 1} models)")
+            else:
+                plt.title(title)
 
     except Exception as ex:
         message = f"[ERR] Bad data selection: {ex}\n{traceback.format_exc()}"
@@ -979,7 +1104,12 @@ async def visualize_depth_profiles_s3(request: Request):
     csv_buf.seek(0)
     base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
-    content = {"image": base64_plot, "csv_data": base64_csv}
+    content = {
+        "image": base64_plot,
+        "csv_data": base64_csv,
+        "skipped_models": skipped_models,
+        "overlay_count": overlay_count,
+    }
 
     plot_data.close()
     del plot_data, data_to_plot
@@ -1172,12 +1302,19 @@ async def visualize_xsection_3d_s3(request: Request):
             vmin = min(float(items_dict["start_value"]), float(items_dict["end_value"]))
             vmax = max(float(items_dict["start_value"]), float(items_dict["end_value"]))
 
+            # Pass explicit levels so the colorbar spans exactly vmin..vmax
+            # regardless of this model's own data range. Without this,
+            # contourf auto-derives levels from the data, which makes
+            # cross-model compare panels show different colorbar ranges.
+            levels = np.linspace(vmin, vmax, 11)
             data_to_plot.plot.contourf(
                 x="distance",
                 y="depth",
                 cmap=cmap,
                 vmin=float(vmin),
                 vmax=float(vmax),
+                levels=levels,
+                extend="both",
             )
         elif vmin:
             data_to_plot.plot.contourf(

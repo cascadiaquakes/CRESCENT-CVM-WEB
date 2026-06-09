@@ -134,6 +134,31 @@ html.embedded #main-container {
     color: #ffffff;
 }
 
+.compare-hint {
+    display: block;
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: #64748b;
+    margin-top: 6px;
+    font-style: italic;
+}
+
+/* Shown in place of the multi-select when no other model has the
+   currently-selected variable. */
+.compare-empty {
+    display: block;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-style: italic;
+    min-height: 110px;
+    box-sizing: border-box;
+}
+
 /* Single-model legacy plot panel (#results-panel) -- inherit the same 20px
    inset as the cards above so the image and the download buttons line up. */
 html.embedded #results-panel {
@@ -195,12 +220,15 @@ html.embedded #results-panel > br {
     display: none !important;
 }
 
-/* Stacked comparison plot cards (shown when 2+ models are plotted at once) */
+/* Side-by-side comparison plot cards (shown when 2+ models are plotted at once).
+   auto-fit + minmax keeps panels side-by-side on wide screens and stacks them on
+   narrow ones, so the user can actually eyeball the differences. */
 .compare-results {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
     gap: 14px;
     margin: 16px 20px 0;
+    align-items: start;
 }
 
 .compare-plot-card {
@@ -208,6 +236,7 @@ html.embedded #results-panel > br {
     border: 1px solid #e8ecf0;
     border-radius: 12px;
     padding: 12px 14px;
+    min-width: 0;
 }
 
 .compare-plot-title-row {
@@ -236,6 +265,19 @@ html.embedded #results-panel > br {
 .compare-plot-err {
     font-size: 12px;
     color: #b91c1c;
+    font-style: italic;
+}
+
+/* Shown when a compare model has no data along the requested section
+   (the line is outside this model's geographic coverage). */
+.compare-plot-empty {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 14px 16px;
     font-style: italic;
 }
 

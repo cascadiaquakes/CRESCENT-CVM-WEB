@@ -3,7 +3,7 @@
 {% block style%}
 <link rel="stylesheet" href="/static/css/repository.css" />
 <link rel="stylesheet" href="/static/css/volume.css" />
-<link rel="stylesheet" href="/static/css/volume-data.css?v=6" />
+<link rel="stylesheet" href="/static/css/volume-data.css?v=12" />
 {%endblock%}
 {% block description%}
 <div id="description" style="display:none;">
@@ -240,6 +240,12 @@
 
                     <div class="form-card">
                         <div class="form-card-title">Variable</div>
+                        <div class="form-input compare-row">
+                            <label for="compare-models">Compare with</label>
+                            <select id="compare-models" multiple size="4" title="Ctrl/Cmd-click to pick extra models. The same point is profiled against each."></select>
+                            <small class="compare-empty" id="compareEmpty" style="display:none;"></small>
+                            <small class="compare-hint">Picking 1 or more plots each model's profile in its own panel for side-by-side comparison.</small>
+                        </div>
                         <div class="form-input">
                             <label for="plot-variable">Variable</label>
                             <select id="plot-variable" name="plot_variable"></select>
@@ -486,57 +492,314 @@
 
 
 
-    // Function to handle form submission
-    function handleSubmit(event) {
+    // --- Compare-mode helpers (depth-profile: side-by-side panels) ---
+    function modelLabelFromFilename(fileName) {
+        if (!fileName) return '';
+        let base = fileName.split('/').pop();
+        base = base.replace(/\.nc$/i, '').replace(/\.r0\.\d+$/i, '');
+        return base;
+    }
+
+    async function plotSingleModel(form, modelValue, modelText) {
+        const formData = new FormData(form);
+        formData.set('data_file', modelValue);
+        const label = modelText || modelLabelFromFilename(modelValue);
+        if (label) formData.set('title', label);
+        const response = await fetch(form.action, { method: 'POST', body: formData });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+    }
+
+    async function syncCompareModels() {
+        const primary = document.getElementById('data-file');
+        const compare = document.getElementById('compare-models');
+        if (!primary || !compare) return;
+        const primaryValue = primary.value;
+        const variableEl = document.getElementById('plot-variable');
+        const variableName = variableEl && variableEl.value ? variableEl.value : '';
+        const currentlySelected = new Set(Array.from(compare.selectedOptions).map(o => o.value));
+
+        let html = '';
+        try {
+            if (variableName) {
+                const r = await fetch(`/data/models_drop_down_s3?required_variable=${encodeURIComponent(variableName)}`);
+                if (r.ok) html = await r.text();
+            }
+        } catch (e) { console.warn('[compare] filtered list fetch failed', e); }
+        if (!html) html = primary.innerHTML;
+
+        const tmp = document.createElement('select');
+        tmp.innerHTML = html;
+        compare.innerHTML = '';
+        Array.from(tmp.options).forEach(opt => {
+            if (!opt.value || opt.value === primaryValue) return;
+            const o = document.createElement('option');
+            o.value = opt.value;
+            o.textContent = opt.text;
+            if (currentlySelected.has(opt.value)) o.selected = true;
+            compare.appendChild(o);
+        });
+
+        const emptyEl = document.getElementById('compareEmpty');
+        if (emptyEl) {
+            if (compare.options.length === 0 && variableName) {
+                emptyEl.textContent =
+                    `No other models contain the '${variableName}' variable. ` +
+                    `Pick a different Variable below to find compatible models, ` +
+                    `or compare against a model that shares this variable.`;
+                emptyEl.style.display = 'block';
+                compare.style.display = 'none';
+            } else {
+                emptyEl.textContent = '';
+                emptyEl.style.display = 'none';
+                compare.style.display = '';
+            }
+        }
+    }
+
+    function tryPopulateCompare(retries) {
+        if (retries === undefined) retries = 30;
+        const primary = document.getElementById('data-file');
+        if (primary && primary.options.length > 1) {
+            syncCompareModels();
+            return;
+        }
+        if (retries > 0) setTimeout(() => tryPopulateCompare(retries - 1), 300);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        tryPopulateCompare();
+        const primary = document.getElementById('data-file');
+        const variable = document.getElementById('plot-variable');
+        if (primary) primary.addEventListener('change', () => setTimeout(syncCompareModels, 500));
+        if (variable) variable.addEventListener('change', syncCompareModels);
+        if (variable) new MutationObserver(() => syncCompareModels()).observe(variable, { childList: true });
+    });
+
+    function decodeBase64Csv(b64) {
+        if (!b64 || typeof b64 !== 'string') return null;
+        try { return atob(b64); } catch (e) { return null; }
+    }
+    function isPlotEmpty(b64CsvData, variableName) {
+        if (!b64CsvData) return true;
+        const csvText = decodeBase64Csv(b64CsvData);
+        if (!csvText) return true;
+        const lines = csvText.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return true;
+        const header = lines[0].split(',').map(s => s.trim());
+        const v = (variableName || '').toLowerCase();
+        let colIdx = header.findIndex(h => h.toLowerCase() === v);
+        if (colIdx === -1 && v) colIdx = header.findIndex(h => h.toLowerCase().includes(v));
+        if (colIdx === -1) colIdx = header.length - 1;
+        for (let i = 1; i < lines.length; i++) {
+            const cells = lines[i].split(',');
+            if (cells.length <= colIdx) continue;
+            const x = parseFloat(cells[colIdx]);
+            if (!isNaN(x) && isFinite(x)) return false;
+        }
+        return true;
+    }
+    const __coverageCache = {};
+    async function fetchModelCoverage(fileName) {
+        if (!fileName) return null;
+        if (__coverageCache[fileName]) return __coverageCache[fileName];
+        try {
+            const jsonFile = fileName.replace(/\.nc$/i, '.json');
+            const r = await fetch(`/data/fetch_json_s3?file_name=${encodeURIComponent(jsonFile)}`);
+            if (!r.ok) return null;
+            const data = await r.json();
+            const cov = {
+                latMin: data.geospatial_lat_min,
+                latMax: data.geospatial_lat_max,
+                lonMin: data.geospatial_lon_min,
+                lonMax: data.geospatial_lon_max,
+            };
+            __coverageCache[fileName] = cov;
+            return cov;
+        } catch (e) { return null; }
+    }
+
+    function ensureCompareContainer() {
+        let container = document.getElementById('compareResults');
+        if (container) return container;
+        container = document.createElement('div');
+        container.id = 'compareResults';
+        container.className = 'compare-results';
+        const dp = document.getElementById('dynamicPlot');
+        if (dp && dp.parentNode) dp.parentNode.insertBefore(container, dp);
+        else document.body.appendChild(container);
+        return container;
+    }
+
+    function downloadBase64(b64, filename, mime) {
+        const a = document.createElement('a');
+        a.href = `data:${mime};base64,${b64}`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function wireDownloadButtons(result) {
+        const dlBtn = document.getElementById('downloadPlotButton');
+        const dlData = document.getElementById('downloadDataButton');
+        if (dlBtn) {
+            dlBtn.style.display = 'inline';
+            dlBtn.onclick = () => downloadBase64(result.image, (result.model || 'model') + '_depth_profile.png', 'image/png');
+        }
+        if (dlData && result.csv_data) {
+            dlData.style.display = 'inline';
+            dlData.onclick = () => downloadBase64(result.csv_data, (result.model || 'model') + '_depth_profile.csv', 'text/csv');
+        }
+    }
+
+    function renderCompareResults(results) {
+        const container = ensureCompareContainer();
+        container.innerHTML = '';
+        const dp = document.getElementById('dynamicPlot');
+        if (dp) dp.style.display = 'none';
+
+        if (results.length === 1 && results[0].image) {
+            const r = results[0];
+            const imageUrl = `data:image/png;base64,${r.image}`;
+            if (dp) {
+                dp.src = imageUrl;
+                dp.style.display = 'block';
+                dp.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+            wireDownloadButtons(r);
+            return;
+        }
+
+        results.forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'compare-plot-card';
+            const titleRow = document.createElement('div');
+            titleRow.className = 'compare-plot-title-row';
+            const title = document.createElement('div');
+            title.className = 'compare-plot-title';
+            title.textContent = r.model;
+            titleRow.appendChild(title);
+            if (r.image) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'button-copy';
+                btn.textContent = 'Download PNG';
+                btn.addEventListener('click', () => downloadBase64(r.image, r.model + '_depth_profile.png', 'image/png'));
+                titleRow.appendChild(btn);
+            }
+            card.appendChild(titleRow);
+            if (r.image) {
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${r.image}`;
+                img.alt = r.model + ' depth profile';
+                img.className = 'compare-plot-img';
+                card.appendChild(img);
+            } else if (r.noData) {
+                const empty = document.createElement('div');
+                empty.className = 'compare-plot-empty';
+                let msg = 'No data at this point in this model.';
+                if (r.coverage) {
+                    const c = r.coverage;
+                    const fmt = (v) => (v === undefined || v === null || isNaN(v)) ? '?' : (Math.round(v * 10) / 10);
+                    msg += ` Coverage: lat ${fmt(c.latMin)}°–${fmt(c.latMax)}°, lon ${fmt(c.lonMin)}°–${fmt(c.lonMax)}°.`;
+                }
+                empty.textContent = msg;
+                card.appendChild(empty);
+            } else {
+                const err = document.createElement('div');
+                err.className = 'compare-plot-err';
+                err.textContent = 'Failed to generate plot for this model.';
+                card.appendChild(err);
+            }
+            container.appendChild(card);
+        });
+        container.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
         const loadingElement = document.getElementById('loadingMessage');
-        loadingElement.style.display = 'block'; // Show the loading message
-
+        if (loadingElement) loadingElement.style.display = 'block';
         const jsonContent = document.getElementById('jsonContent');
-        jsonContent.style.display = 'none'; // Show the loading message
+        if (jsonContent) jsonContent.style.display = 'none';
 
-        event.preventDefault(); // Prevent the default form submission
-        var form = event.target; // Get the form element
-        var url = form.action; // Get the action URL of the form
-        var formData = new FormData(form); // Create FormData object from the form data
-        // Make a POST request to the CGI script
-        fetch(url, {
-            method: 'POST',
-            body: formData
-        })
-            .then(response => response.json())
-            .then(data => {
-                const imageUrl = `data:image/png;base64,${data.image}`;
-                const dynamicPlotElement = document.getElementById('dynamicPlot');
-                dynamicPlotElement.src = imageUrl;
-                dynamicPlotElement.style.display = 'block';
+        const form = event.target;
+        const primary = document.getElementById('data-file');
+        const primaryText = primary.options[primary.selectedIndex].text;
+        const primaryValue = primary.value;
+        const compareSelect = document.getElementById('compare-models');
+        const compareModels = compareSelect
+            ? Array.from(compareSelect.selectedOptions).map(o => ({ value: o.value, text: o.text })).filter(m => m.value && m.value !== primaryValue)
+            : [];
 
-                // Scroll to the dynamicPlot div
-                dynamicPlotElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                document.getElementById('downloadPlotButton').addEventListener('click', () => {
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = imageUrl;
-                    downloadLink.download = model + '_xsection_plot.png';
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
+        // Single POST: backend overlays all models on one figure with a legend.
+        const formData = new FormData(form);
+        formData.set('data_file', primaryValue);
+        if (primaryText) formData.set('title', primaryText);
+        if (compareModels.length > 0) {
+            formData.set('compare_files', compareModels.map(m => m.value).join(','));
+        }
+
+        try {
+            const response = await fetch(form.action, { method: 'POST', body: formData });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const data = await response.json();
+
+            const compareContainer = ensureCompareContainer();
+            compareContainer.innerHTML = '';
+
+            const dp = document.getElementById('dynamicPlot');
+            const imageUrl = `data:image/png;base64,${data.image}`;
+            dp.src = imageUrl;
+            dp.style.display = 'block';
+            dp.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
+            const modelLabel = compareModels.length > 0
+                ? `${primaryText}_vs_${compareModels.length}_models`
+                : primaryText;
+            wireDownloadButtons({ model: modelLabel, image: data.image, csv_data: data.csv_data });
+
+            // Surface any compare models the backend couldn't plot (out of coverage, etc.)
+            if (Array.isArray(data.skipped_models) && data.skipped_models.length > 0) {
+                const notice = document.createElement('div');
+                notice.className = 'compare-plot-card';
+                notice.style.gridColumn = '1 / -1';
+                const titleRow = document.createElement('div');
+                titleRow.className = 'compare-plot-title-row';
+                const title = document.createElement('div');
+                title.className = 'compare-plot-title';
+                title.textContent = `Not plotted (${data.skipped_models.length})`;
+                titleRow.appendChild(title);
+                notice.appendChild(titleRow);
+                data.skipped_models.forEach(sm => {
+                    const row = document.createElement('div');
+                    row.className = 'compare-plot-empty';
+                    row.style.marginTop = '8px';
+                    let msg = `${sm.model}: ${sm.reason}`;
+                    const c = sm.coverage;
+                    if (c && (c.latMin != null || c.lonMin != null)) {
+                        const fmt = (v) => (v == null || isNaN(v)) ? '?' : (Math.round(v * 10) / 10);
+                        msg += ` Coverage: lat ${fmt(c.latMin)}°–${fmt(c.latMax)}°, lon ${fmt(c.lonMin)}°–${fmt(c.lonMax)}°.`;
+                    }
+                    row.textContent = msg;
+                    notice.appendChild(row);
                 });
-                document.getElementById('downloadPlotButton').style.display = 'inline';
-                document.getElementById('downloadDataButton').style.display = 'inline;'
+                compareContainer.appendChild(notice);
+            }
+        } catch (e) {
+            console.error('Depth-profile plot failed:', e);
+            const dp = document.getElementById('dynamicPlot');
+            if (dp) dp.style.display = 'none';
+            const container = ensureCompareContainer();
+            container.innerHTML = '';
+            const err = document.createElement('div');
+            err.className = 'compare-plot-err';
+            err.textContent = 'Failed to generate plot. Check the console for details.';
+            container.appendChild(err);
+        }
 
-                document.getElementById('downloadDataButton').addEventListener('click', () => {
-                    const csvData = `data:text/csv;base64,${data.csv_data}`;
-                    const downloadLink = document.createElement('a');
-                    downloadLink.href = csvData;
-                    downloadLink.download = model + '_xsection_data.csv';
-                    document.body.appendChild(downloadLink);
-                    downloadLink.click();
-                    document.body.removeChild(downloadLink);
-                });
-                document.getElementById('downloadDataButton').style.display = 'inline';
-                loadingElement.style.display = 'none';
-            })
-            .catch(error => console.error('Error fetching plot and data:', error));
-
+        if (loadingElement) loadingElement.style.display = 'none';
     }
 
     // Add event listener to the form for submit event
