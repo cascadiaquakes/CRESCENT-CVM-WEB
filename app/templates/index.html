@@ -347,6 +347,37 @@
         </div>
     </div>
 
+    <!-- Fullscreen plot overlay. Tool panels postMessage the data URL of a
+         rendered figure here so it can be inspected at full browser size,
+         escaping the narrow side-panel iframe. -->
+    <div id="plotFullscreenOverlay"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.93);
+                z-index:100000;align-items:center;justify-content:center;
+                padding:24px;flex-direction:column;">
+        <div style="position:absolute;top:14px;right:18px;display:flex;gap:10px;">
+            <a id="plotFullscreenDownload" download="" style="display:inline-flex;align-items:center;
+                gap:6px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);
+                padding:8px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-family:sans-serif;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+            </a>
+            <button id="plotFullscreenClose" type="button" aria-label="Close fullscreen"
+                style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);
+                       width:34px;height:34px;border-radius:6px;font-size:20px;cursor:pointer;
+                       line-height:1;padding:0;">&times;</button>
+        </div>
+        <div id="plotFullscreenTitle" style="color:#e5f3f5;font-family:sans-serif;font-size:14px;
+             margin-bottom:14px;opacity:0.85;"></div>
+        <img id="plotFullscreenImage" src="" alt="Full size plot"
+             style="width:92vw;height:calc(100vh - 90px);object-fit:contain;
+                    background:#fff;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,0.5);" />
+    </div>
+
     <!-- Bottom-right toggle to open / close the metadata panel -->
     <button type="button" class="btn-show-metadata" id="showMetadataBtn" onclick="toggleMetadataPanel()" title="Model metadata" aria-label="Model metadata">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -704,11 +735,53 @@
     // requested geometry (rectangle, line, or point) on the main 3D Cesium
     // map so the user sees the effect of their inputs without leaving the
     // page. Each tool passes geometry: 'rectangle' | 'line' | 'point'.
+    // Fullscreen plot overlay wiring.
+    function _closePlotFullscreen() {
+        const overlay = document.getElementById('plotFullscreenOverlay');
+        const img = document.getElementById('plotFullscreenImage');
+        if (overlay) overlay.style.display = 'none';
+        if (img) img.src = '';
+    }
+    function _openPlotFullscreen(src, title, filename) {
+        const overlay = document.getElementById('plotFullscreenOverlay');
+        const img = document.getElementById('plotFullscreenImage');
+        const t = document.getElementById('plotFullscreenTitle');
+        const dl = document.getElementById('plotFullscreenDownload');
+        if (!overlay || !img) return;
+        img.src = src;
+        if (t) t.textContent = title || '';
+        if (dl) {
+            dl.href = src;
+            dl.download = filename || 'plot.png';
+        }
+        overlay.style.display = 'flex';
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const overlay = document.getElementById('plotFullscreenOverlay');
+        const closeBtn = document.getElementById('plotFullscreenClose');
+        if (closeBtn) closeBtn.addEventListener('click', _closePlotFullscreen);
+        if (overlay) {
+            // Click on the dark backdrop (not on the image or its toolbar) closes.
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) _closePlotFullscreen();
+            });
+        }
+        window.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay && overlay.style.display !== 'none') {
+                _closePlotFullscreen();
+            }
+        });
+    });
+
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin) return;
         const msg = event.data || {};
         if (msg.type === 'pickFromMap') {
             startPickFromMap(msg.geometry || 'line', event.source);
+            return;
+        }
+        if (msg.type === 'viewPlotFullscreen') {
+            _openPlotFullscreen(msg.src, msg.title, msg.filename);
             return;
         }
         // Back-compat: volume previously sent type 'syncVolumeToMainMap'.
