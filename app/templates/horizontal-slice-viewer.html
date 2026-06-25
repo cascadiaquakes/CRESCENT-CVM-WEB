@@ -325,6 +325,13 @@
                     <!-- Action card -->
                     <div class="form-card action-card">
                         <div class="form-actions">
+                            <button type="button" id="pick-on-map" class="button" title="Click two opposite corners on the main map to set the area">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <path d="M12 22s8-7 8-13a8 8 0 0 0-16 0c0 6 8 13 8 13z"/>
+                                    <circle cx="12" cy="9" r="3"/>
+                                </svg>
+                                <span>Pick on map</span>
+                            </button>
                             <button type="button" id="sync-to-iframe" class="button">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                     <polyline points="23 4 23 10 17 10"/>
@@ -350,6 +357,9 @@
     <div id="results-panel" class="action_side" style="width:100%; border:none;">
         <img id="dynamicPlot" src="" alt="Dynamic Plot" style="display:none;vertical-align: top;">
         <br>
+        <button id="viewPlotFullscreenButton"
+            style="display:none; width:20%;background-color: #0b4a53;color: white;border-radius: 15px;font-size: 9pt;">View
+            Full Size</button>
         <button id="downloadPlotButton"
             style="display:none; width:20%;background-color: #004F59;color: white;; border-radius: 15px;font-size: 9pt;">Download
             Plot</button>
@@ -495,6 +505,33 @@
 
         // Sync to iframe button
         document.getElementById('sync-to-iframe').addEventListener('click', syncToIframe);
+
+        // Pick on map: rectangle. Two corner clicks fill the four lat/lng inputs.
+        const pickBtn = document.getElementById('pick-on-map');
+        if (pickBtn) {
+            pickBtn.addEventListener('click', function () {
+                try {
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage({ type: 'pickFromMap', geometry: 'rectangle' },
+                            window.location.origin);
+                    }
+                } catch (e) { /* cross-origin; ignore */ }
+            });
+        }
+        window.addEventListener('message', function (event) {
+            if (event.origin !== window.location.origin) return;
+            const msg = event.data || {};
+            if (msg.type !== 'pickResult') return;
+            const d = msg.data || {};
+            ['start-lat', 'start-lng', 'end-lat', 'end-lng'].forEach(id => {
+                if (d[id] === undefined) return;
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.value = d[id];
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+            syncToIframe();
+        });
     });
 
 
@@ -735,6 +772,7 @@
     function wireDownloadButtons(result) {
         const dlBtn = document.getElementById('downloadPlotButton');
         const dlData = document.getElementById('downloadDataButton');
+        const fsBtn = document.getElementById('viewPlotFullscreenButton');
         if (dlBtn) {
             dlBtn.style.display = 'inline';
             dlBtn.onclick = () => downloadBase64(result.image, (result.model || 'model') + '_depth_slice_plot.png', 'image/png');
@@ -743,6 +781,23 @@
             dlData.style.display = 'inline';
             dlData.onclick = () => downloadBase64(result.csv_data, (result.model || 'model') + '_depth_slice_data.csv', 'text/csv');
         }
+        if (fsBtn && result.image) {
+            fsBtn.style.display = 'inline';
+            fsBtn.onclick = () => openPlotFullscreen(
+                'data:image/png;base64,' + result.image,
+                result.model || '',
+                (result.model || 'model') + '_depth_slice_plot.png');
+        }
+    }
+
+    function openPlotFullscreen(src, title, filename) {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'viewPlotFullscreen', src, title, filename,
+                }, window.location.origin);
+            }
+        } catch (e) { /* cross-origin; ignore */ }
     }
 
     function renderCompareResults(results) {
@@ -773,6 +828,14 @@
             title.textContent = r.model;
             titleRow.appendChild(title);
             if (r.image) {
+                const viewBtn = document.createElement('button');
+                viewBtn.type = 'button';
+                viewBtn.className = 'button-copy';
+                viewBtn.textContent = 'View Full Size';
+                viewBtn.addEventListener('click', () => openPlotFullscreen(
+                    'data:image/png;base64,' + r.image, r.model, r.model + '_depth_slice.png'));
+                titleRow.appendChild(viewBtn);
+
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'button-copy';

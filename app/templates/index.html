@@ -347,6 +347,37 @@
         </div>
     </div>
 
+    <!-- Fullscreen plot overlay. Tool panels postMessage the data URL of a
+         rendered figure here so it can be inspected at full browser size,
+         escaping the narrow side-panel iframe. -->
+    <div id="plotFullscreenOverlay"
+         style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.93);
+                z-index:100000;align-items:center;justify-content:center;
+                padding:24px;flex-direction:column;">
+        <div style="position:absolute;top:14px;right:18px;display:flex;gap:10px;">
+            <a id="plotFullscreenDownload" download="" style="display:inline-flex;align-items:center;
+                gap:6px;background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);
+                padding:8px 14px;border-radius:6px;font-size:13px;text-decoration:none;font-family:sans-serif;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Download
+            </a>
+            <button id="plotFullscreenClose" type="button" aria-label="Close fullscreen"
+                style="background:rgba(255,255,255,0.12);color:#fff;border:1px solid rgba(255,255,255,0.3);
+                       width:34px;height:34px;border-radius:6px;font-size:20px;cursor:pointer;
+                       line-height:1;padding:0;">&times;</button>
+        </div>
+        <div id="plotFullscreenTitle" style="color:#e5f3f5;font-family:sans-serif;font-size:14px;
+             margin-bottom:14px;opacity:0.85;"></div>
+        <img id="plotFullscreenImage" src="" alt="Full size plot"
+             style="width:92vw;height:calc(100vh - 90px);object-fit:contain;
+                    background:#fff;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,0.5);" />
+    </div>
+
     <!-- Bottom-right toggle to open / close the metadata panel -->
     <button type="button" class="btn-show-metadata" id="showMetadataBtn" onclick="toggleMetadataPanel()" title="Model metadata" aria-label="Model metadata">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -479,13 +510,280 @@
         document.getElementById("metadataPanel")?.classList.toggle("open");
     }
 
+    // --- Pick-on-map: tool panels can ask the user to click the main globe
+    // to define a line (cross-section), rectangle (volume / horizontal slice),
+    // or point (depth profile), and we ship the resulting lat/lng back so the
+    // tool can populate its form inputs without typing.
+    let _activePickState = null;
+    function _cleanupPick() {
+        if (!_activePickState) return;
+        const { viewer, handler, escListener, markers, prevRenderMode } = _activePickState;
+        try { handler && handler.destroy(); } catch (_) {}
+        if (escListener) window.removeEventListener('keydown', escListener);
+        if (viewer) {
+            try {
+                markers.forEach(id => {
+                    const e = viewer.entities.getById(id);
+                    if (e) viewer.entities.remove(e);
+                });
+                const preview = viewer.entities.getById('pickPreview');
+                if (preview) viewer.entities.remove(preview);
+                viewer.scene.canvas.style.cursor = '';
+                if (viewer.scene.screenSpaceCameraController) {
+                    viewer.scene.screenSpaceCameraController.enableInputs = true;
+                }
+                if (prevRenderMode !== undefined) {
+                    viewer.scene.requestRenderMode = prevRenderMode;
+                }
+                viewer.scene.requestRender();
+            } catch (_) {}
+        }
+        const banner = document.getElementById('pickStatusBanner');
+        if (banner) banner.style.display = 'none';
+        _activePickState = null;
+    }
+    function _showPickBanner(text) {
+        let banner = document.getElementById('pickStatusBanner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'pickStatusBanner';
+            banner.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);'
+                + 'z-index:99999;background:rgba(15,42,49,0.92);color:#e5f3f5;'
+                + 'padding:9px 16px;border-radius:999px;font-size:13px;'
+                + 'box-shadow:0 4px 14px rgba(0,0,0,0.35);font-family:sans-serif;'
+                + 'border:1px solid rgba(229,243,245,0.25);';
+            document.body.appendChild(banner);
+        }
+        banner.innerHTML = text + ' <span style="opacity:0.55;margin-left:10px;font-size:11px;">Esc to cancel</span>';
+        banner.style.display = 'block';
+    }
+    function startPickFromMap(geometry, sourceWindow) {
+        const iframe = document.getElementById('3dIframe');
+        const viewer = iframe && iframe.contentWindow && iframe.contentWindow.viewer;
+        const Cesium = iframe && iframe.contentWindow && iframe.contentWindow.Cesium;
+        if (!viewer || !Cesium) return;
+
+        _cleanupPick();
+
+        // Clear any persistent "Sync to map" outline left over from the
+        // previous selection. Re-picking should give the user a clean slate
+        // and Esc-cancel should also leave the map empty rather than showing
+        // a stale outline.
+        const oldSync = viewer.entities.getById('toolSyncOutline');
+        if (oldSync) viewer.entities.remove(oldSync);
+
+        const required = (geometry === 'point') ? 1 : 2;
+        const clicks = [];
+        const markers = [];
+        const PREVIEW_ID = 'pickPreview';
+        let _previewCursor = null;
+
+        viewer.scene.canvas.style.cursor = 'crosshair';
+
+        const pickCartesian = (winPos) => {
+            let c = viewer.scene.pickPosition(winPos);
+            if (!c || isNaN(c.x)) {
+                c = viewer.camera.pickEllipsoid(winPos, viewer.scene.globe.ellipsoid);
+            }
+            return c;
+        };
+        const toLatLng = (cartesian) => {
+            const carto = Cesium.Cartographic.fromCartesian(cartesian);
+            return {
+                lat: Cesium.Math.toDegrees(carto.latitude),
+                lng: Cesium.Math.toDegrees(carto.longitude),
+            };
+        };
+
+        const promptForNextClick = () => {
+            if (geometry === 'point') {
+                _showPickBanner('Click the map to set the profile point.');
+            } else if (geometry === 'line') {
+                _showPickBanner(clicks.length === 0
+                    ? 'Click the map to set the <b>start</b> of the cross-section.'
+                    : 'Click again to set the <b>end</b> of the cross-section.');
+            } else if (geometry === 'rectangle') {
+                _showPickBanner(clicks.length === 0
+                    ? 'Click the map to set <b>one corner</b> of the area.'
+                    : 'Click the <b>opposite corner</b> to finish.');
+            }
+        };
+
+        // The preview entity is added once after the first click; it reads
+        // _previewCursor each frame via CallbackProperty, which is much
+        // smoother than removing and re-adding the entity on every mouse-move.
+        const ensurePreviewEntity = (first) => {
+            if (viewer.entities.getById(PREVIEW_ID)) return;
+            const positionsCallback = new Cesium.CallbackProperty(() => {
+                const cur = _previewCursor || first;
+                if (geometry === 'line') {
+                    return Cesium.Cartesian3.fromDegreesArray([
+                        first.lng, first.lat, cur.lng, cur.lat,
+                    ]);
+                }
+                // rectangle
+                const latMin = Math.min(first.lat, cur.lat);
+                const latMax = Math.max(first.lat, cur.lat);
+                const lngMin = Math.min(first.lng, cur.lng);
+                const lngMax = Math.max(first.lng, cur.lng);
+                return Cesium.Cartesian3.fromDegreesArray([
+                    lngMin, latMin,
+                    lngMax, latMin,
+                    lngMax, latMax,
+                    lngMin, latMax,
+                    lngMin, latMin,
+                ]);
+            }, false);
+            viewer.entities.add({
+                id: PREVIEW_ID,
+                polyline: {
+                    positions: positionsCallback,
+                    width: 4,
+                    material: Cesium.Color.YELLOW.withAlpha(0.8),
+                },
+            });
+        };
+
+        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+        const finish = (data) => {
+            if (sourceWindow) {
+                try {
+                    sourceWindow.postMessage({ type: 'pickResult', geometry, data }, window.location.origin);
+                } catch (_) {}
+            }
+            _cleanupPick();
+        };
+
+        // All geometries use the same click-based pattern: click to drop
+        // a marker, see a live preview as the mouse moves to the next click,
+        // click again to finalize. Point = 1 click, line + rectangle = 2.
+        handler.setInputAction((m) => {
+            const cart = pickCartesian(m.position);
+            if (!cart) return;
+            const ll = toLatLng(cart);
+            clicks.push(ll);
+
+            const markerId = 'pickMarker_' + clicks.length;
+            viewer.entities.add({
+                id: markerId,
+                position: cart,
+                point: {
+                    pixelSize: 12,
+                    color: Cesium.Color.YELLOW,
+                    outlineColor: Cesium.Color.BLACK,
+                    outlineWidth: 2,
+                },
+            });
+            markers.push(markerId);
+
+            if (clicks.length >= required) {
+                if (geometry === 'point') {
+                    finish({
+                        'start-lat': clicks[0].lat.toFixed(4),
+                        'start-lng': clicks[0].lng.toFixed(4),
+                    });
+                } else if (geometry === 'line') {
+                    finish({
+                        'start-lat': clicks[0].lat.toFixed(4),
+                        'start-lng': clicks[0].lng.toFixed(4),
+                        'end-lat': clicks[1].lat.toFixed(4),
+                        'end-lng': clicks[1].lng.toFixed(4),
+                    });
+                } else if (geometry === 'rectangle') {
+                    finish({
+                        'start-lat': Math.min(clicks[0].lat, clicks[1].lat).toFixed(4),
+                        'end-lat': Math.max(clicks[0].lat, clicks[1].lat).toFixed(4),
+                        'start-lng': Math.min(clicks[0].lng, clicks[1].lng).toFixed(4),
+                        'end-lng': Math.max(clicks[0].lng, clicks[1].lng).toFixed(4),
+                    });
+                }
+            } else {
+                promptForNextClick();
+                viewer.scene.requestRender();
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+        if (geometry !== 'point') {
+            handler.setInputAction((m) => {
+                if (clicks.length !== 1) return;
+                const cart = pickCartesian(m.endPosition);
+                if (!cart) return;
+                _previewCursor = toLatLng(cart);
+                ensurePreviewEntity(clicks[0]);
+                // requestRenderMode is off during pick, so no manual render
+                // needed; the CallbackProperty reads _previewCursor each frame.
+            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        }
+
+        const escListener = (e) => {
+            if (e.key === 'Escape') _cleanupPick();
+        };
+        window.addEventListener('keydown', escListener);
+
+        // Cesium normally renders on demand (requestRenderMode=true). Flip it
+        // off while picking so the preview line/rectangle updates smoothly as
+        // the mouse moves, then restore the previous setting on cleanup.
+        const prevRenderMode = viewer.scene.requestRenderMode;
+        viewer.scene.requestRenderMode = false;
+
+        _activePickState = { viewer, handler, escListener, markers, prevRenderMode };
+        promptForNextClick();
+    }
+
     // Forwarded from any tool-panel iframe ("Sync to map" button). Draws the
     // requested geometry (rectangle, line, or point) on the main 3D Cesium
     // map so the user sees the effect of their inputs without leaving the
     // page. Each tool passes geometry: 'rectangle' | 'line' | 'point'.
+    // Fullscreen plot overlay wiring.
+    function _closePlotFullscreen() {
+        const overlay = document.getElementById('plotFullscreenOverlay');
+        const img = document.getElementById('plotFullscreenImage');
+        if (overlay) overlay.style.display = 'none';
+        if (img) img.src = '';
+    }
+    function _openPlotFullscreen(src, title, filename) {
+        const overlay = document.getElementById('plotFullscreenOverlay');
+        const img = document.getElementById('plotFullscreenImage');
+        const t = document.getElementById('plotFullscreenTitle');
+        const dl = document.getElementById('plotFullscreenDownload');
+        if (!overlay || !img) return;
+        img.src = src;
+        if (t) t.textContent = title || '';
+        if (dl) {
+            dl.href = src;
+            dl.download = filename || 'plot.png';
+        }
+        overlay.style.display = 'flex';
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const overlay = document.getElementById('plotFullscreenOverlay');
+        const closeBtn = document.getElementById('plotFullscreenClose');
+        if (closeBtn) closeBtn.addEventListener('click', _closePlotFullscreen);
+        if (overlay) {
+            // Click on the dark backdrop (not on the image or its toolbar) closes.
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) _closePlotFullscreen();
+            });
+        }
+        window.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && overlay && overlay.style.display !== 'none') {
+                _closePlotFullscreen();
+            }
+        });
+    });
+
     window.addEventListener("message", function (event) {
         if (event.origin !== window.location.origin) return;
         const msg = event.data || {};
+        if (msg.type === 'pickFromMap') {
+            startPickFromMap(msg.geometry || 'line', event.source);
+            return;
+        }
+        if (msg.type === 'viewPlotFullscreen') {
+            _openPlotFullscreen(msg.src, msg.title, msg.filename);
+            return;
+        }
         // Back-compat: volume previously sent type 'syncVolumeToMainMap'.
         if (msg.type !== "syncToolToMainMap" && msg.type !== "syncVolumeToMainMap") return;
         const d = msg.data || {};
