@@ -357,6 +357,9 @@
     <div id="results-panel" class="action_side" style="width:100%; border:none;">
         <img id="dynamicPlot" src="" alt="Dynamic Plot" style="display:none;vertical-align: top;">
         <br>
+        <button id="viewPlotFullscreenButton"
+            style="display:none; width:20%;background-color: #0b4a53;color: white;border-radius: 15px;font-size: 9pt;">View
+            Full Size</button>
         <button id="downloadPlotButton"
             style="display:none; width:20%;background-color: #004F59;color: white;; border-radius: 15px;font-size: 9pt;">Download
             Plot</button>
@@ -769,6 +772,7 @@
     function wireDownloadButtons(result) {
         const dlBtn = document.getElementById('downloadPlotButton');
         const dlData = document.getElementById('downloadDataButton');
+        const fsBtn = document.getElementById('viewPlotFullscreenButton');
         if (dlBtn) {
             dlBtn.style.display = 'inline';
             dlBtn.onclick = () => downloadBase64(result.image, (result.model || 'model') + '_depth_slice_plot.png', 'image/png');
@@ -777,6 +781,23 @@
             dlData.style.display = 'inline';
             dlData.onclick = () => downloadBase64(result.csv_data, (result.model || 'model') + '_depth_slice_data.csv', 'text/csv');
         }
+        if (fsBtn && result.image) {
+            fsBtn.style.display = 'inline';
+            fsBtn.onclick = () => openPlotFullscreen(
+                'data:image/png;base64,' + result.image,
+                result.model || '',
+                (result.model || 'model') + '_depth_slice_plot.png');
+        }
+    }
+
+    function openPlotFullscreen(src, title, filename) {
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'viewPlotFullscreen', src, title, filename,
+                }, window.location.origin);
+            }
+        } catch (e) { /* cross-origin; ignore */ }
     }
 
     function renderCompareResults(results) {
@@ -807,6 +828,14 @@
             title.textContent = r.model;
             titleRow.appendChild(title);
             if (r.image) {
+                const viewBtn = document.createElement('button');
+                viewBtn.type = 'button';
+                viewBtn.className = 'button-copy';
+                viewBtn.textContent = 'View Full Size';
+                viewBtn.addEventListener('click', () => openPlotFullscreen(
+                    'data:image/png;base64,' + r.image, r.model, r.model + '_depth_slice.png'));
+                titleRow.appendChild(viewBtn);
+
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'button-copy';
