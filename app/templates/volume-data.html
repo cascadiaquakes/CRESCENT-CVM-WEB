@@ -282,12 +282,16 @@
 
                 <div class="form-card">
                     <div class="request-url-header">
-                        <div class="form-card-title">Submit data request <span class="title-hint">(click to send, edit form to modify URL)</span></div>
-                        <button type="button" id="copyRequestUrl" class="button-copy" onclick="copyRequestUrl()">Copy URL</button>
+                        <div class="form-card-title">Submit data request <span class="title-hint">(click Download, or use the URL to script the request)</span></div>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" id="downloadExtractBtn" class="button button-primary-action">Download</button>
+                            <button type="button" id="copyRequestUrl" class="button-copy" onclick="copyRequestUrl()">Copy URL</button>
+                        </div>
                     </div>
                     <div id="generatedUrl">
                         <a id="dynamicLink" href="" target="_blank"></a>
                     </div>
+                    <div id="extractStatus" class="extract-status" style="display:none;margin-top:8px;font-size:12px;"></div>
                 </div>
                 <!--<label for="requestUrl">Direct request URL:</label>
                 <div id="requestUrl" style="width:100%;"></div><br /><br />
@@ -509,6 +513,10 @@
         // Sync to iframe button
         document.getElementById('sync-to-iframe').addEventListener('click', syncToIframe);
 
+        // Download button for the extract URL (with retry-on-500 for Lambda cold starts).
+        const dlBtn = document.getElementById('downloadExtractBtn');
+        if (dlBtn) dlBtn.addEventListener('click', downloadExtract);
+
         // Pick on map: rectangle.
         const pickBtn = document.getElementById('pick-on-map');
         if (pickBtn) {
@@ -578,6 +586,76 @@
                 btn.classList.remove('is-copied');
             }, 1400);
         });
+    }
+
+    // Fetch the request URL, save the response as a file, and retry on 500
+    // because the upstream Lambda often cold-starts and 500s on the first hit.
+    async function downloadExtract() {
+        const link = document.getElementById('dynamicLink');
+        const btn = document.getElementById('downloadExtractBtn');
+        const status = document.getElementById('extractStatus');
+        if (!link || !btn) return;
+        const url = link.href || link.textContent || '';
+        if (!url || url === window.location.href) {
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = '#b91c1c';
+                status.textContent = 'Fill out the form first to build a download URL.';
+            }
+            return;
+        }
+        const showStatus = (msg, color) => {
+            if (!status) return;
+            status.style.display = 'block';
+            status.style.color = color || '#0b4a53';
+            status.textContent = msg;
+        };
+        const originalLabel = btn.textContent;
+        btn.disabled = true;
+        const MAX_ATTEMPTS = 3;
+        let lastErr = null;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            btn.textContent = attempt === 1
+                ? 'Downloading...'
+                : 'Retrying (' + attempt + '/' + MAX_ATTEMPTS + ')...';
+            showStatus(attempt === 1
+                ? 'Submitting request...'
+                : 'Backend cold-started, retrying...');
+            try {
+                const resp = await fetch(url);
+                if (resp.status === 500 && attempt < MAX_ATTEMPTS) {
+                    await new Promise(r => setTimeout(r, 1500 * attempt));
+                    continue;
+                }
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                const blob = await resp.blob();
+                const disp = resp.headers.get('Content-Disposition') || '';
+                const m = disp.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+                const filename = m ? decodeURIComponent(m[1])
+                    : 'cvm_volume_' + new Date().toISOString().slice(0,10) + '.nc';
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(a.href);
+                showStatus('Saved ' + filename, '#0b4a53');
+                btn.disabled = false;
+                btn.textContent = originalLabel;
+                return;
+            } catch (e) {
+                lastErr = e;
+                if (attempt < MAX_ATTEMPTS) {
+                    await new Promise(r => setTimeout(r, 1500 * attempt));
+                }
+            }
+        }
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        showStatus('Download failed after ' + MAX_ATTEMPTS + ' attempts ('
+            + (lastErr && lastErr.message ? lastErr.message : 'unknown error')
+            + '). Try again or use the URL directly.', '#b91c1c');
     }
 
     // Function to handle form submission
