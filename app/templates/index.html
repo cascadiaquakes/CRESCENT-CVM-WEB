@@ -43,8 +43,19 @@
                     </span>
                 </button>
                 <div class="accordion-body">
-                    <p class="compare-hint">Click the dot on the right of any row to outline that model on the map (up to 8 at once).</p>
-                    <div class="model-table-wrap">
+                    <div class="field-row">
+                        <label for="primaryModelSelect">Model</label>
+                        <select id="primaryModelSelect" class="primary-model-select"></select>
+                    </div>
+                    <label class="compare-check-row">
+                        <input type="checkbox" id="compareModelsToggle">
+                        <span>Compare Models</span>
+                    </label>
+                    <div id="compareModelsPanel" class="compare-models-panel" hidden>
+                        <p class="compare-limit-hint">Max 8 overlays</p>
+                        <div id="compareModelsOptions" class="compare-models-options"></div>
+                    </div>
+                    <div class="model-table-wrap" hidden aria-hidden="true">
                         <div id="fileTable"></div>
                     </div>
                 </div>
@@ -506,6 +517,97 @@
             }
             nameCell.appendChild(toggle);
         });
+    }
+
+    function _tableRowByModel(modelName) {
+        const rows = document.querySelectorAll('#fileTable tr');
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i].cells && rows[i].cells[1] && rows[i].cells[1].textContent.trim() === modelName) {
+                return rows[i];
+            }
+        }
+        return null;
+    }
+
+    function syncPrimaryModelSelect() {
+        const sel = document.getElementById('primaryModelSelect');
+        if (!sel) return;
+        const rows = document.querySelectorAll('#fileTable tr');
+        const previous = sel.value;
+        sel.innerHTML = '';
+        let names = [];
+        rows.forEach((row, i) => {
+            if (i === 0 || !row.cells || !row.cells[1]) return;
+            const name = row.cells[1].textContent.trim();
+            if (!name) return;
+            names.push(name);
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+        if (names.length === 0) return;
+        sel.value = names.includes(previous) ? previous : names[0];
+        if (!sel.dataset.wired) {
+            sel.addEventListener('change', () => {
+                const row = _tableRowByModel(sel.value);
+                const nameCell = row && row.cells[1];
+                if (nameCell) nameCell.click();
+                syncCompareModelsPanel();
+            });
+            sel.dataset.wired = '1';
+        }
+    }
+
+    function syncCompareModelsPanel() {
+        const panel = document.getElementById('compareModelsPanel');
+        const options = document.getElementById('compareModelsOptions');
+        const toggle = document.getElementById('compareModelsToggle');
+        const primary = document.getElementById('primaryModelSelect');
+        if (!panel || !options || !toggle || !primary) return;
+
+        options.innerHTML = '';
+        const rows = document.querySelectorAll('#fileTable tr');
+        rows.forEach((row, i) => {
+            if (i === 0 || !row.cells || !row.cells[1]) return;
+            const name = row.cells[1].textContent.trim();
+            if (!name || name === primary.value) return;
+            const rowToggle = row.querySelector('.compare-toggle');
+            const active = !!(rowToggle && rowToggle.classList.contains('active'));
+            const chip = rowToggle ? rowToggle.style.getPropertyValue('--chip-color') : '';
+            const label = document.createElement('label');
+            label.className = 'compare-model-option';
+            label.innerHTML = `<input type="checkbox" data-model="${name.replace(/"/g, '&quot;')}" ${active ? 'checked' : ''}><span class="compare-model-dot"></span><span class="compare-model-name">${name}</span>`;
+            const dot = label.querySelector('.compare-model-dot');
+            if (dot && chip) dot.style.setProperty('--chip-color', chip);
+            options.appendChild(label);
+        });
+
+        panel.hidden = !toggle.checked;
+
+        if (!toggle.dataset.wired) {
+            toggle.addEventListener('change', () => {
+                panel.hidden = !toggle.checked;
+                if (!toggle.checked) clearAllCompare();
+            });
+            toggle.dataset.wired = '1';
+        }
+        if (!options.dataset.wired) {
+            options.addEventListener('change', (e) => {
+                const cb = e.target;
+                if (!cb || cb.type !== 'checkbox') return;
+                const name = cb.getAttribute('data-model');
+                const row = _tableRowByModel(name);
+                const rowToggle = row && row.querySelector('.compare-toggle');
+                if (!rowToggle) return;
+                const isActive = rowToggle.classList.contains('active');
+                if (cb.checked !== isActive) rowToggle.click();
+                // Reflect the slot color on the checkbox chip.
+                const dot = cb.parentElement.querySelector('.compare-model-dot');
+                if (dot) dot.style.setProperty('--chip-color', rowToggle.style.getPropertyValue('--chip-color') || 'transparent');
+            });
+            options.dataset.wired = '1';
+        }
     }
 
     function openMetadataPanel() {
@@ -1213,6 +1315,8 @@
                 extractAndPopulateVariables();
                 populateModelSelectionBoxes();
                 addCompareToggles();
+                syncPrimaryModelSelect();
+                syncCompareModelsPanel();
 
                 const firstRow = fileTable.querySelector('tr:nth-child(2)');
                 if (!firstRow) {
