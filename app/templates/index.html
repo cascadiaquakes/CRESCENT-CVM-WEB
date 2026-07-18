@@ -441,7 +441,7 @@
     // --- Inline coverage comparison (per-row toggle dots) ---
     // Mirrors cesiumColorList[1..8] in repository_config.js. Slot 0 is unused.
     const COMPARE_COLORS = ['', '#dc2626', '#16a34a', '#2563eb', '#eab308',
-                            '#f8fafc', '#92400e', '#7e22ce', '#ec4899'];
+                            '#f97316', '#92400e', '#7e22ce', '#ec4899'];
     const compareSelections = []; // [{name, slot}]
 
     function nextFreeSlot() {
@@ -588,7 +588,13 @@
         if (!toggle.dataset.wired) {
             toggle.addEventListener('change', () => {
                 panel.hidden = !toggle.checked;
-                if (!toggle.checked) clearAllCompare();
+                if (!toggle.checked) {
+                    clearAllCompare();
+                } else {
+                    // Re-render options from current row state so re-opening
+                    // never surfaces stale checkboxes.
+                    syncCompareModelsPanel();
+                }
             });
             toggle.dataset.wired = '1';
         }
@@ -600,9 +606,13 @@
                 const row = _tableRowByModel(name);
                 const rowToggle = row && row.querySelector('.compare-toggle');
                 if (!rowToggle) return;
-                const isActive = rowToggle.classList.contains('active');
-                if (cb.checked !== isActive) rowToggle.click();
-                // Reflect the slot color on the checkbox chip.
+                const wasActive = rowToggle.classList.contains('active');
+                if (cb.checked !== wasActive) rowToggle.click();
+                // If the row didn't actually flip (e.g. hit the 8-model limit
+                // and the alert bounced the click), revert the checkbox so the
+                // sidebar can't lie about what's on the map.
+                const nowActive = rowToggle.classList.contains('active');
+                if (cb.checked !== nowActive) cb.checked = nowActive;
                 const dot = cb.parentElement.querySelector('.compare-model-dot');
                 if (dot) dot.style.setProperty('--chip-color', rowToggle.style.getPropertyValue('--chip-color') || 'transparent');
             });
