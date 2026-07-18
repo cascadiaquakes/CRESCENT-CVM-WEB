@@ -1,6 +1,6 @@
 # CRESCENT CVM-Web
 
-**CVM-Web** is a web-based application for previewing, visualizing, and extracting data from the Community Velocity Model (CVM) compiled by the Cascadia Region Earthquake Science Center ([CRESCENT](https://cascadiaquakes.org/about-crescent/)). The CVM is a curated collection of seismic velocity models covering the Cascadia Subduction Zone and surrounding region. This platform provides an interactive interface — powered by [CesiumJS](https://cesium.com/platform/cesiumjs/) 3D maps and the [FastAPI](https://fastapi.tiangolo.com/) web framework — for exploring model metadata, comparing model coverage, generating slice/cross-section/depth-profile previews, and downloading subsets of model data. The models are compatible with the Python tooling provided by the companion [CVM-Tools](https://cascadiaquakes.github.io/cvm-tools-book/index.html) project, and are also overlaid with current [Community Fault Model (CFM)](https://github.com/cascadiaquakes/crescent-cfm) traces and surfaces.
+**CVM-Web** is a web-based application for previewing, visualizing, and extracting data from the Community Velocity Model (CVM) compiled by the Cascadia Region Earthquake Science Center ([CRESCENT](https://cascadiaquakes.org/about-crescent/)). The CVM is a curated collection of seismic velocity models covering the Cascadia Subduction Zone and surrounding region. This platform provides an interactive interface — powered by [CesiumJS](https://cesium.com/platform/cesiumjs/) 3D maps and the [FastAPI](https://fastapi.tiangolo.com/) web framework — for exploring model metadata, comparing model coverage, generating slice/cross-section/depth-profile previews, and downloading subsets of model data. The models are compatible with the Python tooling provided by the companion [CVM-Tools](https://cascadiaquakes.github.io/cvm-tools-book/) project, and are also overlaid with current [Community Fault Model (CFM)](https://github.com/cascadiaquakes/crescent-cfm) traces and surfaces.
 
 ## Features
 
@@ -129,7 +129,7 @@ data/config    # repository-wide configuration
 
 To prepare or contribute models for inclusion in the repository, refer to the companion projects:
 
-- 🔗 [CVM-Tools](https://github.com/cascadiaquakes/cvm-tools) — Python tools and conventions for building CVM-compliant netCDF files. See also the [CVM-Tools Book](https://cascadiaquakes.github.io/cvm-tools-book/index.html).
+- 🔗 [CVM-Tools](https://github.com/cascadiaquakes/cvm-tools) — Python tools and conventions for building CVM-compliant netCDF files. See also the [CVM-Tools Book](https://cascadiaquakes.github.io/cvm-tools-book/).
 - 🔗 [CRESCENT-CFM](https://github.com/cascadiaquakes/crescent-cfm) — Community Fault Model GeoJSON files overlaid on the CVM-Web map.
 
 ## Deployment
