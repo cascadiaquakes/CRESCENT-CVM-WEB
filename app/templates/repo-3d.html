@@ -847,7 +847,10 @@
                             pixelSize: 10,
                             color: Cesium.Color.ORANGE,
                             outlineWidth: 1,
-                            outlineColor: Cesium.Color.WHITE
+                            outlineColor: Cesium.Color.WHITE,
+                            // Keep the dot on top of terrain so the endpoint
+                            // doesn't disappear under an elevated surface.
+                            disableDepthTestDistance: Number.POSITIVE_INFINITY
                         }
                     });
                     pointEntities.push(pointEntity);
@@ -865,6 +868,9 @@
                         }
                     });
                 }
+                // requestRenderMode is on, so the scene won't paint the new
+                // entities until we ask it to.
+                if (viewer.scene) viewer.scene.requestRender();
             }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
