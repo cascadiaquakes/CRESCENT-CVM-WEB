@@ -50,6 +50,18 @@
                 </div>
             </div>
 
+            <div class="accordion-section" id="modelInfoSection">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Model Information</span>
+                </button>
+                <div class="accordion-body">
+                    <div id="modelInfoBody" class="model-info">
+                        <p class="model-info-empty">Select a model to see its metadata.</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="accordion-section">
                 <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
                     <span class="accordion-arrow">&#9660;</span>
@@ -1145,6 +1157,51 @@
                 });
         }
 
+        function renderModelInfo(ncFilename) {
+            const body = document.getElementById('modelInfoBody');
+            if (!body || !ncFilename) return;
+            body.innerHTML = '<p class="model-info-empty">Loading&hellip;</p>';
+            fetch('/data/model_metadata_s3/' + encodeURIComponent(ncFilename))
+                .then(r => r.ok ? r.json() : Promise.reject(r.status))
+                .then(m => { body.innerHTML = buildModelInfoHtml(m); })
+                .catch(() => { body.innerHTML = '<p class="model-info-empty">Metadata unavailable.</p>'; });
+        }
+
+        function buildModelInfoHtml(m) {
+            const g = m.geospatial || {};
+            const c = m.coordinate_system || {};
+            const ref = m.reference || {};
+            const fmtRange = (lo, hi, unit, res) => {
+                if (lo == null || hi == null) return '<em>not reported</em>';
+                const r = (res != null) ? ` <span class="model-info-note">(res ${res}${unit ? ' ' + unit : ''})</span>` : '';
+                return `${lo} to ${hi}${unit ? ' ' + unit : ''}${r}`;
+            };
+            const doi = ref.doi ? ref.doi.replace(/^doi:/i, '') : null;
+            const refHtml = ref.citation
+                ? (doi ? `${ref.citation} &middot; <a href="https://doi.org/${doi}" target="_blank" rel="noopener">${doi}</a>` : ref.citation)
+                : '<em>not reported</em>';
+            const coordHtml = [
+                c.grid_ref ? `${c.grid_ref}` : null,
+                c.utm_zone ? `UTM zone ${c.utm_zone}` : null,
+                c.ellipsoid || null,
+            ].filter(Boolean).join(', ') || '<em>not reported</em>';
+            const varRows = (m.variables || []).map(v => {
+                const name = v.display_name || v.long_name || v.name;
+                const unit = v.units ? ` <span class="model-info-note">(${v.units})</span>` : '';
+                return `<li>${name}${unit}</li>`;
+            }).join('') || '<li><em>not reported</em></li>';
+
+            return `
+                <div class="model-info-row"><span class="model-info-label">Summary</span><span class="model-info-value">${m.summary || '<em>not reported</em>'}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Reference</span><span class="model-info-value">${refHtml}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Longitude</span><span class="model-info-value">${fmtRange(g.lon_min, g.lon_max, '&deg;E', g.lon_resolution)}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Latitude</span><span class="model-info-value">${fmtRange(g.lat_min, g.lat_max, '&deg;N', g.lat_resolution)}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Depth</span><span class="model-info-value">${fmtRange(g.depth_min, g.depth_max, g.depth_units || 'km')}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Coordinate&nbsp;system</span><span class="model-info-value">${coordHtml}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Variables</span><span class="model-info-value"><ul class="model-info-vars">${varRows}</ul></span></div>
+            `;
+        }
+
         fetch('/data/list_json_files_s3/' + model)
             .then(response => {
                 if (!response.ok) throw new Error('Network response was not ok');
@@ -1172,6 +1229,8 @@
                 let modelName = firstRow.querySelector('td:nth-child(2)').textContent.trim();
                 const cmodelname = document.getElementById('cmodelname');
                 if (cmodelname) cmodelname.innerHTML = modelName;
+                const firstFilenameCell = firstRow.cells[7];
+                if (firstFilenameCell) renderModelInfo(firstFilenameCell.textContent.trim());
 
                 fileTable.addEventListener('click', function (event) {
                     const target = event.target;
@@ -1189,6 +1248,7 @@
                             hideAllRadioButtonsExceptChecked();
                         }
                         if (cmodelname) cmodelname.innerHTML = modelName;
+                        renderModelInfo(filename);
                         display_metadata(modelName, filename + '.json');
                     }
                 });
