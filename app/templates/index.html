@@ -1263,7 +1263,6 @@
                 .then(jsonData => {
                     document.getElementById("mmodelname").textContent = model + " Metadata";
                     document.getElementById("jsonContent").innerHTML = createHtmlFromJson(jsonData);
-                    openMetadataPanel();
                 })
                 .catch(error => {
                     console.error('Error fetching metadata:', error);
