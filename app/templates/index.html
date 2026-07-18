@@ -1236,6 +1236,7 @@
                 if (select.options[i].text === model) {
                     select.selectedIndex = i;
                     select.dispatchEvent(new Event('click'));
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
                     return;
                 }
             }

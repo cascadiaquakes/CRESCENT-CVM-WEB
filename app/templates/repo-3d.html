@@ -410,13 +410,55 @@
             }
         });
 
-        // Draw a polygon showing the study area
-        const positions = Cesium.Cartesian3.fromDegreesArray([
-            west, north,
-            east, north,
-            east, south,
-            west, south
-        ]);
+        // Study-area outline + corner markers follow the selected model's
+        // bounding box. Default to the Cascadia region until the dropdown
+        // loads its first model and calls drawStudyArea again with real bounds.
+        const STUDY_AREA_POLYGON_ID = 'studyAreaPolygon';
+        const STUDY_AREA_CORNER_IDS = ['studyAreaCornerNW', 'studyAreaCornerNE', 'studyAreaCornerSE', 'studyAreaCornerSW'];
+
+        function drawStudyArea(w, e, s, n) {
+            [STUDY_AREA_POLYGON_ID, ...STUDY_AREA_CORNER_IDS].forEach(id => {
+                const ent = viewer.entities.getById(id);
+                if (ent) viewer.entities.remove(ent);
+            });
+            viewer.entities.add({
+                id: STUDY_AREA_POLYGON_ID,
+                name: "study area",
+                polygon: {
+                    hierarchy: new Cesium.PolygonHierarchy(Cesium.Cartesian3.fromDegreesArray([
+                        w, n, e, n, e, s, w, s
+                    ])),
+                    material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]),
+                    perPositionHeight: true,
+                    outline: true,
+                    outlineColor: cvmAreaOutlineColor[0]
+                }
+            });
+            const cornerDefs = [
+                { id: STUDY_AREA_CORNER_IDS[0], lon: w, lat: n, label: 'NW' },
+                { id: STUDY_AREA_CORNER_IDS[1], lon: e, lat: n, label: 'NE' },
+                { id: STUDY_AREA_CORNER_IDS[2], lon: e, lat: s, label: 'SE' },
+                { id: STUDY_AREA_CORNER_IDS[3], lon: w, lat: s, label: 'SW' }
+            ];
+            cornerDefs.forEach(c => {
+                viewer.entities.add({
+                    id: c.id,
+                    position: Cesium.Cartesian3.fromDegrees(c.lon, c.lat),
+                    point: { pixelSize: 10, color: Cesium.Color.RED },
+                    label: {
+                        text: `${c.label}\n${c.lon.toFixed(1)}, ${c.lat.toFixed(1)}`,
+                        font: '14pt sans-serif',
+                        fillColor: Cesium.Color.YELLOW,
+                        outlineColor: Cesium.Color.BLACK,
+                        outlineWidth: 2,
+                        style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -20)
+                    }
+                });
+            });
+            if (viewer.scene) viewer.scene.requestRender();
+        }
 
         const gridTransparencySlider = document.getElementById('gridTransparencySlider');
         const gridTransparencyValue = document.getElementById('gridTransparencyValue');
@@ -431,16 +473,7 @@
         gridTransparencySlider.value = gridTransparency;
         gridTransparencyValue.textContent = gridTransparency;
 
-        viewer.entities.add({
-            name: "study area",
-            polygon: {
-                hierarchy: new Cesium.PolygonHierarchy(positions),
-                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]),
-                perPositionHeight: true,
-                outline: true,
-                outlineColor: cvmAreaOutlineColor[0]
-            }
-        });
+        drawStudyArea(west, east, south, north);
 
         function filterOutline(cornerN, cornerS, cornerE, cornerW, lw, polylineId, colorIndex) {
             const existingEntity = viewer.entities.getById(polylineId);
@@ -472,33 +505,6 @@
                 });
             }
         }
-
-        const corners = [
-            { lon: west, lat: north, label: 'NW', coordinates: `${west.toFixed(1)}, ${north.toFixed(1)}` },
-            { lon: east, lat: north, label: 'NE', coordinates: `${east.toFixed(1)}, ${north.toFixed(1)}` },
-            { lon: east, lat: south, label: 'SE', coordinates: `${east.toFixed(1)}, ${south.toFixed(1)}` },
-            { lon: west, lat: south, label: 'SW', coordinates: `${west.toFixed(1)}, ${south.toFixed(1)}` }
-        ];
-
-        corners.forEach(corner => {
-            viewer.entities.add({
-                position: Cesium.Cartesian3.fromDegrees(corner.lon, corner.lat),
-                point: {
-                    pixelSize: 10,
-                    color: Cesium.Color.RED
-                },
-                label: {
-                    text: `${corner.label}\n${corner.coordinates}`,
-                    font: '14pt sans-serif',
-                    fillColor: Cesium.Color.YELLOW,
-                    outlineColor: Cesium.Color.BLACK,
-                    outlineWidth: 2,
-                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                    verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                    pixelOffset: new Cesium.Cartesian2(0, -20)
-                }
-            });
-        });
 
         // Primary legends.
         var legendContainer = document.getElementById('legendContainer');
@@ -682,6 +688,13 @@
                     parseFloat(minDepthSlider.value),
                     parseFloat(maxDepthSlider.value),
                     parseFloat(document.getElementById('alphaSlider').value)
+                );
+
+                drawStudyArea(
+                    parseFloat(limits[0]),
+                    parseFloat(limits[1]),
+                    parseFloat(limits[2]),
+                    parseFloat(limits[3])
                 );
             } else {
                 if (boxEntities) {
