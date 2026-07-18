@@ -407,7 +407,7 @@ body:has(#viewer2dWrapper) {
     position: absolute;
     top: 12px;
     left: 12px;
-    bottom: 12px;
+    bottom: 40px;
     width: 320px;
     display: flex;
     flex-direction: column;
@@ -1450,10 +1450,12 @@ body:has(#viewer2dWrapper) {
     background: #ffffff;
 }
 
-/* Bottom-right button that re-opens the metadata panel if user closed it */
+/* Bottom-right button that re-opens the metadata panel if user closed it.
+   Sits above Cesium's built-in fullscreen widget (which lives in the iframe's
+   bottom-right corner) so the two icons no longer collide. */
 .btn-show-metadata {
     position: absolute;
-    bottom: 16px;
+    bottom: 64px;
     right: 16px;
     z-index: 200;
     width: 44px;
