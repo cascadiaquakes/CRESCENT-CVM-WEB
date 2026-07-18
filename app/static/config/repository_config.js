@@ -29,7 +29,7 @@ const cesiumColorList = [
     Cesium.Color.GREEN,
     Cesium.Color.BLUE,
     Cesium.Color.YELLOW,
-    Cesium.Color.WHITE,
+    Cesium.Color.ORANGE,
     Cesium.Color.BROWN,
     Cesium.Color.PURPLE,
     Cesium.Color.PINK

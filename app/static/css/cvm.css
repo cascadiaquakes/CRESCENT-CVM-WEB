@@ -407,7 +407,7 @@ body:has(#viewer2dWrapper) {
     position: absolute;
     top: 12px;
     left: 12px;
-    bottom: 12px;
+    bottom: 40px;
     width: 320px;
     display: flex;
     flex-direction: column;
@@ -523,6 +523,155 @@ body:has(#viewer2dWrapper) {
 
 .accordion-section:not(.open) .accordion-body {
     display: none;
+}
+
+/* Primary model dropdown + Compare Models panel (mirrors eqcat catalog UI) */
+.primary-model-select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 12px;
+    color: #1e293b;
+    font-family: inherit;
+}
+
+.primary-model-select:focus {
+    outline: none;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+}
+
+.compare-check-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+    font-size: 12px;
+    color: #334155;
+    cursor: pointer;
+}
+
+.compare-check-row input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+}
+
+.compare-models-panel {
+    border: 1px solid #e8ecf0;
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    margin-top: 4px;
+}
+
+.compare-limit-hint {
+    margin: 0 0 6px 0;
+    font-size: 11px;
+    color: #64748b;
+    font-style: italic;
+}
+
+.compare-models-options {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.compare-model-option {
+    display: grid;
+    grid-template-columns: 18px 14px 1fr;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 2px;
+    font-size: 12px;
+    color: #1e293b;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.compare-model-option:hover {
+    background: #eef2f7;
+}
+
+.compare-model-dot {
+    --chip-color: transparent;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid #94a3b8;
+    background: var(--chip-color);
+}
+
+.compare-model-name {
+    word-break: break-word;
+}
+
+/* The old table stays in the DOM as a data source for filter/variable machinery,
+   but hidden from the user so the dropdown is the only surfaced control. */
+.model-table-wrap[hidden] {
+    display: none;
+}
+
+/* Model Information section (mirrors eqcat CATALOG INFORMATION layout) */
+.model-info {
+    font-size: 12px;
+    color: #1e293b;
+}
+
+.model-info-empty {
+    margin: 0;
+    color: #64748b;
+    font-style: italic;
+    font-size: 11px;
+}
+
+.model-info-row {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.model-info-row:last-child {
+    border-bottom: none;
+}
+
+.model-info-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding-top: 1px;
+}
+
+.model-info-value {
+    word-break: break-word;
+}
+
+.model-info-value a {
+    color: #0f766e;
+    text-decoration: underline;
+}
+
+.model-info-note {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.model-info-vars {
+    margin: 0;
+    padding-left: 16px;
+}
+
+.model-info-vars li {
+    margin-bottom: 2px;
 }
 
 /* Form rows / inputs / range-inputs inside the sidebar */
@@ -1301,10 +1450,12 @@ body:has(#viewer2dWrapper) {
     background: #ffffff;
 }
 
-/* Bottom-right button that re-opens the metadata panel if user closed it */
+/* Bottom-right button that re-opens the metadata panel if user closed it.
+   Sits above Cesium's built-in fullscreen widget (which lives in the iframe's
+   bottom-right corner) so the two icons no longer collide. */
 .btn-show-metadata {
     position: absolute;
-    bottom: 16px;
+    bottom: 64px;
     right: 16px;
     z-index: 200;
     width: 44px;

@@ -43,9 +43,32 @@
                     </span>
                 </button>
                 <div class="accordion-body">
-                    <p class="compare-hint">Click the dot on the right of any row to outline that model on the map (up to 8 at once).</p>
-                    <div class="model-table-wrap">
+                    <div class="field-row">
+                        <label for="primaryModelSelect">Model</label>
+                        <select id="primaryModelSelect" class="primary-model-select"></select>
+                    </div>
+                    <label class="compare-check-row">
+                        <input type="checkbox" id="compareModelsToggle">
+                        <span>Compare Models</span>
+                    </label>
+                    <div id="compareModelsPanel" class="compare-models-panel" hidden>
+                        <p class="compare-limit-hint">Max 8 overlays</p>
+                        <div id="compareModelsOptions" class="compare-models-options"></div>
+                    </div>
+                    <div class="model-table-wrap" hidden aria-hidden="true">
                         <div id="fileTable"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-section" id="modelInfoSection">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Model Information</span>
+                </button>
+                <div class="accordion-body">
+                    <div id="modelInfoBody" class="model-info">
+                        <p class="model-info-empty">Select a model to see its metadata.</p>
                     </div>
                 </div>
             </div>
@@ -418,7 +441,7 @@
     // --- Inline coverage comparison (per-row toggle dots) ---
     // Mirrors cesiumColorList[1..8] in repository_config.js. Slot 0 is unused.
     const COMPARE_COLORS = ['', '#dc2626', '#16a34a', '#2563eb', '#eab308',
-                            '#f8fafc', '#92400e', '#7e22ce', '#ec4899'];
+                            '#f97316', '#92400e', '#7e22ce', '#ec4899'];
     const compareSelections = []; // [{name, slot}]
 
     function nextFreeSlot() {
@@ -494,6 +517,107 @@
             }
             nameCell.appendChild(toggle);
         });
+    }
+
+    function _tableRowByModel(modelName) {
+        const rows = document.querySelectorAll('#fileTable tr');
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i].cells && rows[i].cells[1] && rows[i].cells[1].textContent.trim() === modelName) {
+                return rows[i];
+            }
+        }
+        return null;
+    }
+
+    function syncPrimaryModelSelect() {
+        const sel = document.getElementById('primaryModelSelect');
+        if (!sel) return;
+        const rows = document.querySelectorAll('#fileTable tr');
+        const previous = sel.value;
+        sel.innerHTML = '';
+        let names = [];
+        rows.forEach((row, i) => {
+            if (i === 0 || !row.cells || !row.cells[1]) return;
+            const name = row.cells[1].textContent.trim();
+            if (!name) return;
+            names.push(name);
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            sel.appendChild(opt);
+        });
+        if (names.length === 0) return;
+        sel.value = names.includes(previous) ? previous : names[0];
+        if (!sel.dataset.wired) {
+            sel.addEventListener('change', () => {
+                const row = _tableRowByModel(sel.value);
+                const nameCell = row && row.cells[1];
+                if (nameCell) nameCell.click();
+                syncCompareModelsPanel();
+            });
+            sel.dataset.wired = '1';
+        }
+    }
+
+    function syncCompareModelsPanel() {
+        const panel = document.getElementById('compareModelsPanel');
+        const options = document.getElementById('compareModelsOptions');
+        const toggle = document.getElementById('compareModelsToggle');
+        const primary = document.getElementById('primaryModelSelect');
+        if (!panel || !options || !toggle || !primary) return;
+
+        options.innerHTML = '';
+        const rows = document.querySelectorAll('#fileTable tr');
+        rows.forEach((row, i) => {
+            if (i === 0 || !row.cells || !row.cells[1]) return;
+            const name = row.cells[1].textContent.trim();
+            if (!name || name === primary.value) return;
+            const rowToggle = row.querySelector('.compare-toggle');
+            const active = !!(rowToggle && rowToggle.classList.contains('active'));
+            const chip = rowToggle ? rowToggle.style.getPropertyValue('--chip-color') : '';
+            const label = document.createElement('label');
+            label.className = 'compare-model-option';
+            label.innerHTML = `<input type="checkbox" data-model="${name.replace(/"/g, '&quot;')}" ${active ? 'checked' : ''}><span class="compare-model-dot"></span><span class="compare-model-name">${name}</span>`;
+            const dot = label.querySelector('.compare-model-dot');
+            if (dot && chip) dot.style.setProperty('--chip-color', chip);
+            options.appendChild(label);
+        });
+
+        panel.hidden = !toggle.checked;
+
+        if (!toggle.dataset.wired) {
+            toggle.addEventListener('change', () => {
+                panel.hidden = !toggle.checked;
+                if (!toggle.checked) {
+                    clearAllCompare();
+                } else {
+                    // Re-render options from current row state so re-opening
+                    // never surfaces stale checkboxes.
+                    syncCompareModelsPanel();
+                }
+            });
+            toggle.dataset.wired = '1';
+        }
+        if (!options.dataset.wired) {
+            options.addEventListener('change', (e) => {
+                const cb = e.target;
+                if (!cb || cb.type !== 'checkbox') return;
+                const name = cb.getAttribute('data-model');
+                const row = _tableRowByModel(name);
+                const rowToggle = row && row.querySelector('.compare-toggle');
+                if (!rowToggle) return;
+                const wasActive = rowToggle.classList.contains('active');
+                if (cb.checked !== wasActive) rowToggle.click();
+                // If the row didn't actually flip (e.g. hit the 8-model limit
+                // and the alert bounced the click), revert the checkbox so the
+                // sidebar can't lie about what's on the map.
+                const nowActive = rowToggle.classList.contains('active');
+                if (cb.checked !== nowActive) cb.checked = nowActive;
+                const dot = cb.parentElement.querySelector('.compare-model-dot');
+                if (dot) dot.style.setProperty('--chip-color', rowToggle.style.getPropertyValue('--chip-color') || 'transparent');
+            });
+            options.dataset.wired = '1';
+        }
     }
 
     function openMetadataPanel() {
@@ -1122,6 +1246,7 @@
                 if (select.options[i].text === model) {
                     select.selectedIndex = i;
                     select.dispatchEvent(new Event('click'));
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
                     return;
                 }
             }
@@ -1138,11 +1263,55 @@
                 .then(jsonData => {
                     document.getElementById("mmodelname").textContent = model + " Metadata";
                     document.getElementById("jsonContent").innerHTML = createHtmlFromJson(jsonData);
-                    openMetadataPanel();
                 })
                 .catch(error => {
                     console.error('Error fetching metadata:', error);
                 });
+        }
+
+        function renderModelInfo(ncFilename) {
+            const body = document.getElementById('modelInfoBody');
+            if (!body || !ncFilename) return;
+            body.innerHTML = '<p class="model-info-empty">Loading&hellip;</p>';
+            fetch('/data/model_metadata_s3/' + encodeURIComponent(ncFilename))
+                .then(r => r.ok ? r.json() : Promise.reject(r.status))
+                .then(m => { body.innerHTML = buildModelInfoHtml(m); })
+                .catch(() => { body.innerHTML = '<p class="model-info-empty">Metadata unavailable.</p>'; });
+        }
+
+        function buildModelInfoHtml(m) {
+            const g = m.geospatial || {};
+            const c = m.coordinate_system || {};
+            const ref = m.reference || {};
+            const fmtRange = (lo, hi, unit, res) => {
+                if (lo == null || hi == null) return '<em>not reported</em>';
+                const r = (res != null) ? ` <span class="model-info-note">(res ${res}${unit ? ' ' + unit : ''})</span>` : '';
+                return `${lo} to ${hi}${unit ? ' ' + unit : ''}${r}`;
+            };
+            const doi = ref.doi ? ref.doi.replace(/^doi:/i, '') : null;
+            const refHtml = ref.citation
+                ? (doi ? `${ref.citation} &middot; <a href="https://doi.org/${doi}" target="_blank" rel="noopener">${doi}</a>` : ref.citation)
+                : '<em>not reported</em>';
+            const coordHtml = [
+                c.grid_ref ? `${c.grid_ref}` : null,
+                c.utm_zone ? `UTM zone ${c.utm_zone}` : null,
+                c.ellipsoid || null,
+            ].filter(Boolean).join(', ') || '<em>not reported</em>';
+            const varRows = (m.variables || []).map(v => {
+                const name = v.display_name || v.long_name || v.name;
+                const unit = v.units ? ` <span class="model-info-note">(${v.units})</span>` : '';
+                return `<li>${name}${unit}</li>`;
+            }).join('') || '<li><em>not reported</em></li>';
+
+            return `
+                <div class="model-info-row"><span class="model-info-label">Summary</span><span class="model-info-value">${m.summary || '<em>not reported</em>'}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Reference</span><span class="model-info-value">${refHtml}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Longitude</span><span class="model-info-value">${fmtRange(g.lon_min, g.lon_max, '&deg;E', g.lon_resolution)}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Latitude</span><span class="model-info-value">${fmtRange(g.lat_min, g.lat_max, '&deg;N', g.lat_resolution)}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Depth</span><span class="model-info-value">${fmtRange(g.depth_min, g.depth_max, g.depth_units || 'km')}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Coordinate&nbsp;system</span><span class="model-info-value">${coordHtml}</span></div>
+                <div class="model-info-row"><span class="model-info-label">Variables</span><span class="model-info-value"><ul class="model-info-vars">${varRows}</ul></span></div>
+            `;
         }
 
         fetch('/data/list_json_files_s3/' + model)
@@ -1156,6 +1325,8 @@
                 extractAndPopulateVariables();
                 populateModelSelectionBoxes();
                 addCompareToggles();
+                syncPrimaryModelSelect();
+                syncCompareModelsPanel();
 
                 const firstRow = fileTable.querySelector('tr:nth-child(2)');
                 if (!firstRow) {
@@ -1172,6 +1343,8 @@
                 let modelName = firstRow.querySelector('td:nth-child(2)').textContent.trim();
                 const cmodelname = document.getElementById('cmodelname');
                 if (cmodelname) cmodelname.innerHTML = modelName;
+                const firstFilenameCell = firstRow.cells[7];
+                if (firstFilenameCell) renderModelInfo(firstFilenameCell.textContent.trim());
 
                 fileTable.addEventListener('click', function (event) {
                     const target = event.target;
@@ -1189,6 +1362,7 @@
                             hideAllRadioButtonsExceptChecked();
                         }
                         if (cmodelname) cmodelname.innerHTML = modelName;
+                        renderModelInfo(filename);
                         display_metadata(modelName, filename + '.json');
                     }
                 });
