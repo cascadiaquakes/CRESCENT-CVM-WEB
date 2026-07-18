@@ -4,6 +4,7 @@ import json
 import traceback
 
 from typing import Optional
+from functools import lru_cache
 
 from fastapi import APIRouter, Request, HTTPException, Query, Request
 from fastapi.responses import (
@@ -1446,6 +1447,95 @@ def generate_geojson_download_url_s3(file_name: str = Query(...)):
     except Exception as e:
         logger.error(f"Failed to generate download URL: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate download URL")
+
+
+@lru_cache(maxsize=64)
+def _load_model_manifest_body(bucket: str, key: str) -> str:
+    obj = s3_client.get_object(Bucket=bucket, Key=key)
+    return obj["Body"].read().decode("utf-8")
+
+
+def _normalize_model_metadata(manifest: dict, filename: str) -> dict:
+    """Reshape the derived-from-netCDF manifest into the stable UI contract.
+
+    Fields default to None when absent so the sidebar can render 'not reported'
+    without the endpoint crashing on a model that lacks a given attribute.
+    """
+    variables = []
+    var_meta = manifest.get("variables", {})
+    if not isinstance(var_meta, dict):
+        var_meta = {}
+    for v in manifest.get("data_vars", []) or []:
+        info = var_meta.get(v, {}) if isinstance(var_meta.get(v), dict) else {}
+        variables.append(
+            {
+                "name": v,
+                "long_name": info.get("long_name"),
+                "display_name": info.get("display_name"),
+                "units": info.get("units"),
+            }
+        )
+
+    return {
+        "id": manifest.get("model"),
+        "file": filename,
+        "title": manifest.get("title"),
+        "summary": manifest.get("summary"),
+        "reference": {
+            "citation": manifest.get("reference"),
+            "doi": manifest.get("reference_pid"),
+        },
+        "author": {
+            "name": manifest.get("author_name"),
+            "institution": manifest.get("author_institution"),
+            "email": manifest.get("author_email"),
+            "url": manifest.get("author_url"),
+        },
+        "geospatial": {
+            "lon_min": manifest.get("geospatial_lon_min"),
+            "lon_max": manifest.get("geospatial_lon_max"),
+            "lon_resolution": manifest.get("geospatial_lon_resolution"),
+            "lon_units": manifest.get("geospatial_lon_units"),
+            "lat_min": manifest.get("geospatial_lat_min"),
+            "lat_max": manifest.get("geospatial_lat_max"),
+            "lat_resolution": manifest.get("geospatial_lat_resolution"),
+            "lat_units": manifest.get("geospatial_lat_units"),
+            "depth_min": manifest.get("geospatial_vertical_min"),
+            "depth_max": manifest.get("geospatial_vertical_max"),
+            "depth_units": manifest.get("geospatial_vertical_units"),
+            "depth_positive": manifest.get("geospatial_vertical_positive"),
+        },
+        "coordinate_system": {
+            "grid_ref": manifest.get("grid_ref"),
+            "utm_zone": manifest.get("utm_zone"),
+            "ellipsoid": manifest.get("ellipsoid"),
+        },
+        "variables": variables,
+        "revision": manifest.get("data_revision"),
+        "conventions": manifest.get("Conventions"),
+    }
+
+
+@router.get("/model_metadata_s3/{filename}")
+def model_metadata_s3(filename: str):
+    """Return the stable UI-facing metadata for a single model.
+
+    The netCDF file the user downloads is the source of truth; the JSON manifest
+    read here is the data-tools-generated projection of that same source, so the
+    sidebar cannot drift from what a downloader would see.
+    """
+    bucket = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    stem = filename.removesuffix(".nc").removesuffix(".json")
+    key = f"{PREFIX['json']}{stem}.json"
+    try:
+        body = _load_model_manifest_body(bucket, key)
+    except ClientError as e:
+        code = e.response.get("Error", {}).get("Code")
+        if code in {"NoSuchKey", "404"}:
+            raise HTTPException(status_code=404, detail=f"No metadata for {filename}")
+        raise HTTPException(status_code=502, detail=f"S3 read failed: {code}")
+    manifest = json.loads(body)
+    return JSONResponse(_normalize_model_metadata(manifest, filename))
 
 
 # Route to create html for model dropdown. A simple drop-down of the file names and model variables.
