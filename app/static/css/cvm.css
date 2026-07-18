@@ -540,8 +540,8 @@ body:has(#viewer2dWrapper) {
 
 .model-info-row {
     display: grid;
-    grid-template-columns: 110px 1fr;
-    gap: 8px;
+    grid-template-columns: 130px 1fr;
+    gap: 12px;
     padding: 6px 0;
     border-bottom: 1px solid #f1f5f9;
 }
