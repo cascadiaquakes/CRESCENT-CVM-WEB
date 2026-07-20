@@ -525,6 +525,99 @@ body:has(#viewer2dWrapper) {
     display: none;
 }
 
+/* Plain (non-accordion) section for the 3D Models group — title acts as a
+   label, no chevron, dropdown sits directly under. Mirrors eqcat's CATALOG. */
+.section-plain {
+    border: 1px solid #e8ecf0;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 10px 12px 12px;
+    margin-bottom: 6px;
+}
+
+.section-plain-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.section-plain-title {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.section-plain-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Compare Models lives in its own rounded box under the dropdown, matching
+   eqcat's COMPARE CATALOGS visual weight. */
+.compare-box {
+    border: 1px solid #e8ecf0;
+    border-radius: 8px;
+    background: #f8fafc;
+    padding: 8px 10px;
+}
+
+/* Model Information uses the native <details> disclosure so the section
+   behaves like eqcat's CATALOG INFORMATION. */
+.model-info-details {
+    border: 1px solid #e8ecf0;
+    border-radius: 10px;
+    background: #f8fafc;
+    margin-bottom: 6px;
+}
+
+.model-info-details > .model-info-summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.model-info-details > .model-info-summary::-webkit-details-marker { display: none; }
+
+.model-info-details > .model-info-summary::before {
+    content: "\25B8";
+    font-size: 10px;
+    color: #64748b;
+    transition: transform 0.2s;
+}
+
+.model-info-details[open] > .model-info-summary::before {
+    transform: rotate(90deg);
+}
+
+.model-info-body-wrap {
+    padding: 8px 12px 12px;
+    background: #ffffff;
+    border-top: 1px solid #f1f5f9;
+    border-radius: 0 0 10px 10px;
+}
+
+.compare-list-header {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 6px 0 4px;
+}
+
 /* Primary model dropdown + Compare Models panel (mirrors eqcat catalog UI) */
 .primary-model-select {
     width: 100%;
@@ -560,11 +653,9 @@ body:has(#viewer2dWrapper) {
 }
 
 .compare-models-panel {
-    border: 1px solid #e8ecf0;
-    border-radius: 8px;
-    padding: 8px 10px;
-    background: #f8fafc;
-    margin-top: 4px;
+    padding: 6px 0 0;
+    margin-top: 6px;
+    border-top: 1px solid #e8ecf0;
 }
 
 .compare-limit-hint {
