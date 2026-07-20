@@ -504,6 +504,10 @@
                     }
                 });
             }
+            // requestRenderMode is on, so entity add/remove doesn't repaint
+            // until something else nudges the canvas. Ask for a frame so the
+            // compare outline appears the instant the checkbox is toggled.
+            if (viewer.scene) viewer.scene.requestRender();
         }
 
         // Primary legends.
