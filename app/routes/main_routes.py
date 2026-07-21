@@ -2195,7 +2195,14 @@ async def visualize_depth_slice_s3(request: Request):
         plt.title(title)
 
     ax = axes[0]
-    ax.set_aspect(aspect_ratio)  # Set the aspect ratio to the calculated value
+    # For lat/lon plots the axis is a Cartopy GeoAxes that already handles its
+    # own projection aspect. Forcing a numeric aspect on top of that squeezes
+    # the map into an invisible strip (Jon's report). Use 'auto' with datalim
+    # adjustable so the map fills the available space in the user's figsize.
+    if plot_grid_ref == "latitude_longitude":
+        ax.set_aspect("auto", adjustable="datalim")
+    else:
+        ax.set_aspect(aspect_ratio)
     # Logo for the plot.
     if os.path.isfile(LOGO_FILE):
 

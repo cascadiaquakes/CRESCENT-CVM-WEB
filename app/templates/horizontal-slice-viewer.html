@@ -1244,6 +1244,13 @@
             const el = document.getElementById(k);
             if (el && v !== undefined && v !== null) el.value = v;
         }
+        // Clear the Compare-with multi-select so a fresh Plot doesn't carry
+        // the previous comparison forward.
+        const cmp = document.getElementById('compare-models');
+        if (cmp && cmp.multiple) {
+            Array.from(cmp.options).forEach(o => { o.selected = false; });
+            cmp.dispatchEvent(new Event('change', { bubbles: true }));
+        }
         document.getElementById('sync-to-iframe')?.click();
     }
 
