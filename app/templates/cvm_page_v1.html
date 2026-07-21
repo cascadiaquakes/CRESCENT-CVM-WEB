@@ -95,72 +95,59 @@
 
     <!-- About modal -->
     <div id="aboutOverlay" class="modal-overlay" style="display:none;">
-        <div class="modal-box">
-            <div class="modal-header-bar">
-                <h3>About</h3>
-                <button class="modal-close" id="aboutClose">&times;</button>
-            </div>
+        <div class="modal-box about-box">
+            <button class="modal-close about-modal-close" id="aboutClose" aria-label="Close">&times;</button>
             <div class="modal-body-content">
-                <h4>CRESCENT Community Velocity Model (CVM)</h4>
-                <p>CVM-Web is a web-based application for previewing, visualizing, and extracting data from the Community Velocity Model compiled by the Cascadia Region Earthquake Science Center. The CVM is a curated collection of seismic velocity models covering the Cascadia Subduction Zone and surrounding region.</p>
-                <p>The repository page lists the available 3D and 2D models with full metadata. Click a model to view its details and see its boundary on the 3D map. Use the filter controls to narrow the list by geographic area, depth, and parameters, or compare up to five models side by side.</p>
+                <h2>CRESCENT Community Velocity Model Viewer</h2>
 
-                <a href="https://cascadiaquakes.github.io/cvm-tools-book/contribution-guidelines/"
-                   target="_blank" rel="noopener" class="modal-cta-btn">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M20 7L12 15 4 7"/>
-                        <path d="M12 3v12"/>
-                    </svg>
-                    <span>Contribute a model (Jupyter notebook guide)</span>
-                </a>
+                <p>
+                    The <strong>Cascadia Region Earthquake Science Center (CRESCENT)</strong>
+                    Community Velocity Model Viewer is a community resource for previewing,
+                    visualizing, and extracting data from curated seismic velocity models of
+                    the Cascadia Subduction Zone and surrounding regions. This viewer supports
+                    reproducible earthquake science by providing standardized access to
+                    3D and 2D models contributed by the community.
+                </p>
 
-                <hr>
-                <h4>Tools</h4>
-                <ul>
-                    <li><a href="/vis/x-section-viewer">Cross-Section Viewer</a> &mdash; vertical slices through a model along an arbitrary path.</li>
-                    <li><a href="/vis/horizontal-slice-viewer">Horizontal-Slice Viewer</a> &mdash; constant-depth slices through a model.</li>
-                    <li><a href="/vis/depth-profile-viewer">Depth-Profile Viewer</a> &mdash; vertical profiles at a single point.</li>
-                    <li><a href="/data/volume-data">Volume Data</a> &mdash; download 3D subvolumes.</li>
-                    <li><a href="/data/x-section-data">Cross-Section Data</a> &mdash; download vertical-slice data.</li>
-                    <li><a href="/data/depth-slice-data">Depth-Slice Data</a> &mdash; download horizontal-slice data.</li>
-                </ul>
+                <div class="about-links">
+                    <a href="https://cascadiaquakes.github.io/cvm-tools-book/"
+                       target="_blank" rel="noopener noreferrer"
+                       class="about-link-button">
+                        View Documentation
+                    </a>
+                </div>
 
-                <hr>
-                <h4>Map Features</h4>
-                <ul>
-                    <li><strong>CRESCENT Study Area</strong> outlined in cyan.</li>
-                    <li><strong>3D Model Outline</strong> of the selected model shown in cyan.</li>
-                    <li><strong>Selected Model Extent</strong> shown in blue, adjustable via lat / lon / depth sliders and an opacity control.</li>
-                    <li><strong>Earthquakes</strong> (yellow dots) are events of magnitude greater than 4 within the CRESCENT study area since 1970, sized by magnitude. Sourced from the ANSS Comprehensive Earthquake Catalog via the USGS FDSN Event Service.</li>
-                    <li><strong>Imagery Layer</strong> toggle adds Cesium imagery for context; <strong>Terrain Occlusion</strong> unhides data when imagery is opaque.</li>
-                    <li><strong>Feature Toggles</strong> control visibility of fault traces, earthquakes, and other elements.</li>
-                    <li><strong>Center View</strong> recenters on the CRESCENT study area; <strong>Home View</strong> resets to the default perspective.</li>
-                    <li><strong>Measure Distance</strong> lets you click two points to measure their separation in kilometers.</li>
-                </ul>
+                <h3>Project Contacts</h3>
 
-                <hr>
-                <h4>Links</h4>
-                <ul>
-                    <li><a href="/vis/">Repository</a></li>
-                    <li><a href="/news">CVM-Web News</a></li>
-                    <li><a href="https://cascadiaquakes.github.io/cvm-tools-book/" target="_blank">CVM-Tools User Guide</a></li>
-                    <li><a href="https://cascadiaquakes.github.io/cvm-tools-book/contribution-guidelines/" target="_blank">Contribution Guidelines</a></li>
-                    <li><a href="/request">Contact Us</a></li>
-                </ul>
+                <div class="contact-info">
+                    <div class="contact-block">
+                        <strong>Amanda M. Thomas</strong>
+                        Department of Earth and Planetary Sciences<br/>
+                        University of California, Davis<br/>
+                        <a href="mailto:amthom@ucdavis.edu">amthom@ucdavis.edu</a>
+                    </div>
 
-                <hr>
-                <h4>About CRESCENT</h4>
-                <ul>
-                    <li><a href="https://cascadiaquakes.org/about-crescent/" target="_blank">CRESCENT</a></li>
-                    <li><a href="https://cascadiaquakes.org/cvm/" target="_blank">Community Velocity Model (CVM)</a></li>
-                    <li><a href="https://cascadiaquakes.org/cfm/" target="_blank">Community Fault Model (CFM)</a></li>
-                    <li><a href="https://cascadiaquakes.org/cpal/" target="_blank">Paleoseismology (CPAL)</a></li>
-                </ul>
+                    <div class="contact-block">
+                        <strong>William Marfo</strong>
+                        Cascadia Region Earthquake Science Center<br/>
+                        Department of Earth and Planetary Sciences<br/>
+                        University of California, Davis<br/>
+                        <a href="mailto:wmarfo@ucdavis.edu">wmarfo@ucdavis.edu</a>
+                    </div>
 
-                <hr>
-                <h4>Disclaimers</h4>
-                <p><strong>Data Disclaimer:</strong> Unless otherwise stated, all data, metadata, and related materials are considered to satisfy the quality standards relative to the purpose for which the data were collected. Although these data and associated metadata have been reviewed for accuracy and completeness, no warranty expressed or implied is made regarding the display or utility of the data for other purposes, nor on all computer systems, nor shall the act of distribution constitute any such warranty.</p>
-                <p><strong>Nonendorsement Disclaimer:</strong> Any use of trade, firm, or product names is for descriptive purposes only and does not imply endorsement by the providers of this application or their sponsors.</p>
+                    <div class="contact-block">
+                        <strong>Loïc Bachelot</strong>
+                        Cascadia Region Earthquake Science Center<br/>
+                        Department of Earth Sciences<br/>
+                        University of Oregon<br/>
+                        <a href="mailto:lbachelo@uoregon.edu">lbachelo@uoregon.edu</a>
+                    </div>
+                </div>
+
+                <p class="acknowledgment">
+                    Supported by the National Science Foundation through the
+                    Cascadia Region Earthquake Science Center (CRESCENT).
+                </p>
             </div>
         </div>
     </div>
