@@ -144,25 +144,8 @@ tr:nth-child(even) {
     width: 60px;
 }
 
-#applyFilterBtn {
-    display: block;
-    font-size: 10pt;
-    margin-bottom: 10px;
-    width: 150px;
-    background-color: #004F59;
-    color: white;
-    border-radius: 15px;
-}
-
-#clearFilterBtn {
-    display: block;
-    font-size: 10pt;
-    margin-bottom: 10px;
-    width: 150px;
-    background-color: #004F59;
-    color: white;
-    border-radius: 15px;
-}
+/* #applyFilterBtn and #clearFilterBtn are now styled in cvm.css alongside
+   the eqcat-style Reset Filters / Apply Filters pair. */
 
 #variableSelect {
     color: black;

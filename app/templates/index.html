@@ -33,27 +33,26 @@
         <div class="card-2d">
             <div class="card-2d-title">CVM Models</div>
 
-            <div class="accordion-section open">
-                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                    <span class="accordion-arrow">&#9660;</span>
-                    <span class="accordion-label">3D Models</span>
+            <div class="section-plain">
+                <div class="section-plain-header">
+                    <span class="section-plain-title">3D Models</span>
                     <span id="compareBadge" class="compare-badge" style="display:none;">
                         <span id="compareCount">0</span>/8 comparing
-                        <button type="button" class="compare-clear-link" onclick="event.stopPropagation(); clearAllCompare();">Clear</button>
+                        <button type="button" class="compare-clear-link" onclick="clearAllCompare();">Clear</button>
                     </span>
-                </button>
-                <div class="accordion-body">
-                    <div class="field-row">
-                        <label for="primaryModelSelect">Model</label>
-                        <select id="primaryModelSelect" class="primary-model-select"></select>
-                    </div>
-                    <label class="compare-check-row">
-                        <input type="checkbox" id="compareModelsToggle">
-                        <span>Compare Models</span>
-                    </label>
-                    <div id="compareModelsPanel" class="compare-models-panel" hidden>
-                        <p class="compare-limit-hint">Max 8 overlays</p>
-                        <div id="compareModelsOptions" class="compare-models-options"></div>
+                </div>
+                <div class="section-plain-body">
+                    <select id="primaryModelSelect" class="primary-model-select"></select>
+                    <div class="compare-box">
+                        <label class="compare-check-row">
+                            <input type="checkbox" id="compareModelsToggle">
+                            <span>Compare Models</span>
+                        </label>
+                        <div id="compareModelsPanel" class="compare-models-panel" hidden>
+                            <p class="compare-limit-hint">Max 8 overlays</p>
+                            <div class="compare-list-header">Select models to overlay:</div>
+                            <div id="compareModelsOptions" class="compare-models-options"></div>
+                        </div>
                     </div>
                     <div class="model-table-wrap" hidden aria-hidden="true">
                         <div id="fileTable"></div>
@@ -61,25 +60,22 @@
                 </div>
             </div>
 
-            <div class="accordion-section" id="modelInfoSection">
-                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                    <span class="accordion-arrow">&#9660;</span>
-                    <span class="accordion-label">Model Information</span>
-                </button>
-                <div class="accordion-body">
+            <details class="model-info-details" id="modelInfoSection">
+                <summary class="model-info-summary">Model Information</summary>
+                <div class="model-info-body-wrap">
                     <div id="modelInfoBody" class="model-info">
                         <p class="model-info-empty">Select a model to see its metadata.</p>
                     </div>
                 </div>
-            </div>
+            </details>
 
-            <div class="accordion-section">
-                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                    <span class="accordion-arrow">&#9660;</span>
-                    <span class="accordion-label">2D Models</span>
-                </button>
-                <div class="accordion-body">
-                    <div id="auxTableContainer"></div>
+            <div class="section-plain">
+                <div class="section-plain-header">
+                    <span class="section-plain-title">2D Models</span>
+                </div>
+                <div class="section-plain-body">
+                    <select id="secondaryModelSelect" class="primary-model-select"></select>
+                    <div id="auxTableContainer" hidden aria-hidden="true"></div>
                 </div>
             </div>
         </div>
@@ -151,8 +147,8 @@
             </div>
 
             <div class="filter-buttons">
-                <button id="applyFilterBtn" type="button" class="btn-primary" onclick="filterTable()">Apply</button>
-                <button id="clearFilterBtn" type="button" class="btn-secondary" onclick="clearFilters()">Clear</button>
+                <button id="clearFilterBtn" type="button" class="btn-secondary" onclick="clearFilters()">Reset Filters</button>
+                <button id="applyFilterBtn" type="button" class="btn-primary" onclick="filterTable()">Apply Filters</button>
             </div>
         </div>
 
@@ -486,6 +482,10 @@
             el.classList.remove('active');
             el.style.removeProperty('--chip-color');
         });
+        // Also flip the sidebar's compare-list checkboxes off and drop the
+        // color chips so the panel state matches what's on the map.
+        document.querySelectorAll('#compareModelsOptions input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        document.querySelectorAll('#compareModelsOptions .compare-model-dot').forEach(d => d.style.removeProperty('--chip-color'));
         updateCompareCount();
     }
 
@@ -529,6 +529,19 @@
         return null;
     }
 
+    // Populated once from /data/model_display_names; maps netCDF filename
+    // and raw model id to the human-readable label (e.g. "Delph et al. (2018)").
+    const _displayNames = {};
+    function _loadDisplayNames() {
+        return fetch('/data/model_display_names')
+            .then(r => r.ok ? r.json() : {})
+            .then(map => { Object.assign(_displayNames, map || {}); })
+            .catch(() => {});
+    }
+    function _friendlyName(rawName, filename) {
+        return _displayNames[filename] || _displayNames[rawName] || rawName;
+    }
+
     function syncPrimaryModelSelect() {
         const sel = document.getElementById('primaryModelSelect');
         if (!sel) return;
@@ -540,10 +553,12 @@
             if (i === 0 || !row.cells || !row.cells[1]) return;
             const name = row.cells[1].textContent.trim();
             if (!name) return;
+            const filenameCell = row.cells[7];
+            const filename = filenameCell ? filenameCell.textContent.trim() + '.nc' : '';
             names.push(name);
             const opt = document.createElement('option');
             opt.value = name;
-            opt.textContent = name;
+            opt.textContent = _friendlyName(name, filename);
             sel.appendChild(opt);
         });
         if (names.length === 0) return;
@@ -575,9 +590,12 @@
             const rowToggle = row.querySelector('.compare-toggle');
             const active = !!(rowToggle && rowToggle.classList.contains('active'));
             const chip = rowToggle ? rowToggle.style.getPropertyValue('--chip-color') : '';
+            const filenameCell = row.cells[7];
+            const filename = filenameCell ? filenameCell.textContent.trim() + '.nc' : '';
+            const displayName = _friendlyName(name, filename);
             const label = document.createElement('label');
             label.className = 'compare-model-option';
-            label.innerHTML = `<input type="checkbox" data-model="${name.replace(/"/g, '&quot;')}" ${active ? 'checked' : ''}><span class="compare-model-dot"></span><span class="compare-model-name">${name}</span>`;
+            label.innerHTML = `<input type="checkbox" data-model="${name.replace(/"/g, '&quot;')}" ${active ? 'checked' : ''}><span class="compare-model-dot"></span><span class="compare-model-name">${displayName}</span>`;
             const dot = label.querySelector('.compare-model-dot');
             if (dot && chip) dot.style.setProperty('--chip-color', chip);
             options.appendChild(label);
@@ -1211,6 +1229,38 @@
         document.getElementById('depth_max').value = '';
         const vSel = document.getElementById('variableSelect');
         if (vSel) Array.from(vSel.options).forEach(o => o.selected = false);
+
+        // Bring the model dropdowns and compare state back to the same shape
+        // the sidebar had on first visit.
+        clearAllCompare();
+        const compareToggle = document.getElementById('compareModelsToggle');
+        if (compareToggle) {
+            compareToggle.checked = false;
+            const panel = document.getElementById('compareModelsPanel');
+            if (panel) panel.hidden = true;
+        }
+        const primary = document.getElementById('primaryModelSelect');
+        if (primary && primary.options.length > 0 && primary.selectedIndex !== 0) {
+            primary.selectedIndex = 0;
+            primary.dispatchEvent(new Event('change'));
+        }
+        const secondary = document.getElementById('secondaryModelSelect');
+        if (secondary && secondary.options.length > 0) secondary.selectedIndex = 0;
+        // Un-apply whichever 2D layer the user had loaded so the map returns
+        // to the "nothing overlaid yet" state that a first visit shows.
+        const iframe = document.getElementById('3dIframe');
+        if (iframe && iframe.contentWindow) {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const surfaceSel = iframeDoc && iframeDoc.getElementById('select2dSurface');
+            if (surfaceSel) {
+                Array.from(surfaceSel.options).forEach(o => { o.selected = false; });
+                surfaceSel.value = '';
+                surfaceSel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+        const info = document.getElementById('modelInfoSection');
+        if (info) info.open = false;
+
         filterTable();
     }
 
@@ -1281,37 +1331,27 @@
 
         function buildModelInfoHtml(m) {
             const g = m.geospatial || {};
-            const c = m.coordinate_system || {};
-            const ref = m.reference || {};
-            const fmtRange = (lo, hi, unit, res) => {
-                if (lo == null || hi == null) return '<em>not reported</em>';
-                const r = (res != null) ? ` <span class="model-info-note">(res ${res}${unit ? ' ' + unit : ''})</span>` : '';
-                return `${lo} to ${hi}${unit ? ' ' + unit : ''}${r}`;
-            };
-            const doi = ref.doi ? ref.doi.replace(/^doi:/i, '') : null;
-            const refHtml = ref.citation
-                ? (doi ? `${ref.citation} &middot; <a href="https://doi.org/${doi}" target="_blank" rel="noopener">${doi}</a>` : ref.citation)
+            const mathish = (s) => s ? s.replace(/V\$_([a-z0-9]+)\$/g, 'V<sub>$1</sub>').replace(/\$([^$]+)\$/g, '$1') : s;
+            const val = (v) => (v == null || v === '') ? '<em>not reported</em>' : v;
+            const pub = m.publication_url
+                ? `<a href="${m.publication_url}" target="_blank" rel="noopener">View Paper</a>`
                 : '<em>not reported</em>';
-            const coordHtml = [
-                c.grid_ref ? `${c.grid_ref}` : null,
-                c.utm_zone ? `UTM zone ${c.utm_zone}` : null,
-                c.ellipsoid || null,
-            ].filter(Boolean).join(', ') || '<em>not reported</em>';
-            const varRows = (m.variables || []).map(v => {
-                const name = v.display_name || v.long_name || v.name;
-                const unit = v.units ? ` <span class="model-info-note">(${v.units})</span>` : '';
-                return `<li>${name}${unit}</li>`;
-            }).join('') || '<li><em>not reported</em></li>';
-
-            return `
-                <div class="model-info-row"><span class="model-info-label">Summary</span><span class="model-info-value">${m.summary || '<em>not reported</em>'}</span></div>
-                <div class="model-info-row"><span class="model-info-label">Reference</span><span class="model-info-value">${refHtml}</span></div>
-                <div class="model-info-row"><span class="model-info-label">Longitude</span><span class="model-info-value">${fmtRange(g.lon_min, g.lon_max, '&deg;E', g.lon_resolution)}</span></div>
-                <div class="model-info-row"><span class="model-info-label">Latitude</span><span class="model-info-value">${fmtRange(g.lat_min, g.lat_max, '&deg;N', g.lat_resolution)}</span></div>
-                <div class="model-info-row"><span class="model-info-label">Depth</span><span class="model-info-value">${fmtRange(g.depth_min, g.depth_max, g.depth_units || 'km')}</span></div>
-                <div class="model-info-row"><span class="model-info-label">Coordinate&nbsp;system</span><span class="model-info-value">${coordHtml}</span></div>
-                <div class="model-info-row"><span class="model-info-label">Variables</span><span class="model-info-value"><ul class="model-info-vars">${varRows}</ul></span></div>
-            `;
+            const rows = [
+                ['Publication', pub],
+                ['Summary', val(m.summary)],
+                ['Model Type', val(mathish(m.model_type))],
+                ['Minimum Longitude', val(g.lon_min)],
+                ['Maximum Longitude', val(g.lon_max)],
+                ['Longitude Resolution', val(g.lon_resolution)],
+                ['Minimum Latitude', val(g.lat_min)],
+                ['Maximum Latitude', val(g.lat_max)],
+                ['Latitude Resolution', val(g.lat_resolution)],
+                ['Minimum Depth', g.depth_min != null ? `${g.depth_min} km` : '<em>not reported</em>'],
+                ['Maximum Depth', g.depth_max != null ? `${g.depth_max} km` : '<em>not reported</em>'],
+            ];
+            return rows.map(([label, value]) =>
+                `<div class="model-info-row"><span class="model-info-label">${label}</span><span class="model-info-value">${value}</span></div>`
+            ).join('');
         }
 
         fetch('/data/list_json_files_s3/' + model)
@@ -1576,7 +1616,6 @@
                 const summary = await summarizeGeoJSON(dataFile, label, title, reference, decimation);
                 document.getElementById("jsonContent").innerHTML = summary;
                 document.getElementById("mmodelname").textContent = label + " Metadata";
-                openMetadataPanel();
 
                 const iframe = document.getElementById('3dIframe');
                 if (iframe && iframe.contentWindow) {
@@ -1625,6 +1664,35 @@
         auxTableWrapper.appendChild(auxTable);
         container.appendChild(toggleButton);
         container.appendChild(auxTableWrapper);
+
+        // Mirror the hidden table into the sidebar dropdown so the visible
+        // control matches the 3D Models pattern. Selecting an option fires
+        // the underlying row's click, which still owns the "open metadata +
+        // toggle the 2D surface in the iframe" behavior.
+        const sel = document.getElementById('secondaryModelSelect');
+        if (sel) {
+            sel.innerHTML = '';
+            auxLabel.forEach((label, index) => {
+                const opt = document.createElement('option');
+                opt.value = String(index);
+                opt.textContent = label;
+                sel.appendChild(opt);
+            });
+            if (!sel.dataset.wired) {
+                sel.addEventListener('change', () => {
+                    const idx = sel.value;
+                    if (idx === '') return;
+                    const row = auxTable.querySelectorAll('tbody tr')[Number(idx)];
+                    const cell = row && row.cells && row.cells[0];
+                    if (cell && cell.onclick) cell.onclick();
+                });
+                sel.dataset.wired = '1';
+            }
+            // Default to the first 2D model so the visible label matches the
+            // 3D Models dropdown behavior. No auto-click; the map only loads
+            // the layer once the user actively picks it.
+            if (auxLabel.length > 0 && !sel.value) sel.selectedIndex = 0;
+        }
     }
 
     // Sidebar toggle (mobile)
@@ -1635,7 +1703,7 @@
     window.addEventListener("load", () => {
         populateLatLonInputs();
         initLatLonSliders();
-        loadFileListAndJSON("-");
+        _loadDisplayNames().finally(() => loadFileListAndJSON("-"));
         document.getElementById('clearModelsBtn')?.addEventListener('click', clearAllModels);
     });
 </script>

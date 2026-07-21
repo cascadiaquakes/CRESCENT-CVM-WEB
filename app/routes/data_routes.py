@@ -1455,12 +1455,93 @@ def _load_model_manifest_body(bucket: str, key: str) -> str:
     return obj["Body"].read().decode("utf-8")
 
 
+import re
+import urllib.request
+
+_JBOOK_RAW_URL = (
+    "https://raw.githubusercontent.com/cascadiaquakes/cvm-tools-book/main/3Dmodels/{slug}.md"
+)
+
+# netCDF filename → JBook 3Dmodels/*.md slug. The two Delph netCDFs both point
+# at the same paper until the second one is confirmed as a distinct publication.
+_NETCDF_TO_JBOOK = {
+    "Cascadia-ANT+RF-Delph2018.r0.1.nc": "delph_epsl_2018",
+    "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "delph_epsl_2018",
+    "Cascadia_highRes_Vp_Ashraf2025.r0.0.nc": "ashraf_jgr_2025",
+    "Janiszewski2019_phasevelocities.r0.1.nc": "janiszewski_gji_2019",
+    "PNW10-S_CVM.r0.1.nc": "porritt_epsl_2011",
+    "SVI_EQTOMO_Savard2018.r0.1.nc": "savard_g3_2018",
+    "WUS324-Casc-CVM.r0.0-n4.nc": "rodgers_grl_2024",
+    "casc1.6-velmdl.r1.0-n4.nc": "stephenson_ofr_2019",
+}
+
+# Human-readable dropdown labels. Falls back to the JBook H1 when a filename
+# is absent here; the two Delph entries differentiate the netCDFs at the
+# sidebar level so users can tell them apart even though they map to the same
+# JBook page for now.
+_MODEL_DISPLAY_NAMES = {
+    "Cascadia-ANT+RF-Delph2018.r0.1.nc": "Delph et al. (2018) — ANT+RF",
+    "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "Delph et al. (2018) — Rayleigh",
+}
+
+
+@lru_cache(maxsize=16)
+def _fetch_jbook_md(slug: str) -> str:
+    url = _JBOOK_RAW_URL.format(slug=slug)
+    with urllib.request.urlopen(url, timeout=8) as r:
+        return r.read().decode("utf-8")
+
+
+def _parse_jbook_md(md: str) -> dict:
+    """Extract the fields the CVM sidebar needs from a JBook 3Dmodels/*.md.
+
+    Grabs the H1 as the display name, the DOI URL from the shield-badge link,
+    and every '- **KEY:** value' line under '## Model Information'.
+    """
+    out = {}
+    m = re.search(r"^#\s+(.+?)\s*$", md, re.MULTILINE)
+    if m:
+        out["display_name"] = m.group(1).strip()
+
+    m = re.search(r"\((https?://doi\.org/[^)\s]+)\)", md)
+    if m:
+        out["publication_url"] = m.group(1)
+
+    mi = re.search(r"##\s+Model Information\s*\n(.+?)(?:\n##|\Z)", md, re.DOTALL)
+    if mi:
+        fields = {}
+        for line in mi.group(1).splitlines():
+            m = re.match(r"\s*-\s*\*\*([^:]+):\*\*\s*(.+?)\s*$", line)
+            if m:
+                fields[m.group(1).strip()] = m.group(2).strip()
+        out["fields"] = fields
+    return out
+
+
+def _jbook_meta_for(filename: str) -> dict:
+    # The frontend sometimes hands us the stem without the .nc suffix
+    # (list_json_files_s3's hidden filename cell); normalize so the map hits.
+    canonical = filename if filename.endswith(".nc") else filename + ".nc"
+    slug = _NETCDF_TO_JBOOK.get(canonical) or _NETCDF_TO_JBOOK.get(filename)
+    if not slug:
+        return {}
+    try:
+        return _parse_jbook_md(_fetch_jbook_md(slug))
+    except Exception as e:
+        logger.warning(f"JBook fetch failed for {filename} ({slug}): {e}")
+        return {}
+
+
 def _normalize_model_metadata(manifest: dict, filename: str) -> dict:
     """Reshape the derived-from-netCDF manifest into the stable UI contract.
 
     Fields default to None when absent so the sidebar can render 'not reported'
     without the endpoint crashing on a model that lacks a given attribute.
+    When a matching JBook page exists, its summary/model-type override the
+    netCDF-derived values because Amanda curates that copy.
     """
+    jbook = _jbook_meta_for(filename)
+    jbf = jbook.get("fields", {}) if isinstance(jbook, dict) else {}
     variables = []
     var_meta = manifest.get("variables", {})
     if not isinstance(var_meta, dict):
@@ -1479,8 +1560,16 @@ def _normalize_model_metadata(manifest: dict, filename: str) -> dict:
     return {
         "id": manifest.get("model"),
         "file": filename,
+        "display_name": (
+            _MODEL_DISPLAY_NAMES.get(filename)
+            or _MODEL_DISPLAY_NAMES.get(filename + ".nc" if not filename.endswith(".nc") else filename)
+            or jbook.get("display_name")
+            or manifest.get("model")
+        ),
         "title": manifest.get("title"),
-        "summary": manifest.get("summary"),
+        "summary": jbf.get("SUMMARY") or manifest.get("summary"),
+        "model_type": jbf.get("MODEL TYPE"),
+        "publication_url": jbook.get("publication_url"),
         "reference": {
             "citation": manifest.get("reference"),
             "doi": manifest.get("reference_pid"),
@@ -1536,6 +1625,24 @@ def model_metadata_s3(filename: str):
         raise HTTPException(status_code=502, detail=f"S3 read failed: {code}")
     manifest = json.loads(body)
     return JSONResponse(_normalize_model_metadata(manifest, filename))
+
+
+@router.get("/model_display_names")
+def model_display_names():
+    """Return {netcdf_filename: friendly_dropdown_label} for every model with
+    a curated JBook entry. The sidebar merges this map onto the raw model list
+    so the dropdown reads 'Delph et al. (2018)' instead of the internal id."""
+    out = {}
+    for filename, slug in _NETCDF_TO_JBOOK.items():
+        label = _MODEL_DISPLAY_NAMES.get(filename)
+        if not label:
+            try:
+                label = _parse_jbook_md(_fetch_jbook_md(slug)).get("display_name")
+            except Exception:
+                label = None
+        if label:
+            out[filename] = label
+    return JSONResponse(out)
 
 
 # Route to create html for model dropdown. A simple drop-down of the file names and model variables.
