@@ -1246,6 +1246,18 @@
         }
         const secondary = document.getElementById('secondaryModelSelect');
         if (secondary && secondary.options.length > 0) secondary.selectedIndex = 0;
+        // Un-apply whichever 2D layer the user had loaded so the map returns
+        // to the "nothing overlaid yet" state that a first visit shows.
+        const iframe = document.getElementById('3dIframe');
+        if (iframe && iframe.contentWindow) {
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            const surfaceSel = iframeDoc && iframeDoc.getElementById('select2dSurface');
+            if (surfaceSel) {
+                Array.from(surfaceSel.options).forEach(o => { o.selected = false; });
+                surfaceSel.value = '';
+                surfaceSel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
         const info = document.getElementById('modelInfoSection');
         if (info) info.open = false;
 
