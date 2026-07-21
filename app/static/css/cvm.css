@@ -863,8 +863,8 @@ body:has(#viewer2dWrapper) {
 
 .btn-secondary {
     background: #f1f5f9;
-    color: #0b4a53;
-    border-color: #cbd5e1;
+    color: #64748b;
+    border: none;
     flex: 1;
 }
 

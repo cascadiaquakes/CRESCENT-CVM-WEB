@@ -1229,6 +1229,26 @@
         document.getElementById('depth_max').value = '';
         const vSel = document.getElementById('variableSelect');
         if (vSel) Array.from(vSel.options).forEach(o => o.selected = false);
+
+        // Bring the model dropdowns and compare state back to the same shape
+        // the sidebar had on first visit.
+        clearAllCompare();
+        const compareToggle = document.getElementById('compareModelsToggle');
+        if (compareToggle) {
+            compareToggle.checked = false;
+            const panel = document.getElementById('compareModelsPanel');
+            if (panel) panel.hidden = true;
+        }
+        const primary = document.getElementById('primaryModelSelect');
+        if (primary && primary.options.length > 0 && primary.selectedIndex !== 0) {
+            primary.selectedIndex = 0;
+            primary.dispatchEvent(new Event('change'));
+        }
+        const secondary = document.getElementById('secondaryModelSelect');
+        if (secondary && secondary.options.length > 0) secondary.selectedIndex = 0;
+        const info = document.getElementById('modelInfoSection');
+        if (info) info.open = false;
+
         filterTable();
     }
 
