@@ -926,6 +926,16 @@
             _openPlotFullscreen(msg.src, msg.title, msg.filename);
             return;
         }
+        // A tool panel is telling us to remove its map overlay (Reset).
+        if (msg.type === 'clearToolSync') {
+            const iframe = document.getElementById("3dIframe");
+            const viewer = iframe && iframe.contentWindow && iframe.contentWindow.viewer;
+            if (!viewer) return;
+            const existing = viewer.entities.getById("toolSyncOutline");
+            if (existing) viewer.entities.remove(existing);
+            if (viewer.scene) viewer.scene.requestRender();
+            return;
+        }
         // Back-compat: volume previously sent type 'syncVolumeToMainMap'.
         if (msg.type !== "syncToolToMainMap" && msg.type !== "syncVolumeToMainMap") return;
         const d = msg.data || {};
