@@ -74,9 +74,7 @@
                     <span class="section-plain-title">2D Models</span>
                 </div>
                 <div class="section-plain-body">
-                    <select id="secondaryModelSelect" class="primary-model-select">
-                        <option value="">Select a 2D model...</option>
-                    </select>
+                    <select id="secondaryModelSelect" class="primary-model-select"></select>
                     <div id="auxTableContainer" hidden aria-hidden="true"></div>
                 </div>
             </div>
@@ -1642,9 +1640,7 @@
         // toggle the 2D surface in the iframe" behavior.
         const sel = document.getElementById('secondaryModelSelect');
         if (sel) {
-            const keep = sel.querySelector('option[value=""]');
             sel.innerHTML = '';
-            if (keep) sel.appendChild(keep);
             auxLabel.forEach((label, index) => {
                 const opt = document.createElement('option');
                 opt.value = String(index);
@@ -1661,6 +1657,10 @@
                 });
                 sel.dataset.wired = '1';
             }
+            // Default to the first 2D model so the visible label matches the
+            // 3D Models dropdown behavior. No auto-click; the map only loads
+            // the layer once the user actively picks it.
+            if (auxLabel.length > 0 && !sel.value) sel.selectedIndex = 0;
         }
     }
 
