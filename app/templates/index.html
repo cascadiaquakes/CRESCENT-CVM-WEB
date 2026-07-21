@@ -1584,7 +1584,6 @@
                 const summary = await summarizeGeoJSON(dataFile, label, title, reference, decimation);
                 document.getElementById("jsonContent").innerHTML = summary;
                 document.getElementById("mmodelname").textContent = label + " Metadata";
-                openMetadataPanel();
 
                 const iframe = document.getElementById('3dIframe');
                 if (iframe && iframe.contentWindow) {
