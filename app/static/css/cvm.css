@@ -861,15 +861,26 @@ body:has(#viewer2dWrapper) {
     background: #0f5e69;
 }
 
-.btn-secondary {
+.btn-secondary,
+#clearFilterBtn.btn-secondary {
     background: #f1f5f9;
     color: #64748b;
     border: none;
+    border-radius: 8px;
     flex: 1;
+    width: auto;
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+#clearFilterBtn.btn-secondary:hover {
     background: #e2e8f0;
+}
+
+#applyFilterBtn.btn-primary {
+    background: #0b4a53;
+    color: #ffffff;
+    border-radius: 8px;
+    width: auto;
 }
 
 .btn-primary:active,
