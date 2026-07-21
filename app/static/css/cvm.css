@@ -563,7 +563,7 @@ body:has(#viewer2dWrapper) {
     border: 1px solid #e2e8f0;
     border-radius: 14px;
     background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-    padding: 8px 12px;
+    padding: 4px 12px;
 }
 
 /* Model Information uses the native <details> disclosure so the section

@@ -482,6 +482,10 @@
             el.classList.remove('active');
             el.style.removeProperty('--chip-color');
         });
+        // Also flip the sidebar's compare-list checkboxes off and drop the
+        // color chips so the panel state matches what's on the map.
+        document.querySelectorAll('#compareModelsOptions input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        document.querySelectorAll('#compareModelsOptions .compare-model-dot').forEach(d => d.style.removeProperty('--chip-color'));
         updateCompareCount();
     }
 
