@@ -393,15 +393,15 @@ html.embedded body {
     margin-bottom: 12px;
 }
 
-.about-links {
+.about-box .modal-body-content .about-links {
     margin: 20px 0 18px;
     text-align: center;
 }
 
-.about-link-button {
+.about-box .modal-body-content .about-link-button {
     display: inline-block;
     background: linear-gradient(135deg, #0e7490 0%, #0b4a53 100%);
-    color: #ffffff !important;
+    color: #ffffff;
     padding: 13px 28px;
     border-radius: 999px;
     text-decoration: none;
@@ -411,12 +411,12 @@ html.embedded body {
     box-shadow: 0 6px 18px rgba(14, 116, 144, 0.35);
 }
 
-.about-link-button:hover {
+.about-box .modal-body-content .about-link-button:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(14, 116, 144, 0.45);
 }
 
-.contact-info {
+.about-box .modal-body-content .contact-info {
     background: rgba(255, 255, 255, 0.55);
     border-left: 3px solid #0e7490;
     border-radius: 14px;
@@ -426,15 +426,15 @@ html.embedded body {
     line-height: 1.45;
 }
 
-.contact-block {
+.about-box .modal-body-content .contact-block {
     margin-bottom: 14px;
 }
 
-.contact-block:last-child {
+.about-box .modal-body-content .contact-block:last-child {
     margin-bottom: 0;
 }
 
-.contact-block strong {
+.about-box .modal-body-content .contact-block strong {
     font-size: 14px;
     font-weight: 600;
     color: #0b4a53;
@@ -442,18 +442,18 @@ html.embedded body {
     margin-bottom: 4px;
 }
 
-.contact-block a {
+.about-box .modal-body-content .contact-block a {
     font-size: 13px;
     color: #0e7490;
     text-decoration: none;
     font-weight: 500;
 }
 
-.contact-block a:hover {
+.about-box .modal-body-content .contact-block a:hover {
     text-decoration: underline;
 }
 
-.acknowledgment {
+.about-box .modal-body-content .acknowledgment {
     font-size: 12.5px;
     color: #64748b;
     font-style: italic;
