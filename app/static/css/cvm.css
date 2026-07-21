@@ -337,6 +337,131 @@ html.embedded body {
     transform: translateY(1px);
 }
 
+/* About modal — eqcat-style structure: wide soft-white box, absolute close,
+   pill CTA button, contact cards with a left accent bar. */
+.about-box {
+    background: rgba(242, 247, 249, 0.96);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    max-width: 740px;
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    position: relative;
+}
+
+.about-box .modal-body-content {
+    padding: 34px 40px;
+}
+
+.about-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: none;
+    font-size: 26px;
+    color: #64748b;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 2;
+}
+
+.about-modal-close:hover { color: #0b4a53; }
+
+.about-box .modal-body-content h2 {
+    color: #0e7490;
+    margin: 0 0 14px;
+    font-size: 22px;
+    font-weight: 700;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+.about-box .modal-body-content h3 {
+    margin: 20px 0 8px;
+    font-size: 16px;
+    color: #0b4a53;
+    font-weight: 600;
+}
+
+.about-box .modal-body-content p {
+    color: #334155;
+    font-size: 14.5px;
+    line-height: 1.6;
+    margin-bottom: 12px;
+}
+
+.about-links {
+    margin: 20px 0 18px;
+    text-align: center;
+}
+
+.about-link-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #0e7490 0%, #0b4a53 100%);
+    color: #ffffff !important;
+    padding: 13px 28px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 18px rgba(14, 116, 144, 0.35);
+}
+
+.about-link-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(14, 116, 144, 0.45);
+}
+
+.contact-info {
+    background: rgba(255, 255, 255, 0.55);
+    border-left: 3px solid #0e7490;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-top: 8px;
+    font-size: 13.5px;
+    line-height: 1.45;
+}
+
+.contact-block {
+    margin-bottom: 14px;
+}
+
+.contact-block:last-child {
+    margin-bottom: 0;
+}
+
+.contact-block strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0b4a53;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.contact-block a {
+    font-size: 13px;
+    color: #0e7490;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.contact-block a:hover {
+    text-decoration: underline;
+}
+
+.acknowledgment {
+    font-size: 12.5px;
+    color: #64748b;
+    font-style: italic;
+    margin-top: 16px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+
 .modal-cta-btn svg {
     flex-shrink: 0;
 }
