@@ -1124,6 +1124,15 @@
             Array.from(cmp.options).forEach(o => { o.selected = false; });
             cmp.dispatchEvent(new Event('change', { bubbles: true }));
         }
+        // Wipe the stale plot + downloads so the panel visually matches the
+        // reset form state. User clicks Plot to get fresh output.
+        ['dynamicPlot', 'viewPlotFullscreenButton', 'downloadPlotButton', 'downloadDataButton']
+            .forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+        const dp = document.getElementById('dynamicPlot');
+        if (dp) dp.src = '';
         document.getElementById('sync-to-iframe')?.click();
     }
 
