@@ -1251,8 +1251,8 @@
             Array.from(cmp.options).forEach(o => { o.selected = false; });
             cmp.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        // Wipe the stale plot + downloads so the panel visually matches the
-        // reset form state. User clicks Plot to get fresh output.
+        // Wipe every visible bit of the previous plot so the panel matches
+        // its first-open state: primary image, compare stack, downloads.
         ['dynamicPlot', 'viewPlotFullscreenButton', 'downloadPlotButton', 'downloadDataButton']
             .forEach(id => {
                 const el = document.getElementById(id);
@@ -1260,7 +1260,15 @@
             });
         const dp = document.getElementById('dynamicPlot');
         if (dp) dp.src = '';
-        document.getElementById('sync-to-iframe')?.click();
+        const compareResults = document.getElementById('compareResults');
+        if (compareResults) compareResults.innerHTML = '';
+        // Tell the parent map to drop whichever tool-sync overlay this panel
+        // pushed onto it.
+        try {
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'clearToolSync' }, window.location.origin);
+            }
+        } catch (e) { /* cross-origin; ignore */ }
     }
 
     document.addEventListener('DOMContentLoaded', function () {
