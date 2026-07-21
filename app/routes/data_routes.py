@@ -1519,7 +1519,10 @@ def _parse_jbook_md(md: str) -> dict:
 
 
 def _jbook_meta_for(filename: str) -> dict:
-    slug = _NETCDF_TO_JBOOK.get(filename)
+    # The frontend sometimes hands us the stem without the .nc suffix
+    # (list_json_files_s3's hidden filename cell); normalize so the map hits.
+    canonical = filename if filename.endswith(".nc") else filename + ".nc"
+    slug = _NETCDF_TO_JBOOK.get(canonical) or _NETCDF_TO_JBOOK.get(filename)
     if not slug:
         return {}
     try:
@@ -1559,6 +1562,7 @@ def _normalize_model_metadata(manifest: dict, filename: str) -> dict:
         "file": filename,
         "display_name": (
             _MODEL_DISPLAY_NAMES.get(filename)
+            or _MODEL_DISPLAY_NAMES.get(filename + ".nc" if not filename.endswith(".nc") else filename)
             or jbook.get("display_name")
             or manifest.get("model")
         ),
