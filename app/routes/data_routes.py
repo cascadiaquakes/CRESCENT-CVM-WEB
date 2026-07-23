@@ -1482,7 +1482,22 @@ _NETCDF_TO_JBOOK = {
 _MODEL_DISPLAY_NAMES = {
     "Cascadia-ANT+RF-Delph2018.r0.1.nc": "Delph et al. (2018) — ANT+RF",
     "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "Delph et al. (2018) — Rayleigh",
+    "CRESCENT_CVM0_He2026.r0.0.nc": "He et al. (2026) — CRESCENT CVM Gen 0",
 }
+
+
+def _publication_url_from_manifest(manifest: dict) -> str | None:
+    """Derive a paper URL from the netCDF's reference_pid so newly-uploaded
+    models have a working View Paper link before their JBook page lands."""
+    pid = (manifest.get("reference_pid") or "").strip()
+    if not pid:
+        return None
+    lower = pid.lower()
+    if lower.startswith("doi:"):
+        return f"https://doi.org/{pid[4:]}"
+    if lower.startswith("http://") or lower.startswith("https://"):
+        return pid
+    return None
 
 
 @lru_cache(maxsize=16)
@@ -1569,7 +1584,7 @@ def _normalize_model_metadata(manifest: dict, filename: str) -> dict:
         "title": manifest.get("title"),
         "summary": jbf.get("SUMMARY") or manifest.get("summary"),
         "model_type": jbf.get("MODEL TYPE"),
-        "publication_url": jbook.get("publication_url"),
+        "publication_url": jbook.get("publication_url") or _publication_url_from_manifest(manifest),
         "reference": {
             "citation": manifest.get("reference"),
             "doi": manifest.get("reference_pid"),
@@ -1633,9 +1648,14 @@ def model_display_names():
     a curated JBook entry. The sidebar merges this map onto the raw model list
     so the dropdown reads 'Delph et al. (2018)' instead of the internal id."""
     out = {}
-    for filename, slug in _NETCDF_TO_JBOOK.items():
+    # Union of JBook-mapped models and hard-coded display names so newly
+    # uploaded models with a curated label appear even before their JBook
+    # page lands.
+    filenames = set(_NETCDF_TO_JBOOK) | set(_MODEL_DISPLAY_NAMES)
+    for filename in filenames:
         label = _MODEL_DISPLAY_NAMES.get(filename)
-        if not label:
+        slug = _NETCDF_TO_JBOOK.get(filename)
+        if not label and slug:
             try:
                 label = _parse_jbook_md(_fetch_jbook_md(slug)).get("display_name")
             except Exception:
