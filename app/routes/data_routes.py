@@ -1500,6 +1500,49 @@ def _publication_url_from_manifest(manifest: dict) -> str | None:
     return None
 
 
+def _model_type_from_manifest(manifest: dict) -> str | None:
+    """Summarize the netCDF data_vars into a readable MODEL TYPE string so
+    the sidebar has something meaningful even before a curated JBook Model
+    Information block lands. Uncertainty companions (e.g. vs_uncert) annotate
+    their base variable instead of appearing on their own."""
+    variables = manifest.get("variables") or {}
+    data_vars = manifest.get("data_vars") or []
+    if not data_vars or not isinstance(variables, dict):
+        return None
+
+    entries = []
+    for v in data_vars:
+        info = variables.get(v)
+        if not isinstance(info, dict):
+            continue
+        raw = info.get("display_name") or info.get("long_name") or v
+        # trim trailing units like " [km/s]" or " (km/s)"
+        label = raw.split("(")[0].split("[")[0].strip().rstrip(",")
+        is_uncert = ("uncert" in v.lower()) or ("uncertainty" in label.lower())
+        if is_uncert:
+            base_id = v.lower().replace("_uncert", "").replace("uncertainty", "").rstrip("_")
+            for e in entries:
+                if e["id"].lower() == base_id:
+                    e["with_uncert"] = True
+                    break
+            continue
+        if label.lower() in {e["label"].lower() for e in entries}:
+            continue
+        entries.append({"id": v, "label": label, "with_uncert": False})
+
+    if not entries:
+        return None
+    parts = [
+        f"{e['label']} (with uncertainty)" if e["with_uncert"] else e["label"]
+        for e in entries
+    ]
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2:
+        return f"{parts[0]} and {parts[1]}"
+    return ", ".join(parts[:-1]) + f", and {parts[-1]}"
+
+
 @lru_cache(maxsize=16)
 def _fetch_jbook_md(slug: str) -> str:
     url = _JBOOK_RAW_URL.format(slug=slug)
@@ -1583,7 +1626,7 @@ def _normalize_model_metadata(manifest: dict, filename: str) -> dict:
         ),
         "title": manifest.get("title"),
         "summary": jbf.get("SUMMARY") or manifest.get("summary"),
-        "model_type": jbf.get("MODEL TYPE"),
+        "model_type": jbf.get("MODEL TYPE") or _model_type_from_manifest(manifest),
         "publication_url": jbook.get("publication_url") or _publication_url_from_manifest(manifest),
         "reference": {
             "citation": manifest.get("reference"),
