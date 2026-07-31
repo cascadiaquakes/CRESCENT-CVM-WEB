@@ -333,7 +333,7 @@
 </div>
 {%endblock%}
 {%block scripts %}
-<script src="/static/js/shared.js?v=2"></script>
+<script src="/static/js/shared.js?v=3"></script>
 <script src="/static/config/project.js"></script>
 
 
@@ -960,7 +960,7 @@
                         // Populate the select element with options
                         selectElement.options.length = 0;
                         value.forEach(val => {
-                            const option = new Option(val, val);
+                            const option = new Option(displayVarName(val), val);
                             selectElement.add(option);
                         });
 

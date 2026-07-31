@@ -316,7 +316,7 @@
 {%endblock%}
 {%block scripts %}
 <script src="https://unpkg.com/@turf/turf"></script>
-<script src="/static/js/shared.js?v=2"></script>
+<script src="/static/js/shared.js?v=3"></script>
 
 <script>
     async function loadDropdown() {
@@ -402,7 +402,7 @@
                             // Populate the select element with options
                             selectElement.options.length = 0;
                             value.forEach((val, index) => {
-                                const option = new Option(val, val);
+                                const option = new Option(displayVarName(val), val);
                                 selectElement.add(option);
 
                                 if (index === 0) {
@@ -758,7 +758,7 @@
                         // Populate the select element with options
                         selectElement.options.length = 0;
                         value.forEach((val, index) => {
-                            const option = new Option(val, val);
+                            const option = new Option(displayVarName(val), val);
                             selectElement.add(option);
 
                             if (index === 0) {
