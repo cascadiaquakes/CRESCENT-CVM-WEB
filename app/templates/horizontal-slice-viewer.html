@@ -558,6 +558,7 @@
 
     // Call loadColormaps when the page has finished loading
     document.addEventListener('DOMContentLoaded', loadColormaps);
+    document.addEventListener('DOMContentLoaded', function () { initPlotColorRangeControl(); });
 
     var model = ""
     var lat_min, lat_max, lon_min, lon_max, current_units;
@@ -814,6 +815,7 @@
                 dp.style.display = 'block';
                 dp.scrollIntoView({ behavior: 'smooth', block: 'end' });
             }
+            showColorRangeControl();
             wireDownloadButtons(r);
             return;
         }
@@ -1253,7 +1255,7 @@
         }
         // Wipe every visible bit of the previous plot so the panel matches
         // its first-open state: primary image, compare stack, downloads.
-        ['dynamicPlot', 'viewPlotFullscreenButton', 'downloadPlotButton', 'downloadDataButton']
+        ['dynamicPlot', 'viewPlotFullscreenButton', 'downloadPlotButton', 'downloadDataButton', 'colorRangeToolbar']
             .forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
