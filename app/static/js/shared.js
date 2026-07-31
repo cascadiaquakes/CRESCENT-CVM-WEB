@@ -10,6 +10,15 @@
     } catch (e) { /* cross-origin; ignore */ }
 })();
 
+// Canonical-case display for variable names. Contributors upload models
+// with mixed casing (e.g. "vs" vs "Vs"), so we uppercase the first letter
+// for anything shown to the user. The raw value is still sent to the
+// backend as-is so plots keep working regardless of source casing.
+function displayVarName(v) {
+    if (!v) return '';
+    return String(v).charAt(0).toUpperCase() + String(v).slice(1);
+}
+
 /**
        * Generates HTML content from a given JSON object, handling nested structures recursively.
        *

@@ -531,16 +531,16 @@
                         // Populate the select element with options
                         selectElement.options.length = 0;
                         value.forEach(val => {
-                            const option = new Option(val, val);
+                            const option = new Option(displayVarName(val), val);
                             selectElement.add(option);
                         });
                         var start_label = document.querySelector('label[for="start-value"]');
-                        start_label.textContent = "Min. " + selectElement.value;
+                        start_label.textContent = "Min. " + displayVarName(selectElement.value);
                         var end_label = document.querySelector('label[for="end-value"]');
-                        end_label.textContent = "Max. " + selectElement.value;
+                        end_label.textContent = "Max. " + displayVarName(selectElement.value);
 
                         var cmap_label = document.querySelector('label[for="colormap"]');
-                        cmap_label.textContent = selectElement.value + " colormap";
+                        cmap_label.textContent = displayVarName(selectElement.value) + " colormap";
 
                     }
 
@@ -619,12 +619,12 @@
         var selectElement = document.getElementById('plot-variable');
 
         var start_label = document.querySelector('label[for="start-value"]');
-        start_label.textContent = "Min. " + selectElement.value;
+        start_label.textContent = "Min. " + displayVarName(selectElement.value);
         var end_label = document.querySelector('label[for="end-value"]');
-        end_label.textContent = "Max. " + selectElement.value;
+        end_label.textContent = "Max. " + displayVarName(selectElement.value);
 
         var cmap_label = document.querySelector('label[for="colormap"]');
-        cmap_label.textContent = selectElement.value + " colormap";
+        cmap_label.textContent = displayVarName(selectElement.value) + " colormap";
 
         const selectModelElement = document.getElementById('data-file')
         const model = selectModelElement.options[selectElement.selectedIndex].textContent
