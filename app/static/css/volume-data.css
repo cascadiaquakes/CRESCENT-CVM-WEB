@@ -162,17 +162,18 @@ html.embedded #main-container {
 /* Single-model legacy plot panel (#results-panel) -- inherit the same 20px
    inset as the cards above so the image and the download buttons line up. */
 html.embedded #results-panel {
-    width: 100% !important;
+    /* Panel needs an explicit width so the img's max-width:100% has
+       something concrete to constrain against (width:auto let the panel
+       collapse to the natural PNG size and pushed everything right).
+       Use calc so the 20px horizontal margin stays inside the parent
+       instead of overflowing it (buttons like "Color scale" and "View
+       Full Size" were sticking out to the left of the panel edge). */
+    width: calc(100% - 40px) !important;
     padding: 0 !important;
     margin: 16px 20px 0 !important;
     box-sizing: border-box;
     border: 0 !important;
     background: transparent !important;
-    /* width:auto here let the panel collapse to the plot image's natural
-       size (matplotlib PNGs are 800-1200px wide), which pushed the panel
-       to the right and left only the colorbar visible inside the tool
-       panel iframe. width:100% forces the panel to fill the parent so
-       the img's max-width:100% actually constrains the image. */
 }
 
 /* The plot image itself sits in a subtle white card for visual rhythm.
@@ -182,7 +183,14 @@ html.embedded #results-panel {
    legacy image underneath the comparison stack. */
 html.embedded #dynamicPlot {
     max-width: 100% !important;
+    /* Cap the vertical extent so tall matplotlib PNGs (e.g. square-ish
+       lat/lon plots at 12x12in / 1200x1200px) don't push the panel into
+       a huge scroll. object-fit:contain keeps the aspect ratio while
+       fitting the img within max-width x max-height. */
+    max-height: 75vh !important;
     height: auto !important;
+    width: auto !important;
+    object-fit: contain;
     background: #ffffff !important;
     border: 1px solid #e8ecf0 !important;
     border-radius: 12px !important;
