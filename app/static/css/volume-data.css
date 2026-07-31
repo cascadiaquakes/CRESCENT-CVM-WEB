@@ -182,15 +182,12 @@ html.embedded #results-panel {
    takes over). Do NOT force display here or compare mode will leak the
    legacy image underneath the comparison stack. */
 html.embedded #dynamicPlot {
+    /* Classic responsive img: cap to container width, keep aspect ratio.
+       No max-height / object-fit — matplotlib PNGs then render at the
+       natural aspect ratio scaled down to the panel width, and the tool
+       panel scrolls if the plot is tall. */
     max-width: 100% !important;
-    /* Cap the vertical extent so tall matplotlib PNGs (e.g. square-ish
-       lat/lon plots at 12x12in / 1200x1200px) don't push the panel into
-       a huge scroll. object-fit:contain keeps the aspect ratio while
-       fitting the img within max-width x max-height. */
-    max-height: 75vh !important;
     height: auto !important;
-    width: auto !important;
-    object-fit: contain;
     background: #ffffff !important;
     border: 1px solid #e8ecf0 !important;
     border-radius: 12px !important;
