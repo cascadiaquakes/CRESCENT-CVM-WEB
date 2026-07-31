@@ -548,17 +548,27 @@
         const rows = document.querySelectorAll('#fileTable tr');
         const previous = sel.value;
         sel.innerHTML = '';
-        let names = [];
+        // Collect first, sort by year, then paint so the dropdown lists
+        // models chronologically (oldest to newest) instead of the S3
+        // listing order.
+        const entries = [];
         rows.forEach((row, i) => {
             if (i === 0 || !row.cells || !row.cells[1]) return;
             const name = row.cells[1].textContent.trim();
             if (!name) return;
             const filenameCell = row.cells[7];
             const filename = filenameCell ? filenameCell.textContent.trim() + '.nc' : '';
-            names.push(name);
+            const label = _friendlyName(name, filename);
+            const yearMatch = label.match(/\((\d{4})\)/);
+            const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
+            entries.push({ name, filename, label, year });
+        });
+        entries.sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
+        const names = entries.map(e => e.name);
+        entries.forEach(e => {
             const opt = document.createElement('option');
-            opt.value = name;
-            opt.textContent = _friendlyName(name, filename);
+            opt.value = e.name;
+            opt.textContent = e.label;
             sel.appendChild(opt);
         });
         if (names.length === 0) return;
@@ -583,6 +593,9 @@
 
         options.innerHTML = '';
         const rows = document.querySelectorAll('#fileTable tr');
+        // Same chronological sort the primary dropdown uses so both stay
+        // consistent.
+        const entries = [];
         rows.forEach((row, i) => {
             if (i === 0 || !row.cells || !row.cells[1]) return;
             const name = row.cells[1].textContent.trim();
@@ -593,11 +606,17 @@
             const filenameCell = row.cells[7];
             const filename = filenameCell ? filenameCell.textContent.trim() + '.nc' : '';
             const displayName = _friendlyName(name, filename);
+            const yearMatch = displayName.match(/\((\d{4})\)/);
+            const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
+            entries.push({ name, active, chip, displayName, year });
+        });
+        entries.sort((a, b) => a.year - b.year || a.displayName.localeCompare(b.displayName));
+        entries.forEach(e => {
             const label = document.createElement('label');
             label.className = 'compare-model-option';
-            label.innerHTML = `<input type="checkbox" data-model="${name.replace(/"/g, '&quot;')}" ${active ? 'checked' : ''}><span class="compare-model-dot"></span><span class="compare-model-name">${displayName}</span>`;
+            label.innerHTML = `<input type="checkbox" data-model="${e.name.replace(/"/g, '&quot;')}" ${e.active ? 'checked' : ''}><span class="compare-model-dot"></span><span class="compare-model-name">${e.displayName}</span>`;
             const dot = label.querySelector('.compare-model-dot');
-            if (dot && chip) dot.style.setProperty('--chip-color', chip);
+            if (dot && e.chip) dot.style.setProperty('--chip-color', e.chip);
             options.appendChild(label);
         });
 
@@ -1127,10 +1146,13 @@
         return processJson(jsonData);
     }
 
-    // Extract unique variables from the 9th column of the table and populate the select dropdown
+    // Extract unique variables from the 9th column of the table and populate
+    // the select dropdown. Variable names are case-normalized against the
+    // curated allow-list so contributors uploading with different casing
+    // (e.g. "vs" vs "Vs") don't create duplicate filter options.
     async function extractAndPopulateVariables() {
         const rows = document.querySelectorAll('#fileTable tr');
-        const variableSet = new Set();
+        const rawVariables = new Set();
 
         let variablesList = [];
         try {
@@ -1148,16 +1170,30 @@
                 .split(',')
                 .map(v => v.trim());
             variables.forEach(variable => {
-                if (variable) variableSet.add(variable);
+                if (variable) rawVariables.add(variable);
             });
         });
 
-        const variableSetArray = Array.from(variableSet);
-        const filteredVariablesList = variablesList.filter(variable => variableSet.has(variable));
-        variableSetArray.forEach(variable => {
-            if (!filteredVariablesList.includes(variable)) {
-                filteredVariablesList.push(variable);
+        // Map each raw variable to its canonical form: allow-list case
+        // wins if there's a case-insensitive match; otherwise capitalize
+        // the first letter as a best-effort normalization.
+        const allowLower = variablesList.map(v => v.toLowerCase());
+        const canonicalSet = new Set();
+        rawVariables.forEach(raw => {
+            const idx = allowLower.indexOf(raw.toLowerCase());
+            if (idx >= 0) {
+                canonicalSet.add(variablesList[idx]);
+            } else {
+                canonicalSet.add(raw.charAt(0).toUpperCase() + raw.slice(1));
             }
+        });
+
+        // Show allow-list order first (only entries actually present in the
+        // current model set), then append any extras present in models but
+        // not in the allow-list.
+        const filteredVariablesList = variablesList.filter(v => canonicalSet.has(v));
+        canonicalSet.forEach(v => {
+            if (!filteredVariablesList.includes(v)) filteredVariablesList.push(v);
         });
 
         const variableSelect = document.getElementById('variableSelect');
@@ -1218,10 +1254,11 @@
                 (minDepthVal <= depth_max && maxDepthVal >= depth_min);
 
             const variableCondition = selectedVariables.length === 0 || selectedVariables.some(selectedVar => {
-                const mappedValues = (variableMapping[selectedVar] || []).map(v => v.trim());
-                const rowVariablesNormalized = rowVariables.map(rv => rv.trim());
-                return rowVariablesNormalized.includes(selectedVar.trim()) ||
-                    rowVariablesNormalized.some(rv => mappedValues.includes(rv));
+                const target = selectedVar.trim().toLowerCase();
+                const mappedValues = (variableMapping[selectedVar] || []).map(v => v.trim().toLowerCase());
+                const rowVariablesLower = rowVariables.map(rv => rv.trim().toLowerCase());
+                return rowVariablesLower.includes(target) ||
+                    rowVariablesLower.some(rv => mappedValues.includes(rv));
             });
 
             row.style.display = (latLonCondition && depthCondition && variableCondition) ? '' : 'none';
@@ -1682,10 +1719,30 @@
         const sel = document.getElementById('secondaryModelSelect');
         if (sel) {
             sel.innerHTML = '';
-            auxLabel.forEach((label, index) => {
+            // Neutral placeholder so the label doesn't imply a 2D layer is
+            // showing on the map by default (nothing is loaded until the
+            // user picks). Disabled + hidden so it can't be re-selected
+            // once the user picks a real option.
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Select a 2D model...';
+            placeholder.disabled = true;
+            placeholder.selected = true;
+            placeholder.hidden = true;
+            sel.appendChild(placeholder);
+            // Sort by year ascending, matching the 3D dropdown convention.
+            // Underlying auxData indexes stay intact because we carry the
+            // original index on each option's value.
+            const entries = auxLabel.map((label, index) => {
+                const yearMatch = label.match(/\b(\d{4})\b/);
+                const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
+                return { label, index, year };
+            });
+            entries.sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
+            entries.forEach(e => {
                 const opt = document.createElement('option');
-                opt.value = String(index);
-                opt.textContent = label;
+                opt.value = String(e.index);
+                opt.textContent = e.label;
                 sel.appendChild(opt);
             });
             if (!sel.dataset.wired) {
@@ -1698,10 +1755,6 @@
                 });
                 sel.dataset.wired = '1';
             }
-            // Default to the first 2D model so the visible label matches the
-            // 3D Models dropdown behavior. No auto-click; the map only loads
-            // the layer once the user actively picks it.
-            if (auxLabel.length > 0 && !sel.value) sel.selectedIndex = 0;
         }
     }
 

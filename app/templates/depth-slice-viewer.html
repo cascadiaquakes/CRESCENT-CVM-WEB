@@ -503,6 +503,7 @@
 
     // Call loadColormaps when the page has finished loading
     document.addEventListener('DOMContentLoaded', loadColormaps);
+    document.addEventListener('DOMContentLoaded', function () { initPlotColorRangeControl(); });
 
     var model = ""
     var lat_min = 40;
@@ -543,6 +544,7 @@
                 const dynamicPlotElement = document.getElementById('dynamicPlot');
                 dynamicPlotElement.src = imageUrl;
                 dynamicPlotElement.style.display = 'block';
+                showColorRangeControl();
 
                 // Scroll to the dynamicPlot div
                 dynamicPlotElement.scrollIntoView({ behavior: 'smooth', block: 'end' });

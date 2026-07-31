@@ -1480,9 +1480,15 @@ _NETCDF_TO_JBOOK = {
 # sidebar level so users can tell them apart even though they map to the same
 # JBook page for now.
 _MODEL_DISPLAY_NAMES = {
-    "Cascadia-ANT+RF-Delph2018.r0.1.nc": "Delph et al. (2018) — ANT+RF",
-    "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "Delph et al. (2018) — Rayleigh",
-    "CRESCENT_CVM0_He2026.r0.0.nc": "He et al. (2026) — CRESCENT CVM Gen 0",
+    "Cascadia-ANT+RF-Delph2018.r0.1.nc": "Delph et al. (2018) — ANT+RF (Vs)",
+    "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "Delph et al. (2018) — Rayleigh (Vs)",
+    "CRESCENT_CVM0_He2026.r0.0.nc": "He et al. (2026) — CRESCENT CVM Gen 0 (Vp/Vs/ρ)",
+    "Cascadia_highRes_Vp_Ashraf2025.r0.0.nc": "Ashraf et al. (2025) — Vp",
+    "Janiszewski2019_phasevelocities.r0.1.nc": "Janiszewski et al. (2019) — Vp",
+    "PNW10-S_CVM.r0.1.nc": "Porritt et al. (2011) — Vs",
+    "SVI_EQTOMO_Savard2018.r0.1.nc": "Savard et al. (2018) — Vp/Vs/ρ",
+    "WUS324-Casc-CVM.r0.0-n4.nc": "Rodgers et al. (2024) — Vp/Vs/ρ",
+    "casc1.6-velmdl.r1.0-n4.nc": "Stephenson et al. (2019) — Vp/Vs",
 }
 
 
