@@ -1,6 +1,18 @@
+// When a viewer template is loaded inside the main map's tool panel iframe,
+// flag the document so the embedded-scoped CSS rules apply (they constrain
+// #dynamicPlot to max-width:100% so the returned PNG fits the panel width
+// instead of overflowing to the right at its natural size).
+(function () {
+    try {
+        if (window.parent && window.parent !== window) {
+            document.documentElement.classList.add('embedded');
+        }
+    } catch (e) { /* cross-origin; ignore */ }
+})();
+
 /**
        * Generates HTML content from a given JSON object, handling nested structures recursively.
-       * 
+       *
        * @param {Object} jsonData - The JSON object to be converted into HTML.
        * @returns {string} - The generated HTML content as a string.
        */
