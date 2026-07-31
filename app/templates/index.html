@@ -413,7 +413,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/shared.js"></script>
+<script src="/static/js/shared.js?v=2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script>
@@ -1037,7 +1037,11 @@
         if (!panel || !frame) return;
         if (heading) heading.textContent = title || "Tool";
         if (openNew) openNew.href = url;
-        frame.src = url;
+        // Cache-buster so the browser always loads a fresh iframe document
+        // for the tool panel. Without this, reopening the panel in the same
+        // session served a stale HTML/JS pair and required a hard refresh.
+        const sep = url.includes('?') ? '&' : '?';
+        frame.src = url + sep + '_ts=' + Date.now();
         panel.classList.add("open");
     }
 
