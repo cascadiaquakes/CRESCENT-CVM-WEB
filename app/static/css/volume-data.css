@@ -181,14 +181,14 @@ html.embedded #results-panel {
    when a single-model plot is rendered, display:none when compare mode
    takes over). Do NOT force display here or compare mode will leak the
    legacy image underneath the comparison stack. */
-/* Cap to container width AND to 70vh height so tall matplotlib plots
-   (form defaults Width=7in x Height=12in produce a 700x1200 PNG) don't
-   push the colorbar to dominate the panel. Browser preserves the img's
-   natural aspect ratio and picks whichever constraint applies first. */
+/* Give the img an explicit 100% x 70vh box and let object-fit:contain
+   scale the PNG inside it while preserving aspect ratio. max-* alone
+   was letting the browser stretch the img to fill both bounds. */
 #dynamicPlot {
-    max-width: 100% !important;
-    max-height: 70vh !important;
-    height: auto !important;
+    width: 100% !important;
+    height: 70vh !important;
+    object-fit: contain !important;
+    object-position: center !important;
     box-sizing: border-box;
 }
 
