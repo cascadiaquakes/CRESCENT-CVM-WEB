@@ -181,12 +181,13 @@ html.embedded #results-panel {
    when a single-model plot is rendered, display:none when compare mode
    takes over). Do NOT force display here or compare mode will leak the
    legacy image underneath the comparison stack. */
-/* Classic responsive img: cap to container width, keep aspect ratio.
-   Applied universally (not scoped to html.embedded) so we don't depend
-   on the class-add IIFE having run before render. The visual styling
-   (white background, border, padding) is scoped to embedded below. */
+/* Cap to container width AND to 70vh height so tall matplotlib plots
+   (form defaults Width=7in x Height=12in produce a 700x1200 PNG) don't
+   push the colorbar to dominate the panel. Browser preserves the img's
+   natural aspect ratio and picks whichever constraint applies first. */
 #dynamicPlot {
     max-width: 100% !important;
+    max-height: 70vh !important;
     height: auto !important;
     box-sizing: border-box;
 }
