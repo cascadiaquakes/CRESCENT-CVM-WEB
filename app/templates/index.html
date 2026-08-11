@@ -337,23 +337,9 @@
         </div>
     </div>
 
-    <!-- Metadata side panel (slides in from right when a model is clicked) -->
-    <div class="metadata-panel" id="metadataPanel">
-        <div class="metadata-panel-header">
-            <h3 id="mmodelname">Model Metadata</h3>
-            <button type="button" class="btn-close-metadata" onclick="closeMetadataPanel()" aria-label="Close">&times;</button>
-        </div>
-        <div class="metadata-panel-body">
-            <div id="jsonContent">
-                <span id="cmodelname" style="display:none;"></span>
-                <span class="info-message">Click on a model to view its metadata.</span>
-            </div>
-        </div>
-    </div>
-
     <!-- Tool side panel (slides in from right; hosts the Export Data and
          Interactive Plots forms inline as an iframe so the user does not
-         leave the map view). Mutex with the metadata panel. -->
+         leave the map view). -->
     <div class="tool-panel" id="toolPanel">
         <div class="tool-panel-header">
             <h3 id="toolPanelTitle">Tool</h3>
@@ -397,16 +383,6 @@
                     background:#fff;border-radius:4px;box-shadow:0 8px 30px rgba(0,0,0,0.5);" />
     </div>
 
-    <!-- Bottom-right toggle to open / close the metadata panel -->
-    <button type="button" class="btn-show-metadata" id="showMetadataBtn" onclick="toggleMetadataPanel()" title="Model metadata" aria-label="Model metadata">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
-        </svg>
-    </button>
 </div>
 
 {{ self.scripts() }}
@@ -563,7 +539,13 @@
             const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
             entries.push({ name, filename, label, year });
         });
-        entries.sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
+        // Pin He et al. first (CRESCENT CVM Gen 0 is our reference model
+        // and should be the default selection), then sort the rest by year.
+        const _pinHe = (s) => /^He\s+et\s+al/i.test(s) ? 0 : 1;
+        entries.sort((a, b) =>
+            _pinHe(a.label) - _pinHe(b.label)
+            || a.year - b.year
+            || a.label.localeCompare(b.label));
         const names = entries.map(e => e.name);
         entries.forEach(e => {
             const opt = document.createElement('option');
@@ -610,7 +592,12 @@
             const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
             entries.push({ name, active, chip, displayName, year });
         });
-        entries.sort((a, b) => a.year - b.year || a.displayName.localeCompare(b.displayName));
+        // Same He-first pin as the primary dropdown so both stay consistent.
+        const _pinHe = (s) => /^He\s+et\s+al/i.test(s) ? 0 : 1;
+        entries.sort((a, b) =>
+            _pinHe(a.displayName) - _pinHe(b.displayName)
+            || a.year - b.year
+            || a.displayName.localeCompare(b.displayName));
         entries.forEach(e => {
             const label = document.createElement('label');
             label.className = 'compare-model-option';
@@ -655,20 +642,6 @@
             });
             options.dataset.wired = '1';
         }
-    }
-
-    function openMetadataPanel() {
-        // Mutex with the tool panel.
-        if (typeof closeToolPanel === "function") closeToolPanel();
-        document.getElementById("metadataPanel")?.classList.add("open");
-    }
-
-    function closeMetadataPanel() {
-        document.getElementById("metadataPanel")?.classList.remove("open");
-    }
-
-    function toggleMetadataPanel() {
-        document.getElementById("metadataPanel")?.classList.toggle("open");
     }
 
     // --- Pick-on-map: tool panels can ask the user to click the main globe
@@ -1028,8 +1001,6 @@
 
     // --- Tool panel (hosts Export Data + Interactive Plots iframes) ---
     function openToolPanel(url, title) {
-        // Mutex with the metadata panel.
-        closeMetadataPanel();
         const panel = document.getElementById("toolPanel");
         const frame = document.getElementById("toolPanelFrame");
         const heading = document.getElementById("toolPanelTitle");
@@ -1132,22 +1103,6 @@
             });
             lonEl.noUiSlider.on('change', filterTable);
         }
-    }
-
-    function createHtmlFromJson(jsonData) {
-        function processJson(jsonData) {
-            let htmlContent = '<div class="json-container">';
-            for (let key in jsonData) {
-                if (typeof jsonData[key] === 'object' && jsonData[key] !== null) {
-                    htmlContent += `<div><b>${key}:</b>${processJson(jsonData[key])}</div>`;
-                } else {
-                    htmlContent += `<div><b>${key}:</b> ${jsonData[key]}</div>`;
-                }
-            }
-            htmlContent += '</div>';
-            return htmlContent;
-        }
-        return processJson(jsonData);
     }
 
     // Extract unique variables from the 9th column of the table and populate
@@ -1354,22 +1309,6 @@
             console.warn('Model option not found in iframe:', model);
         }
 
-        function display_metadata(model, fileName) {
-            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}`;
-            fetch(apiUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
-                })
-                .then(jsonData => {
-                    document.getElementById("mmodelname").textContent = model + " Metadata";
-                    document.getElementById("jsonContent").innerHTML = createHtmlFromJson(jsonData);
-                })
-                .catch(error => {
-                    console.error('Error fetching metadata:', error);
-                });
-        }
-
         function renderModelInfo(ncFilename) {
             const body = document.getElementById('modelInfoBody');
             if (!body || !ncFilename) return;
@@ -1432,8 +1371,6 @@
                 }
 
                 let modelName = firstRow.querySelector('td:nth-child(2)').textContent.trim();
-                const cmodelname = document.getElementById('cmodelname');
-                if (cmodelname) cmodelname.innerHTML = modelName;
                 const firstFilenameCell = firstRow.cells[7];
                 if (firstFilenameCell) renderModelInfo(firstFilenameCell.textContent.trim());
 
@@ -1452,9 +1389,7 @@
                             radio.checked = true;
                             hideAllRadioButtonsExceptChecked();
                         }
-                        if (cmodelname) cmodelname.innerHTML = modelName;
                         renderModelInfo(filename);
-                        display_metadata(modelName, filename + '.json');
                     }
                 });
 
@@ -1581,47 +1516,6 @@
         });
     }
 
-    async function summarizeGeoJSON(fileName, label, title, reference, decimation) {
-        try {
-            const apiUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
-            const response = await fetch(apiUrl);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            const data = await response.json();
-            if (!data || data.type !== "FeatureCollection") throw new Error("Invalid GeoJSON file.");
-
-            const geometryTypes = new Set();
-            const propertiesSet = new Set();
-            data.features.forEach(feature => {
-                if (feature.geometry) geometryTypes.add(feature.geometry.type);
-                if (feature.properties) Object.keys(feature.properties).forEach(prop => propertiesSet.add(prop));
-            });
-
-            const downloadUrl = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
-            return `
-                <div class="json-container">
-                    <div><b>File:</b> ${fileName}</div>
-                    <div><b>Label:</b> ${label}</div>
-                    <div><b>Title:</b> ${title}</div>
-                    <div><b>Reference:</b> <a href="${reference}" target="_blank" rel="noopener">${reference}</a></div>
-                    <div><b>Decimation:</b> ${decimation}</div>
-                    <div><b>Features:</b> ${data.features.length}</div>
-                    <div><b>Geometry types:</b> ${Array.from(geometryTypes).join(', ')}</div>
-                    <div><b>Properties:</b> ${Array.from(propertiesSet).join(', ')}</div>
-                </div>
-                <a href="${downloadUrl}" download="${fileName}" class="modal-cta-btn" style="margin-top:14px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                        <polyline points="7 10 12 15 17 10"/>
-                        <line x1="12" y1="15" x2="12" y2="3"/>
-                    </svg>
-                    <span>Download GeoJSON</span>
-                </a>
-            `;
-        } catch (error) {
-            console.error("Error reading GeoJSON file:", error);
-            return `<span style="color: red;">Error: ${error.message}</span>`;
-        }
-    }
 
     function createAuxTable() {
         const container = document.getElementById('auxTableContainer');
@@ -1659,14 +1553,6 @@
                 const rows = auxTable.querySelectorAll('tr');
                 rows.forEach(r => r.classList.remove('highlighted-row'));
                 row.classList.add('highlighted-row');
-
-                const dataFile = auxData[index];
-                const title = auxTitle[index];
-                const reference = auxCitation[index][1];
-                const decimation = auxDecimation[index];
-                const summary = await summarizeGeoJSON(dataFile, label, title, reference, decimation);
-                document.getElementById("jsonContent").innerHTML = summary;
-                document.getElementById("mmodelname").textContent = label + " Metadata";
 
                 const iframe = document.getElementById('3dIframe');
                 if (iframe && iframe.contentWindow) {
