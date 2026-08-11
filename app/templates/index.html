@@ -36,6 +36,7 @@
             <div class="section-plain">
                 <div class="section-plain-header">
                     <span class="section-plain-title">3D Models</span>
+                    <span id="modelFilterBadge" class="model-filter-badge" style="display:none;"></span>
                     <span id="compareBadge" class="compare-badge" style="display:none;">
                         <span id="compareCount">0</span>/8 comparing
                         <button type="button" class="compare-clear-link" onclick="clearAllCompare();">Clear</button>
@@ -43,6 +44,17 @@
                 </div>
                 <div class="section-plain-body">
                     <select id="primaryModelSelect" class="primary-model-select"></select>
+                    <details class="inline-variable-filter" id="variableFilterSection">
+                        <summary class="inline-variable-filter-summary">
+                            <span class="inline-variable-filter-label">Filter by variable</span>
+                        </summary>
+                        <div id="variableFilterHint" class="inline-variable-filter-hint">
+                            Tick one or more variables to narrow the 3D Models list above. Use Reset Filters to restore.
+                        </div>
+                        <div id="variableCheckboxes" class="variable-checkboxes">
+                            <span class="variable-checkboxes-empty">Load a model to see variable filters.</span>
+                        </div>
+                    </details>
                     <div class="compare-box">
                         <label class="compare-check-row">
                             <input type="checkbox" id="compareModelsToggle">
@@ -129,19 +141,6 @@
                             <input id="depth_max" name="depth_max" type="number" step="0.01"
                                 title="Maximum depth in km" />
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="accordion-section">
-                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
-                    <span class="accordion-arrow">&#9660;</span>
-                    <span class="accordion-label">Filter Variables</span>
-                </button>
-                <div class="accordion-body">
-                    <div class="field-row">
-                        <label>Ctrl/Cmd-click to multi-select</label>
-                        <select id="variableSelect" multiple size="6"></select>
                     </div>
                 </div>
             </div>
@@ -1105,13 +1104,25 @@
         }
     }
 
-    // Extract unique variables from the 9th column of the table and populate
-    // the select dropdown. Variable names are case-normalized against the
+    // Populate Filter Variables as checkboxes, one per canonical variable
+    // present across the current model set. Case-normalized against the
     // curated allow-list so contributors uploading with different casing
-    // (e.g. "vs" vs "Vs") don't create duplicate filter options.
-    async function extractAndPopulateVariables() {
+    // (e.g. "vs" vs "Vs") don't create duplicate options.
+    async function populateVariableCheckboxes() {
+        const container = document.getElementById('variableCheckboxes');
+        if (!container) return;
+
         const rows = document.querySelectorAll('#fileTable tr');
         const rawVariables = new Set();
+        rows.forEach((row, index) => {
+            if (index === 0) return;
+            const lastColumnText = row.cells[8]?.textContent?.trim() || '';
+            lastColumnText
+                .split('f(')[0]
+                .split(',')
+                .map(v => v.trim())
+                .forEach(v => { if (v) rawVariables.add(v); });
+        });
 
         let variablesList = [];
         try {
@@ -1121,48 +1132,89 @@
             console.error('Error fetching variables JSON:', error);
         }
 
-        rows.forEach((row, index) => {
-            if (index === 0) return;
-            const lastColumnText = row.cells[8]?.textContent?.trim() || '';
-            const variables = lastColumnText
-                .split('f(')[0]
-                .split(',')
-                .map(v => v.trim());
-            variables.forEach(variable => {
-                if (variable) rawVariables.add(variable);
-            });
-        });
-
-        // Map each raw variable to its canonical form: allow-list case
-        // wins if there's a case-insensitive match; otherwise capitalize
-        // the first letter as a best-effort normalization.
         const allowLower = variablesList.map(v => v.toLowerCase());
         const canonicalSet = new Set();
         rawVariables.forEach(raw => {
             const idx = allowLower.indexOf(raw.toLowerCase());
-            if (idx >= 0) {
-                canonicalSet.add(variablesList[idx]);
-            } else {
-                canonicalSet.add(raw.charAt(0).toUpperCase() + raw.slice(1));
-            }
+            canonicalSet.add(idx >= 0 ? variablesList[idx] : raw.charAt(0).toUpperCase() + raw.slice(1));
         });
 
-        // Show allow-list order first (only entries actually present in the
-        // current model set), then append any extras present in models but
-        // not in the allow-list.
-        const filteredVariablesList = variablesList.filter(v => canonicalSet.has(v));
-        canonicalSet.forEach(v => {
-            if (!filteredVariablesList.includes(v)) filteredVariablesList.push(v);
+        const ordered = variablesList.filter(v => canonicalSet.has(v));
+        canonicalSet.forEach(v => { if (!ordered.includes(v)) ordered.push(v); });
+
+        container.innerHTML = '';
+        if (ordered.length === 0) {
+            container.innerHTML = '<span class="variable-checkboxes-empty">No variables detected.</span>';
+            return;
+        }
+        ordered.forEach(v => {
+            const label = document.createElement('label');
+            label.className = 'variable-checkbox-item';
+            label.innerHTML = `<input type="checkbox" value="${v}" onchange="filterModelListByVariables()"> <span>${v}</span>`;
+            container.appendChild(label);
+        });
+    }
+
+    // Filter the 3D model dropdown and compare panel to only show models
+    // that contain at least one of the currently-checked variables. If none
+    // are checked, show everything. Match is case-insensitive so lowercase
+    // "vs" in a model's data_vars still matches a checked "Vs".
+    function filterModelListByVariables() {
+        const checked = Array.from(document.querySelectorAll('#variableCheckboxes input[type="checkbox"]:checked'))
+            .map(cb => cb.value.toLowerCase());
+
+        // Build a name → row-variables map from the hidden fileTable so we
+        // can decide which dropdown options to hide without re-parsing.
+        const modelVars = {};
+        document.querySelectorAll('#fileTable tr').forEach((row, index) => {
+            if (index === 0 || !row.cells || !row.cells[1] || !row.cells[8]) return;
+            const name = row.cells[1].textContent.trim();
+            const vars = row.cells[8].textContent
+                .split('f(')[0]
+                .split(',')
+                .map(v => v.trim().toLowerCase())
+                .filter(Boolean);
+            modelVars[name] = vars;
         });
 
-        const variableSelect = document.getElementById('variableSelect');
-        variableSelect.innerHTML = '';
-        filteredVariablesList.forEach(variable => {
-            const option = document.createElement('option');
-            option.value = variable;
-            option.textContent = variable;
-            variableSelect.appendChild(option);
+        const modelPasses = (name) => {
+            if (checked.length === 0) return true;
+            const vars = modelVars[name] || [];
+            return checked.some(c => vars.includes(c));
+        };
+
+        const sel = document.getElementById('primaryModelSelect');
+        let visibleCount = 0;
+        let totalCount = 0;
+        if (sel) {
+            Array.from(sel.options).forEach(opt => {
+                totalCount++;
+                const passes = modelPasses(opt.value);
+                opt.hidden = !passes;
+                if (passes) visibleCount++;
+            });
+            // Deliberately do NOT auto-switch the selection if it gets hidden
+            // by the filter. Amanda's intent: filter the list, map stays put.
+        }
+        document.querySelectorAll('#compareModelsOptions .compare-model-option').forEach(label => {
+            const cb = label.querySelector('input[type="checkbox"]');
+            const name = cb ? cb.getAttribute('data-model') : label.textContent.trim();
+            label.style.display = modelPasses(name) ? '' : 'none';
         });
+
+        // Visible feedback: badge next to the 3D Models header shows the
+        // filtered count, and only appears when a variable filter is active.
+        // The inline hint text under "Filter by variable" is inverse: shown
+        // when nothing is checked, hidden once the user starts filtering.
+        const badge = document.getElementById('modelFilterBadge');
+        const hint = document.getElementById('variableFilterHint');
+        if (checked.length === 0) {
+            if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+            if (hint) hint.style.display = '';
+        } else {
+            if (badge) { badge.style.display = ''; badge.textContent = `${visibleCount} of ${totalCount}`; }
+            if (hint) hint.style.display = 'none';
+        }
     }
 
     async function filterTable() {
@@ -1175,24 +1227,10 @@
         const lon_max = parseFloat(document.getElementById('lon_max').value);
         const depth_min = parseFloat(document.getElementById('depth_min').value);
         const depth_max = parseFloat(document.getElementById('depth_max').value);
-        const selectedVariables = $('#variableSelect').val() || [];
 
-        let variableMapping = {};
-        try {
-            const response = await fetch('../static/config/variables.json');
-            variableMapping = await response.json();
-        } catch (error) {
-            console.error('Error fetching variable mapping JSON:', error);
-        }
-
-        const wholeAreaCondition = false;
         if (iframeDoc) {
             const iframeWindow = iframe.contentWindow;
-            if (!wholeAreaCondition) {
-                iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 2, "studyAreaOutline", 0);
-            } else {
-                iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 0, "studyAreaOutline", 0);
-            }
+            iframeWindow.filterOutline(lat_max, lat_min, lon_max, lon_min, 2, "studyAreaOutline", 0);
         }
 
         const rows = document.querySelectorAll('#fileTable tr');
@@ -1202,7 +1240,6 @@
             const latMaxVal = parseFloat(row.cells[4].textContent);
             const lonMinVal = parseFloat(row.cells[5].textContent);
             const lonMaxVal = parseFloat(row.cells[6].textContent);
-            const rowVariables = row.cells[8].textContent.split('f(')[0].split(',').map(v => v.trim());
             const minDepthVal = parseFloat(row.cells[9].textContent);
             const maxDepthVal = parseFloat(row.cells[10].textContent);
 
@@ -1212,16 +1249,13 @@
             const depthCondition = isNaN(depth_min) || isNaN(depth_max) ||
                 (minDepthVal <= depth_max && maxDepthVal >= depth_min);
 
-            const variableCondition = selectedVariables.length === 0 || selectedVariables.some(selectedVar => {
-                const target = selectedVar.trim().toLowerCase();
-                const mappedValues = (variableMapping[selectedVar] || []).map(v => v.trim().toLowerCase());
-                const rowVariablesLower = rowVariables.map(rv => rv.trim().toLowerCase());
-                return rowVariablesLower.includes(target) ||
-                    rowVariablesLower.some(rv => mappedValues.includes(rv));
-            });
-
-            row.style.display = (latLonCondition && depthCondition && variableCondition) ? '' : 'none';
+            row.style.display = (latLonCondition && depthCondition) ? '' : 'none';
         });
+
+        // Apply the variable checkboxes to the visible model dropdown so the
+        // Apply Filters button reflects the same state the checkbox onchange
+        // handlers already produce (redundant but explicit).
+        filterModelListByVariables();
     }
 
     function clearFilters() {
@@ -1233,8 +1267,8 @@
         else { document.getElementById('lon_min').value = west; document.getElementById('lon_max').value = east; }
         document.getElementById('depth_min').value = '';
         document.getElementById('depth_max').value = '';
-        const vSel = document.getElementById('variableSelect');
-        if (vSel) Array.from(vSel.options).forEach(o => o.selected = false);
+        document.querySelectorAll('#variableCheckboxes input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+        filterModelListByVariables();
 
         // Bring the model dropdowns and compare state back to the same shape
         // the sidebar had on first visit.
@@ -1352,7 +1386,7 @@
             .then(html => {
                 fileTable.innerHTML = html;
 
-                extractAndPopulateVariables();
+                populateVariableCheckboxes();
                 populateModelSelectionBoxes();
                 addCompareToggles();
                 syncPrimaryModelSelect();
