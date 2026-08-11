@@ -267,7 +267,6 @@
                         <div class="form-input compare-row">
                             <label for="compare-models">Compare with</label>
                             <select id="compare-models" multiple size="4" title="Ctrl/Cmd-click to pick extra models. The same geometry is plotted against each."></select>
-                            <small class="compare-empty" id="compareEmpty" style="display:none;"></small>
                             <small class="compare-hint">Picking 1 or more locks the color scale across all panels (the primary model is probed first, then Min/Max are filled in above). Override Min/Max manually for a custom range.</small>
                         </div>
                         <div class="form-input">
@@ -617,22 +616,6 @@
             compare.appendChild(o);
         });
 
-        // Show or hide the empty-state explanation under the select.
-        const emptyEl = document.getElementById('compareEmpty');
-        if (emptyEl) {
-            if (compare.options.length === 0 && variableName) {
-                emptyEl.textContent =
-                    `No other models contain the '${variableName}' variable. ` +
-                    `Pick a different Variable below to find compatible models, ` +
-                    `or compare against a model that shares this variable.`;
-                emptyEl.style.display = 'block';
-                compare.style.display = 'none';
-            } else {
-                emptyEl.textContent = '';
-                emptyEl.style.display = 'none';
-                compare.style.display = '';
-            }
-        }
     }
 
     // Poll until the primary dropdown is populated, then mirror its options
