@@ -70,11 +70,10 @@ function display_metadata() {
                 return response.json();
             })
             .then(jsonData => {
-                // Display JSON content in the panel
-                // document.getElementById("mmodelname").innerHTML = " Metadata";
-                jsonContent = document.getElementById("jsonContent")
+                const jsonContent = document.getElementById("jsonContent");
+                if (!jsonContent) return;
                 jsonContent.innerHTML = createHtmlFromJson(jsonData);
-                jsonContent.style.display = 'block'
+                jsonContent.style.display = 'block';
             })
             .catch(error => {
                 console.error('There was a problem with the fetch operation:', error);
