@@ -243,7 +243,6 @@
                         <div class="form-input compare-row">
                             <label for="compare-models">Compare with</label>
                             <select id="compare-models" multiple size="4" title="Ctrl/Cmd-click to pick extra models. The same point is profiled against each."></select>
-                            <small class="compare-empty" id="compareEmpty" style="display:none;"></small>
                             <small class="compare-hint">Picking 1 or more plots each model's profile in its own panel for side-by-side comparison.</small>
                         </div>
                         <div class="form-input">
@@ -577,21 +576,6 @@
             compare.appendChild(o);
         });
 
-        const emptyEl = document.getElementById('compareEmpty');
-        if (emptyEl) {
-            if (compare.options.length === 0 && variableName) {
-                emptyEl.textContent =
-                    `No other models contain the '${variableName}' variable. ` +
-                    `Pick a different Variable below to find compatible models, ` +
-                    `or compare against a model that shares this variable.`;
-                emptyEl.style.display = 'block';
-                compare.style.display = 'none';
-            } else {
-                emptyEl.textContent = '';
-                emptyEl.style.display = 'none';
-                compare.style.display = '';
-            }
-        }
     }
 
     function tryPopulateCompare(retries) {
