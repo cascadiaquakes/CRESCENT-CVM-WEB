@@ -557,8 +557,17 @@
         if (!sel.dataset.wired) {
             sel.addEventListener('change', () => {
                 const row = _tableRowByModel(sel.value);
-                const nameCell = row && row.cells[1];
-                if (nameCell) nameCell.click();
+                if (row && row.cells) {
+                    const nameCell = row.cells[1];
+                    if (nameCell) nameCell.click();
+                    // Belt-and-suspenders: call renderModelInfo directly in
+                    // case the delegated fileTable click handler isn't wired
+                    // yet or the hidden table swallows the synthetic click.
+                    const filenameCell = row.cells[7];
+                    if (filenameCell && typeof renderModelInfo === 'function') {
+                        renderModelInfo(filenameCell.textContent.trim());
+                    }
+                }
                 syncCompareModelsPanel();
             });
             sel.dataset.wired = '1';
@@ -1304,6 +1313,44 @@
         filterTable();
     }
 
+    // Populate the Model Information panel from the /data/model_metadata_s3
+    // endpoint. Defined at outer scope so the 3D dropdown change handler
+    // and the fileTable row-click handler can both call it directly.
+    function renderModelInfo(ncFilename) {
+        const body = document.getElementById('modelInfoBody');
+        if (!body || !ncFilename) return;
+        body.innerHTML = '<p class="model-info-empty">Loading&hellip;</p>';
+        fetch('/data/model_metadata_s3/' + encodeURIComponent(ncFilename))
+            .then(r => r.ok ? r.json() : Promise.reject(r.status))
+            .then(m => { body.innerHTML = buildModelInfoHtml(m); })
+            .catch(() => { body.innerHTML = '<p class="model-info-empty">Metadata unavailable.</p>'; });
+    }
+
+    function buildModelInfoHtml(m) {
+        const g = m.geospatial || {};
+        const mathish = (s) => s ? s.replace(/V\$_([a-z0-9]+)\$/g, 'V<sub>$1</sub>').replace(/\$([^$]+)\$/g, '$1') : s;
+        const val = (v) => (v == null || v === '') ? '<em>not reported</em>' : v;
+        const pub = m.publication_url
+            ? `<a href="${m.publication_url}" target="_blank" rel="noopener">View Paper</a>`
+            : '<em>not reported</em>';
+        const rows = [
+            ['Publication', pub],
+            ['Summary', val(m.summary)],
+            ['Model Type', val(mathish(m.model_type))],
+            ['Minimum Longitude', val(g.lon_min)],
+            ['Maximum Longitude', val(g.lon_max)],
+            ['Longitude Resolution', val(g.lon_resolution)],
+            ['Minimum Latitude', val(g.lat_min)],
+            ['Maximum Latitude', val(g.lat_max)],
+            ['Latitude Resolution', val(g.lat_resolution)],
+            ['Minimum Depth', g.depth_min != null ? `${g.depth_min} km` : '<em>not reported</em>'],
+            ['Maximum Depth', g.depth_max != null ? `${g.depth_max} km` : '<em>not reported</em>'],
+        ];
+        return rows.map(([label, value]) =>
+            `<div class="model-info-row"><span class="model-info-label">${label}</span><span class="model-info-value">${value}</span></div>`
+        ).join('');
+    }
+
     function loadFileListAndJSON(model) {
         const fileTable = document.getElementById('fileTable');
         if (!fileTable) {
@@ -1341,41 +1388,6 @@
                 }
             }
             console.warn('Model option not found in iframe:', model);
-        }
-
-        function renderModelInfo(ncFilename) {
-            const body = document.getElementById('modelInfoBody');
-            if (!body || !ncFilename) return;
-            body.innerHTML = '<p class="model-info-empty">Loading&hellip;</p>';
-            fetch('/data/model_metadata_s3/' + encodeURIComponent(ncFilename))
-                .then(r => r.ok ? r.json() : Promise.reject(r.status))
-                .then(m => { body.innerHTML = buildModelInfoHtml(m); })
-                .catch(() => { body.innerHTML = '<p class="model-info-empty">Metadata unavailable.</p>'; });
-        }
-
-        function buildModelInfoHtml(m) {
-            const g = m.geospatial || {};
-            const mathish = (s) => s ? s.replace(/V\$_([a-z0-9]+)\$/g, 'V<sub>$1</sub>').replace(/\$([^$]+)\$/g, '$1') : s;
-            const val = (v) => (v == null || v === '') ? '<em>not reported</em>' : v;
-            const pub = m.publication_url
-                ? `<a href="${m.publication_url}" target="_blank" rel="noopener">View Paper</a>`
-                : '<em>not reported</em>';
-            const rows = [
-                ['Publication', pub],
-                ['Summary', val(m.summary)],
-                ['Model Type', val(mathish(m.model_type))],
-                ['Minimum Longitude', val(g.lon_min)],
-                ['Maximum Longitude', val(g.lon_max)],
-                ['Longitude Resolution', val(g.lon_resolution)],
-                ['Minimum Latitude', val(g.lat_min)],
-                ['Maximum Latitude', val(g.lat_max)],
-                ['Latitude Resolution', val(g.lat_resolution)],
-                ['Minimum Depth', g.depth_min != null ? `${g.depth_min} km` : '<em>not reported</em>'],
-                ['Maximum Depth', g.depth_max != null ? `${g.depth_max} km` : '<em>not reported</em>'],
-            ];
-            return rows.map(([label, value]) =>
-                `<div class="model-info-row"><span class="model-info-label">${label}</span><span class="model-info-value">${value}</span></div>`
-            ).join('');
         }
 
         fetch('/data/list_json_files_s3/' + model)
