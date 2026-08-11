@@ -539,7 +539,13 @@
             const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
             entries.push({ name, filename, label, year });
         });
-        entries.sort((a, b) => a.year - b.year || a.label.localeCompare(b.label));
+        // Pin He et al. first (CRESCENT CVM Gen 0 is our reference model
+        // and should be the default selection), then sort the rest by year.
+        const _pinHe = (s) => /^He\s+et\s+al/i.test(s) ? 0 : 1;
+        entries.sort((a, b) =>
+            _pinHe(a.label) - _pinHe(b.label)
+            || a.year - b.year
+            || a.label.localeCompare(b.label));
         const names = entries.map(e => e.name);
         entries.forEach(e => {
             const opt = document.createElement('option');
@@ -586,7 +592,12 @@
             const year = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
             entries.push({ name, active, chip, displayName, year });
         });
-        entries.sort((a, b) => a.year - b.year || a.displayName.localeCompare(b.displayName));
+        // Same He-first pin as the primary dropdown so both stay consistent.
+        const _pinHe = (s) => /^He\s+et\s+al/i.test(s) ? 0 : 1;
+        entries.sort((a, b) =>
+            _pinHe(a.displayName) - _pinHe(b.displayName)
+            || a.year - b.year
+            || a.displayName.localeCompare(b.displayName));
         entries.forEach(e => {
             const label = document.createElement('label');
             label.className = 'compare-model-option';
