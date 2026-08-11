@@ -23,6 +23,8 @@ from numpy import nanmin, nanmax
 import base64
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from cartopy.mpl.gridliner import LATITUDE_FORMATTER, LONGITUDE_FORMATTER
+from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
 
 import matplotlib.pyplot as plt
 from datetime import datetime, timezone
@@ -1980,17 +1982,32 @@ async def visualize_depth_slice_s3(request: Request):
                         },
                     )
 
-                plt.xticks(rotation=45)  # Rotating the x-axis labels to 45 degrees
-                # Add coastlines
+                # Cartopy handles its own tick rotation and formatting via
+                # gridlines below, so no plt.xticks call here.
                 ax.coastlines()
-
-                # Optionally, add other geographic features
                 ax.add_feature(cfeature.BORDERS, linestyle=":")
 
-                # Add gridlines with labels only on the left and bottom
-                gl = ax.gridlines(draw_labels=True)
-                gl.top_labels = False  # Disable top labels
-                gl.right_labels = False  # Disable right labels
+                # Draw the gridlines (light gray, no labels) plus explicit
+                # matplotlib tick labels via cartopy formatters. draw_labels
+                # on cartopy gridliner was leaving the y-axis blank in this
+                # version, so set them via ax.set_yticks + LatitudeFormatter
+                # which is the more reliable path.
+                ax.gridlines(draw_labels=False, linestyle="-", alpha=0.4)
+                x_ticks = np.arange(
+                    math.ceil(min(start_lon, end_lon)),
+                    math.floor(max(start_lon, end_lon)) + 1,
+                    2.5,
+                )
+                y_ticks = np.arange(
+                    math.ceil(min(start_lat, end_lat)),
+                    math.floor(max(start_lat, end_lat)) + 1,
+                    2,
+                )
+                ax.set_xticks(x_ticks, crs=ccrs.PlateCarree())
+                ax.set_yticks(y_ticks, crs=ccrs.PlateCarree())
+                ax.xaxis.set_major_formatter(LongitudeFormatter())
+                ax.yaxis.set_major_formatter(LatitudeFormatter())
+                ax.tick_params(axis="x", rotation=45)
             else:
                 if vmin and vmax:
                     vmin = min(
@@ -2123,15 +2140,26 @@ async def visualize_depth_slice_s3(request: Request):
                     transform=ccrs.PlateCarree(),
                 )
 
-                # Add coastlines
                 ax.coastlines()
-
-                # Optionally, add other features like borders and gridlines
                 ax.add_feature(cfeature.BORDERS)
-                gl = ax.gridlines(draw_labels=True)
-                gl.top_labels = False  # Disable top labels
-                gl.right_labels = False  # Disable right labels
-                # logger.warning(f"lon_list:{lon_list}\nlat_list:{lat_list}")
+                # Native matplotlib ticks with cartopy formatters (see the
+                # note in the no-interp branch above).
+                ax.gridlines(draw_labels=False, linestyle="-", alpha=0.4)
+                x_ticks = np.arange(
+                    math.ceil(min(start_lon, end_lon)),
+                    math.floor(max(start_lon, end_lon)) + 1,
+                    2.5,
+                )
+                y_ticks = np.arange(
+                    math.ceil(min(start_lat, end_lat)),
+                    math.floor(max(start_lat, end_lat)) + 1,
+                    2,
+                )
+                ax.set_xticks(x_ticks, crs=ccrs.PlateCarree())
+                ax.set_yticks(y_ticks, crs=ccrs.PlateCarree())
+                ax.xaxis.set_major_formatter(LongitudeFormatter())
+                ax.yaxis.set_major_formatter(LatitudeFormatter())
+                ax.tick_params(axis="x", rotation=45)
 
             else:
                 logger.debug(f"y_list: {y_list}")
@@ -2153,7 +2181,11 @@ async def visualize_depth_slice_s3(request: Request):
         cbar.set_label(
             plot_data.attrs["display_name"]
         )  # Optionally add a label to the colorbar
-    plt.xticks(rotation=45)  # Rotating the x-axis labels to 45 degrees
+    # plt.xticks rotates tick labels on a matplotlib native axis; Cartopy
+    # GeoAxes handles its own tick rotation via gl.xlabel_style, so only
+    # apply here for non-lat/lon plots.
+    if plot_grid_ref != "latitude_longitude":
+        plt.xticks(rotation=45)
 
     # Get the dimensions of the Axes object in inches
     bbox = plt.gca().get_position()
