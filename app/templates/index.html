@@ -21,6 +21,13 @@
     <!-- Full-bleed map (iframe to CVM's /data/3d Cesium page) -->
     <div id="mapContainer">
         <iframe src="/data/3d" id="3dIframe"></iframe>
+        <!-- Floating legend overlay for compare mode; positioned over the
+             map so the color chip and model name sit next to what they
+             refer to on the globe. Populated by updateCompareLegend(). -->
+        <div id="mapCompareLegend" class="map-compare-legend" hidden>
+            <div class="map-compare-legend-title">Compare Models</div>
+            <div id="mapCompareLegendItems" class="map-compare-legend-items"></div>
+        </div>
     </div>
 
     <!-- Mobile toggle for sidebar -->
@@ -37,35 +44,9 @@
                 <div class="section-plain-header">
                     <span class="section-plain-title">3D Models</span>
                     <span id="modelFilterBadge" class="model-filter-badge" style="display:none;"></span>
-                    <span id="compareBadge" class="compare-badge" style="display:none;">
-                        <span id="compareCount">0</span>/8 comparing
-                        <button type="button" class="compare-clear-link" onclick="clearAllCompare();">Clear</button>
-                    </span>
                 </div>
                 <div class="section-plain-body">
                     <select id="primaryModelSelect" class="primary-model-select"></select>
-                    <details class="inline-variable-filter" id="variableFilterSection">
-                        <summary class="inline-variable-filter-summary">
-                            <span class="inline-variable-filter-label">Filter by variable</span>
-                        </summary>
-                        <div id="variableFilterHint" class="inline-variable-filter-hint">
-                            Tick one or more variables to narrow the 3D Models list above. Use Reset Filters to restore.
-                        </div>
-                        <div id="variableCheckboxes" class="variable-checkboxes">
-                            <span class="variable-checkboxes-empty">Load a model to see variable filters.</span>
-                        </div>
-                    </details>
-                    <div class="compare-box">
-                        <label class="compare-check-row">
-                            <input type="checkbox" id="compareModelsToggle">
-                            <span>Compare Models</span>
-                        </label>
-                        <div id="compareModelsPanel" class="compare-models-panel" hidden>
-                            <p class="compare-limit-hint">Max 8 overlays</p>
-                            <div class="compare-list-header">Select models to overlay:</div>
-                            <div id="compareModelsOptions" class="compare-models-options"></div>
-                        </div>
-                    </div>
                     <div class="model-table-wrap" hidden aria-hidden="true">
                         <div id="fileTable"></div>
                     </div>
@@ -92,9 +73,15 @@
             </div>
         </div>
 
-        <!-- Filters card -->
+        <!-- Model Search & Compare card (formerly "Filters") -->
         <div class="card-2d">
-            <div class="card-2d-title">Filters</div>
+            <div class="card-2d-title">
+                Model Search &amp; Compare
+                <span id="compareBadge" class="compare-badge" style="display:none;">
+                    <span id="compareCount">0</span>/8 comparing
+                    <button type="button" class="compare-clear-link" onclick="clearAllCompare();">Clear</button>
+                </span>
+            </div>
 
             <div class="accordion-section open">
                 <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
@@ -141,6 +128,44 @@
                             <input id="depth_max" name="depth_max" type="number" step="0.01"
                                 title="Maximum depth in km" />
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-section">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Filter by Variable</span>
+                    <span id="variableFilterInlineCount" class="accordion-range" style="display:none;"></span>
+                </button>
+                <div class="accordion-body">
+                    <div id="variableFilterHint" class="inline-variable-filter-hint">
+                        Pick a variable to narrow the 3D Models list. Reset Filters restores.
+                    </div>
+                    <div id="variableCheckboxes" class="variable-checkboxes">
+                        <span class="variable-checkboxes-empty">Load a model to see variable filters.</span>
+                    </div>
+                    <div id="variableFilterResults" class="variable-filter-results" hidden>
+                        <div class="variable-filter-results-title">Matching models</div>
+                        <ul id="variableFilterResultsList" class="variable-filter-results-list"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-section">
+                <button type="button" class="accordion-header" onclick="toggleAccordion(this)">
+                    <span class="accordion-arrow">&#9660;</span>
+                    <span class="accordion-label">Compare Models</span>
+                </button>
+                <div class="accordion-body">
+                    <label class="compare-check-row">
+                        <input type="checkbox" id="compareModelsToggle">
+                        <span>Enable comparison overlays</span>
+                    </label>
+                    <div id="compareModelsPanel" class="compare-models-panel" hidden>
+                        <p class="compare-limit-hint">Max 8 overlays. Legend shows on the map.</p>
+                        <div class="compare-list-header">Select models to overlay on the map:</div>
+                        <div id="compareModelsOptions" class="compare-models-options"></div>
                     </div>
                 </div>
             </div>
@@ -388,7 +413,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/shared.js?v=3"></script>
+<script src="/static/js/shared.js?v=5"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script>
@@ -427,6 +452,24 @@
         if (!badge || !count) return;
         count.textContent = compareSelections.length;
         badge.style.display = compareSelections.length > 0 ? 'inline-flex' : 'none';
+        updateCompareLegend();
+    }
+
+    // Populate the compare-mode legend — floating overlay on top of the map
+    // so the color chip sits next to the coverage box it labels.
+    function updateCompareLegend() {
+        const wrap = document.getElementById('mapCompareLegend');
+        const items = document.getElementById('mapCompareLegendItems');
+        if (!wrap || !items) return;
+        if (compareSelections.length === 0) {
+            wrap.hidden = true;
+            items.innerHTML = '';
+            return;
+        }
+        wrap.hidden = false;
+        items.innerHTML = compareSelections
+            .map(s => `<div class="map-compare-legend-item"><span class="map-compare-legend-swatch" style="background:${COMPARE_COLORS[s.slot]}"></span><span class="map-compare-legend-name">${s.name}</span></div>`)
+            .join('');
     }
 
     function toggleModelComparison(modelName, toggleEl) {
@@ -569,6 +612,18 @@
                     }
                 }
                 syncCompareModelsPanel();
+                // Real-time sync: if the tool panel iframe is already open,
+                // push the newly-selected filename into it via postMessage so
+                // its own model dropdown + downstream form fields refresh
+                // without the user having to close and reopen the panel.
+                if (row && row.cells && row.cells[7]) {
+                    const raw = row.cells[7].textContent.trim();
+                    const filename = raw.endsWith('.nc') ? raw : raw + '.nc';
+                    const frame = document.getElementById('toolPanelFrame');
+                    if (frame && frame.contentWindow) {
+                        frame.contentWindow.postMessage({ type: 'cvm-sync-model', model: filename }, '*');
+                    }
+                }
             });
             sel.dataset.wired = '1';
         }
@@ -1015,12 +1070,29 @@
         const openNew = document.getElementById("toolPanelOpenNew");
         if (!panel || !frame) return;
         if (heading) heading.textContent = title || "Tool";
-        if (openNew) openNew.href = url;
-        // Cache-buster so the browser always loads a fresh iframe document
-        // for the tool panel. Without this, reopening the panel in the same
-        // session served a stale HTML/JS pair and required a hard refresh.
+        // Sync the tool panel to the sidebar: look up the netCDF filename
+        // of the currently-selected model from the hidden fileTable and pass
+        // it as ?model= so shared.js can pre-select the matching option in
+        // the tool's own dropdown (whose option values ARE the filenames).
+        const primary = document.getElementById("primaryModelSelect");
+        const currentModel = primary && primary.value ? primary.value : '';
+        let currentFilename = '';
+        if (currentModel && typeof _tableRowByModel === 'function') {
+            const row = _tableRowByModel(currentModel);
+            const fnCell = row && row.cells && row.cells[7];
+            if (fnCell) {
+                const raw = fnCell.textContent.trim();
+                currentFilename = raw.endsWith('.nc') ? raw : raw + '.nc';
+            }
+        }
+        const params = new URLSearchParams();
+        if (currentFilename) params.set('model', currentFilename);
+        else if (currentModel) params.set('model', currentModel);
+        params.set('_ts', Date.now());
         const sep = url.includes('?') ? '&' : '?';
-        frame.src = url + sep + '_ts=' + Date.now();
+        const finalUrl = url + sep + params.toString();
+        if (openNew) openNew.href = finalUrl;
+        frame.src = finalUrl;
         panel.classList.add("open");
     }
 
@@ -1156,21 +1228,28 @@
             container.innerHTML = '<span class="variable-checkboxes-empty">No variables detected.</span>';
             return;
         }
+        // Radio buttons (exclusive single-select) matching the original CVM
+        // behavior Amanda asked for. "All variables" clears the filter.
+        const allLabel = document.createElement('label');
+        allLabel.className = 'variable-checkbox-item';
+        allLabel.innerHTML = '<input type="radio" name="variableFilter" value="" checked onchange="filterModelListByVariables()"> <span>All variables</span>';
+        container.appendChild(allLabel);
         ordered.forEach(v => {
             const label = document.createElement('label');
             label.className = 'variable-checkbox-item';
-            label.innerHTML = `<input type="checkbox" value="${v}" onchange="filterModelListByVariables()"> <span>${v}</span>`;
+            label.innerHTML = `<input type="radio" name="variableFilter" value="${v}" onchange="filterModelListByVariables()"> <span>${v}</span>`;
             container.appendChild(label);
         });
     }
 
     // Filter the 3D model dropdown and compare panel to only show models
-    // that contain at least one of the currently-checked variables. If none
-    // are checked, show everything. Match is case-insensitive so lowercase
-    // "vs" in a model's data_vars still matches a checked "Vs".
+    // that contain the currently-selected variable. Exclusive single-select:
+    // empty value ("All variables") means no filter. Match is case-insensitive
+    // so lowercase "vs" in a model's data_vars still matches a selected "Vs".
     function filterModelListByVariables() {
-        const checked = Array.from(document.querySelectorAll('#variableCheckboxes input[type="checkbox"]:checked'))
-            .map(cb => cb.value.toLowerCase());
+        const selectedRadio = document.querySelector('#variableCheckboxes input[type="radio"]:checked');
+        const selected = selectedRadio ? selectedRadio.value.toLowerCase() : '';
+        const checked = selected ? [selected] : [];
 
         // Build a name → row-variables map from the hidden fileTable so we
         // can decide which dropdown options to hide without re-parsing.
@@ -1211,18 +1290,34 @@
             label.style.display = modelPasses(name) ? '' : 'none';
         });
 
-        // Visible feedback: badge next to the 3D Models header shows the
-        // filtered count, and only appears when a variable filter is active.
-        // The inline hint text under "Filter by variable" is inverse: shown
-        // when nothing is checked, hidden once the user starts filtering.
-        const badge = document.getElementById('modelFilterBadge');
+        // Visible feedback lives inside the Filter by Variable accordion so
+        // the user's eye stays where they clicked. The inline count next to
+        // the accordion label + a matching-models list under the radios.
+        const inlineCount = document.getElementById('variableFilterInlineCount');
         const hint = document.getElementById('variableFilterHint');
+        const results = document.getElementById('variableFilterResults');
+        const resultsList = document.getElementById('variableFilterResultsList');
+        const badge = document.getElementById('modelFilterBadge');
+        if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+
         if (checked.length === 0) {
-            if (badge) { badge.style.display = 'none'; badge.textContent = ''; }
+            if (inlineCount) { inlineCount.style.display = 'none'; inlineCount.textContent = ''; }
             if (hint) hint.style.display = '';
+            if (results) results.hidden = true;
+            if (resultsList) resultsList.innerHTML = '';
         } else {
-            if (badge) { badge.style.display = ''; badge.textContent = `${visibleCount} of ${totalCount}`; }
+            if (inlineCount) {
+                inlineCount.style.display = '';
+                inlineCount.textContent = `${visibleCount} of ${totalCount}`;
+            }
             if (hint) hint.style.display = 'none';
+            if (sel && results && resultsList) {
+                const names = Array.from(sel.options).filter(o => !o.hidden).map(o => o.text);
+                resultsList.innerHTML = names.length
+                    ? names.map(n => `<li>${n}</li>`).join('')
+                    : '<li class="variable-filter-results-empty">No models match.</li>';
+                results.hidden = false;
+            }
         }
     }
 
