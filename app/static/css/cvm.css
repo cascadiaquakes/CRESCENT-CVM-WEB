@@ -582,8 +582,10 @@ body:has(#viewer2dWrapper) {
 }
 
 .card-2d-title {
-    font-size: 12px;
-    font-weight: 700;
+    /* Match .section-plain-title so 3D Models, 2D Models, Model Search &
+       Compare, and Plot & Export Data all read at the same visual weight. */
+    font-size: 11px;
+    font-weight: 600;
     color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -852,6 +854,103 @@ body:has(#viewer2dWrapper) {
     font-size: 11px;
     color: #94a3b8;
     font-style: italic;
+}
+
+/* Matching-models list under the Filter by Variable radios. Gives the
+   user immediate visible feedback when they pick a variable, without
+   needing to open the primary dropdown to see fewer options. */
+.variable-filter-results {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.variable-filter-results-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.variable-filter-results-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.variable-filter-results-list li {
+    padding: 2px 0;
+    line-height: 1.35;
+}
+
+.variable-filter-results-empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Compare-mode legend floating over the top-right of the map iframe so
+   it clears the left-side sidebar. Pushed further down so it clears
+   the Measure Distance widget that sits near the top-right edge. */
+.map-compare-legend {
+    position: absolute;
+    top: 130px;
+    right: 14px;
+    z-index: 20;
+    max-width: 260px;
+    background: rgba(255, 255, 255, 0.96);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: 10px 12px;
+    pointer-events: auto;
+}
+
+.map-compare-legend-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #0b4a53;
+    margin-bottom: 8px;
+}
+
+.map-compare-legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.map-compare-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #1e293b;
+}
+
+.map-compare-legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.map-compare-legend-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .primary-model-select:focus {

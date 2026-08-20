@@ -19,6 +19,57 @@ function displayVarName(v) {
     return String(v).charAt(0).toUpperCase() + String(v).slice(1);
 }
 
+// Sync the tool panel's model dropdown to whatever the sidebar has picked.
+// Two entry points:
+//   1. URL param ?model=<filename> — set on initial iframe load by openToolPanel
+//   2. postMessage {type: 'cvm-sync-model', model: <filename>} — sent by the
+//      sidebar when the primary select changes while the panel is already open
+// Both funnel through _cvmApplyModel below.
+(function () {
+    function _cvmApplyModel(wantModel) {
+        if (!wantModel) return false;
+        const sel = document.getElementById('data-file')
+            || document.getElementById('select-file');
+        if (!sel || !sel.options || sel.options.length === 0) return false;
+        for (let i = 0; i < sel.options.length; i++) {
+            const opt = sel.options[i];
+            if (opt.value === wantModel || opt.text === wantModel) {
+                if (sel.selectedIndex === i) return true;
+                sel.selectedIndex = i;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                // Fallback title so the plot header reflects the new model
+                // even when the model's JSON metadata has no "model" key.
+                const titleInput = document.getElementById('title');
+                if (titleInput) titleInput.value = opt.text || opt.value;
+                return true;
+            }
+        }
+        return false;
+    }
+    // Expose so postMessage handler below can reach it.
+    window._cvmApplyModel = _cvmApplyModel;
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const wantModel = params.get('model');
+        if (wantModel) {
+            if (!_cvmApplyModel(wantModel)) {
+                let attempts = 0;
+                const iv = setInterval(() => {
+                    attempts++;
+                    if (_cvmApplyModel(wantModel) || attempts > 40) clearInterval(iv);
+                }, 100);
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    window.addEventListener('message', function (event) {
+        const data = event.data;
+        if (!data || data.type !== 'cvm-sync-model') return;
+        _cvmApplyModel(data.model);
+    });
+})();
+
 /**
        * Generates HTML content from a given JSON object, handling nested structures recursively.
        *
