@@ -2,7 +2,9 @@
 
 {% block style %}
 <link rel="stylesheet" href="/static/css/cvm.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <style>
     /* Page shell */
     .search-page {
@@ -158,12 +160,14 @@
 
     .search-map {
         height: 420px;
-        background: #0b1220;
         border-radius: 8px;
-        border: 1px solid #d1d5db;
+        border: 1px solid #cbd5e1;
         overflow: hidden; position: relative;
     }
-    .search-map iframe { width: 100%; height: 100%; border: 0; display: block; }
+    #searchFormMap { width: 100%; height: 100%; }
+    .draw-tools button.active {
+        background: #0b4a53; color: #fff; border-color: #0b4a53;
+    }
 
     /* Actions row (Search / Clear) */
     .search-actions {
@@ -486,10 +490,15 @@
 
                 <div class="search-map-header">
                     <h3>Map</h3>
+                    <div class="draw-tools">
+                        <button type="button" id="drawCircleBtn" title="Draw a circle on the map to define the search area">Circle</button>
+                        <button type="button" id="drawRectBtn" title="Draw a rectangle on the map to define the search area">Rectangle</button>
+                        <button type="button" class="draw-clear" id="drawClearBtn" title="Clear the drawing and the Lat/Lon inputs">Clear</button>
+                    </div>
                 </div>
 
                 <div class="search-map">
-                    <iframe src="/data/3d" title="CRESCENT 3D globe"></iframe>
+                    <div id="searchFormMap"></div>
                 </div>
             </div>
         </div>
@@ -902,6 +911,95 @@
         window.location.href = '/search' + (qs ? ('?' + qs) : '');
     }
 
+    // --- Form-state map: Leaflet basemap + draw tools that populate the
+    //     Lat/Lon Min/Max inputs. Drawing is a visual shortcut; users can
+    //     also type numbers directly. ---
+    var formMap = null;
+    var drawnLayer = null;
+    var activeDraw = null;
+
+    function initFormMap() {
+        if (formMap) return formMap;
+        formMap = L.map('searchFormMap', {
+            zoomControl: true,
+        }).setView([44, -122], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18,
+        }).addTo(formMap);
+
+        // Ensure Leaflet recalculates size once the container is laid out.
+        setTimeout(function () { formMap.invalidateSize(); }, 50);
+
+        formMap.on(L.Draw.Event.CREATED, function (e) {
+            clearDrawing();
+            drawnLayer = e.layer;
+            formMap.addLayer(drawnLayer);
+            var bounds = drawnLayer.getBounds ? drawnLayer.getBounds() : null;
+            // Circles don't expose getBounds() the same way; compute from center + radius
+            if (!bounds && drawnLayer.getLatLng && drawnLayer.getRadius) {
+                var c = drawnLayer.getLatLng();
+                var rMeters = drawnLayer.getRadius();
+                // Approx conversion: 1 deg lat ≈ 111 km. Longitude scales by cos(lat).
+                var dLat = (rMeters / 1000) / 111;
+                var dLon = (rMeters / 1000) / (111 * Math.max(0.001, Math.cos(c.lat * Math.PI / 180)));
+                bounds = L.latLngBounds(
+                    [c.lat - dLat, c.lng - dLon],
+                    [c.lat + dLat, c.lng + dLon]
+                );
+            }
+            if (bounds) {
+                populateInputsFromBounds(bounds);
+                clearActiveDrawState();
+            }
+        });
+        return formMap;
+    }
+
+    function populateInputsFromBounds(bounds) {
+        var sw = bounds.getSouthWest();
+        var ne = bounds.getNorthEast();
+        setNum('lat_min', sw.lat);
+        setNum('lat_max', ne.lat);
+        setNum('lon_min', sw.lng);
+        setNum('lon_max', ne.lng);
+    }
+
+    function setNum(id, val) {
+        var el = document.getElementById(id);
+        if (el) el.value = String(Math.round(val * 100) / 100);
+    }
+
+    function clearDrawing() {
+        if (drawnLayer && formMap) {
+            formMap.removeLayer(drawnLayer);
+            drawnLayer = null;
+        }
+    }
+
+    function clearActiveDrawState() {
+        if (activeDraw) {
+            try { activeDraw.disable(); } catch (e) { /* ignore */ }
+            activeDraw = null;
+        }
+        document.querySelectorAll('.draw-tools button').forEach(function (b) { b.classList.remove('active'); });
+    }
+
+    function startDraw(kind, btnId) {
+        if (!formMap) return;
+        clearActiveDrawState();
+        if (kind === 'rectangle') {
+            activeDraw = new L.Draw.Rectangle(formMap, { shapeOptions: { color: '#0b4a53', weight: 2 } });
+        } else if (kind === 'circle') {
+            activeDraw = new L.Draw.Circle(formMap, { shapeOptions: { color: '#0b4a53', weight: 2 } });
+        }
+        if (activeDraw) {
+            activeDraw.enable();
+            var btn = document.getElementById(btnId);
+            if (btn) btn.classList.add('active');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('searchForm').addEventListener('submit', onSubmit);
         document.getElementById('clearFilterBtn').addEventListener('click', clearForm);
@@ -920,6 +1018,16 @@
                 });
         } else {
             showFormState();
+            initFormMap();
+            document.getElementById('drawRectBtn').addEventListener('click', function () { startDraw('rectangle', 'drawRectBtn'); });
+            document.getElementById('drawCircleBtn').addEventListener('click', function () { startDraw('circle', 'drawCircleBtn'); });
+            document.getElementById('drawClearBtn').addEventListener('click', function () {
+                clearActiveDrawState();
+                clearDrawing();
+                ['lat_min', 'lat_max', 'lon_min', 'lon_max'].forEach(function (id) {
+                    document.getElementById(id).value = '';
+                });
+            });
         }
     });
 })();
