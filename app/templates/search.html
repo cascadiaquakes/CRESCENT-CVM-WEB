@@ -741,18 +741,34 @@
         return PALETTE[i % PALETTE.length];
     }
 
+    function buildBasemapLayers() {
+        return {
+            'Streets': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 18,
+            }),
+            'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+                maxZoom: 19,
+            }),
+            'Topo': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)',
+                maxZoom: 17,
+            }),
+        };
+    }
+
     function ensureMap() {
         if (footprintMap) return footprintMap;
+        var basemaps = buildBasemapLayers();
         footprintMap = L.map('resultsFootprintMap', {
             zoomControl: true,
             attributionControl: true,
             fullscreenControl: true,
             fullscreenControlOptions: { position: 'topright', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' },
+            layers: [basemaps.Streets],
         }).setView([44, -122], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18,
-        }).addTo(footprintMap);
+        L.control.layers(basemaps, {}, { position: 'topright', collapsed: true }).addTo(footprintMap);
         footprintMap.on('fullscreenchange', function () {
             setTimeout(function () { footprintMap.invalidateSize(); }, 50);
         });
@@ -957,15 +973,14 @@
 
     function initFormMap() {
         if (formMap) return formMap;
+        var basemaps = buildBasemapLayers();
         formMap = L.map('searchFormMap', {
             zoomControl: true,
             fullscreenControl: true,
             fullscreenControlOptions: { position: 'topright', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' },
+            layers: [basemaps.Streets],
         }).setView([44, -122], 5);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18,
-        }).addTo(formMap);
+        L.control.layers(basemaps, {}, { position: 'topright', collapsed: true }).addTo(formMap);
         formMap.on('fullscreenchange', function () {
             setTimeout(function () { formMap.invalidateSize(); }, 50);
         });
