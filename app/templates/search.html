@@ -1,0 +1,932 @@
+{% extends 'cvm_page_v1.html' %}
+
+{% block style %}
+<link rel="stylesheet" href="/static/css/cvm.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<style>
+    /* Page shell */
+    .search-page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px 24px 40px;
+        color: #334155;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+
+    .search-crumbs {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 13px; color: #64748b;
+        margin-bottom: 10px;
+    }
+    .search-crumbs a { color: #0b4a53; text-decoration: none; }
+    .search-crumbs a:hover { text-decoration: underline; }
+    .search-crumbs .sep { color: #94a3b8; }
+    .search-crumbs .current { color: #0b4a53; font-weight: 600; }
+
+    .search-header {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 14px;
+        margin: 6px 0 4px;
+    }
+    .search-header-left {
+        display: flex; align-items: center; gap: 14px;
+    }
+    .search-header-icon {
+        width: 46px; height: 46px;
+        border-radius: 10px;
+        background: rgba(11, 74, 83, 0.08);
+        color: #0b4a53;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .search-header h1 {
+        margin: 0;
+        font-size: 26px; font-weight: 700;
+        color: #0b4a53;
+    }
+    .header-links {
+        display: flex; align-items: center; gap: 16px;
+        font-size: 13px; font-weight: 600;
+    }
+    .header-links a {
+        color: #0b4a53;
+        text-decoration: none;
+    }
+    .header-links a:hover { color: #0f5e69; text-decoration: underline; }
+
+    .search-subtitle {
+        margin: 6px 0 24px 60px;
+        font-size: 14px; color: #64748b;
+    }
+
+    /* Two-column grid: filters left, location right (form state) */
+    .search-grid {
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.15fr);
+        gap: 24px;
+        align-items: start;
+    }
+
+    /* Two-column grid for results state: query card left, table right */
+    .results-grid {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        gap: 24px;
+        align-items: start;
+        margin-top: 4px;
+    }
+
+    /* Card section */
+    .search-section {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 18px 20px;
+        margin-bottom: 16px;
+    }
+    .search-section h2 {
+        margin: 0 0 12px;
+        font-size: 14px; font-weight: 700;
+        color: #0b4a53;
+        letter-spacing: 0.02em;
+    }
+    .search-section .helper {
+        margin: -6px 0 12px;
+        font-size: 12px; color: #64748b;
+    }
+
+    /* Min / Max input pairs */
+    .minmax-row {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    }
+    .minmax-field { display: flex; flex-direction: column; gap: 4px; }
+    .minmax-field label {
+        font-size: 11px; font-weight: 600;
+        letter-spacing: 0.05em;
+        color: #475569; text-transform: uppercase;
+    }
+    .minmax-input { position: relative; }
+    .minmax-input input {
+        width: 100%;
+        padding: 8px 42px 8px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 13px;
+        box-sizing: border-box;
+        background: #fff; color: #0f172a;
+        font-family: inherit;
+    }
+    .minmax-input input:focus { outline: 2px solid #0b4a53; outline-offset: -1px; border-color: transparent; }
+    .minmax-input .unit {
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        font-size: 11px; color: #94a3b8;
+        pointer-events: none;
+    }
+
+    /* Variable checkboxes */
+    .variable-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 8px 14px;
+    }
+    .variable-grid label {
+        display: flex; align-items: center; gap: 6px;
+        font-size: 13px; color: #374151;
+    }
+
+    /* Map + drawing controls */
+    .search-map-header {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .search-map-header h3 {
+        margin: 0; font-size: 13px; font-weight: 700; color: #0b4a53;
+    }
+    .draw-tools { display: flex; gap: 6px; }
+    .draw-tools button {
+        padding: 6px 10px;
+        font-size: 12px; font-weight: 600;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #0b4a53;
+        font-family: inherit;
+    }
+    .draw-tools button:hover { background: #f1f5f9; }
+    .draw-tools .draw-clear { color: #b91c1c; border-color: #fecaca; }
+
+    .search-map {
+        height: 420px;
+        background: #0b1220;
+        border-radius: 8px;
+        border: 1px solid #d1d5db;
+        overflow: hidden; position: relative;
+    }
+    .search-map iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+    /* Actions row (Search / Clear) */
+    .search-actions {
+        display: flex; gap: 10px; margin-top: 4px;
+    }
+    .search-actions .btn-search,
+    .search-actions .btn-clear {
+        padding: 10px 22px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+        font-size: 13px; font-weight: 600;
+        cursor: pointer;
+    }
+    .search-actions .btn-search {
+        background: #0b4a53; color: #fff; border-color: #0b4a53;
+        font-family: inherit;
+    }
+    .search-actions .btn-search:hover { background: #0f5e69; }
+    .search-actions .btn-clear {
+        background: #fff; color: #334155; border-color: #cbd5e1;
+        font-family: inherit;
+    }
+    .search-actions .btn-clear:hover { background: #f1f5f9; }
+
+    /* --- Results state --- */
+    .query-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px 18px;
+    }
+    .query-card h3 {
+        margin: 0 0 10px;
+        font-size: 13px; font-weight: 700; color: #0b4a53;
+        letter-spacing: 0.02em;
+    }
+    .query-line {
+        font-size: 12px; color: #475569; margin: 4px 0;
+        line-height: 1.5;
+    }
+    .query-line strong { color: #0b4a53; font-weight: 700; }
+    .query-refine {
+        display: inline-block;
+        margin-top: 12px;
+        font-size: 13px; font-weight: 600;
+        color: #0b4a53;
+        text-decoration: none;
+    }
+    .query-refine:hover { color: #0f5e69; text-decoration: underline; }
+
+    .results-summary-chips {
+        display: flex; flex-wrap: wrap; gap: 8px;
+        margin-bottom: 12px;
+    }
+    .results-chip {
+        background: rgba(11, 74, 83, 0.06); color: #334155;
+        border: 1px solid rgba(11, 74, 83, 0.18);
+        border-radius: 999px;
+        padding: 5px 12px;
+        font-size: 12px; font-weight: 600;
+    }
+    .results-chip strong {
+        color: #0b4a53; font-weight: 700; margin-left: 4px;
+    }
+
+    /* Table */
+    .results-table-wrap {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .results-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    .results-table thead th {
+        background: rgba(11, 74, 83, 0.06);
+        color: #0b4a53;
+        text-align: left;
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        padding: 10px 14px;
+        border-bottom: 1px solid rgba(11, 74, 83, 0.18);
+        white-space: nowrap;
+    }
+    .results-table tbody td {
+        padding: 12px 14px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: top;
+    }
+    .results-table tbody tr:hover td { background: #f8fafc; }
+    .results-table .col-name a {
+        color: #0b4a53;
+        font-weight: 700;
+        text-decoration: none;
+    }
+    .results-table .col-name a:hover { color: #0f5e69; text-decoration: underline; }
+    .results-table .col-num { white-space: nowrap; color: #334155; }
+    .results-table .col-vars { color: #334155; font-weight: 600; }
+    .results-table .col-year { text-align: right; color: #334155; }
+    .table-empty {
+        padding: 40px 20px;
+        text-align: center;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .results-toolbar {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+    .results-controls {
+        display: flex; align-items: center; gap: 10px;
+        font-size: 12px; color: #475569;
+    }
+    .results-controls select {
+        padding: 5px 10px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 12px;
+        background: #fff;
+        color: #0f172a;
+        font-family: inherit;
+    }
+
+    /* Footprint map above the results table */
+    .results-map-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+    }
+    .results-map-header {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 12px; margin-bottom: 8px;
+    }
+    .results-map-title {
+        margin: 0; font-size: 13px; font-weight: 700;
+        color: #0b4a53; letter-spacing: 0.02em;
+    }
+    .compare-action-btn {
+        background: #0b4a53; color: #fff;
+        border: 1px solid #0b4a53;
+        border-radius: 6px;
+        padding: 6px 14px;
+        font-size: 12px; font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    .compare-action-btn[disabled] {
+        background: #cbd5e1; border-color: #cbd5e1;
+        color: #64748b; cursor: not-allowed;
+    }
+    .compare-action-btn:not([disabled]):hover { background: #0f5e69; }
+
+    #resultsFootprintMap {
+        height: 300px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e1;
+        overflow: hidden;
+    }
+    .results-legend {
+        display: flex; flex-wrap: wrap; gap: 8px;
+        margin-top: 10px;
+    }
+    .legend-chip {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: 3px 10px 3px 6px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        font-size: 11px; font-weight: 600;
+        color: #334155;
+    }
+    .legend-chip .swatch {
+        width: 10px; height: 10px; border-radius: 2px;
+        display: inline-block;
+    }
+    .legend-chip.dimmed { opacity: 0.4; }
+
+    /* Compare checkbox column */
+    .results-table .col-compare {
+        width: 36px; text-align: center;
+        padding: 12px 6px;
+    }
+    .results-table thead th.col-compare {
+        padding: 10px 6px;
+    }
+    .results-table .col-compare input[type="checkbox"] {
+        cursor: pointer;
+        accent-color: #0b4a53;
+    }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="search-page">
+
+    <nav class="search-crumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a>
+        <span class="sep">&rsaquo;</span>
+        <a href="/search" id="crumbSearch">Search Models</a>
+        <span class="sep" id="crumbSep" style="display:none;">&rsaquo;</span>
+        <span class="current" id="crumbCurrent" style="display:none;">Results</span>
+    </nav>
+
+    <div class="search-header">
+        <div class="search-header-left">
+            <div class="search-header-icon" aria-hidden="true">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+            </div>
+            <h1>Model Search &amp; Compare</h1>
+        </div>
+        <div class="header-links" id="headerLinks" style="display:none;">
+            <a href="/search">Refine Search</a>
+        </div>
+    </div>
+    <p class="search-subtitle">Search and compare CRESCENT community velocity models by region, depth, and variable.</p>
+
+    <!-- FORM STATE -->
+    <form id="searchForm" class="search-grid" method="get" action="/search">
+
+        <!-- LEFT: filter groups -->
+        <div>
+            <div class="search-section">
+                <h2>Latitude</h2>
+                <p class="helper">Range in degrees north.</p>
+                <div class="minmax-row">
+                    <div class="minmax-field">
+                        <label for="lat_min">Min</label>
+                        <div class="minmax-input">
+                            <input id="lat_min" name="lat_min" type="number" step="0.01" placeholder="39" />
+                            <span class="unit">&deg;N</span>
+                        </div>
+                    </div>
+                    <div class="minmax-field">
+                        <label for="lat_max">Max</label>
+                        <div class="minmax-input">
+                            <input id="lat_max" name="lat_max" type="number" step="0.01" placeholder="52" />
+                            <span class="unit">&deg;N</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-section">
+                <h2>Longitude</h2>
+                <p class="helper">Range in degrees east (negative values are west).</p>
+                <div class="minmax-row">
+                    <div class="minmax-field">
+                        <label for="lon_min">Min</label>
+                        <div class="minmax-input">
+                            <input id="lon_min" name="lon_min" type="number" step="0.01" placeholder="-130" />
+                            <span class="unit">&deg;E</span>
+                        </div>
+                    </div>
+                    <div class="minmax-field">
+                        <label for="lon_max">Max</label>
+                        <div class="minmax-input">
+                            <input id="lon_max" name="lon_max" type="number" step="0.01" placeholder="-116" />
+                            <span class="unit">&deg;E</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-section">
+                <h2>Depth</h2>
+                <p class="helper">Depth range covered by the model, in km.</p>
+                <div class="minmax-row">
+                    <div class="minmax-field">
+                        <label for="depth_min">Min</label>
+                        <div class="minmax-input">
+                            <input id="depth_min" name="depth_min" type="number" step="0.01" placeholder="0" />
+                            <span class="unit">km</span>
+                        </div>
+                    </div>
+                    <div class="minmax-field">
+                        <label for="depth_max">Max</label>
+                        <div class="minmax-input">
+                            <input id="depth_max" name="depth_max" type="number" step="0.01" placeholder="100" />
+                            <span class="unit">km</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-section">
+                <h2>Variables</h2>
+                <p class="helper">Return models that contain the selected variables.</p>
+                <div class="variable-grid" id="variableCheckboxes">
+                    <label><input type="checkbox" name="var" value="vs" /> Vs</label>
+                    <label><input type="checkbox" name="var" value="vp" /> Vp</label>
+                    <label><input type="checkbox" name="var" value="density" /> Density</label>
+                    <label><input type="checkbox" name="var" value="qs" /> Qs</label>
+                    <label><input type="checkbox" name="var" value="qp" /> Qp</label>
+                </div>
+            </div>
+
+            <div class="search-actions">
+                <button type="submit" class="btn-search" id="applyFilterBtn">Search</button>
+                <button type="button" class="btn-clear" id="clearFilterBtn">Clear</button>
+            </div>
+        </div>
+
+        <!-- RIGHT: location / map -->
+        <div>
+            <div class="search-section">
+                <h2>Location</h2>
+                <p class="helper">Use the map or the Latitude / Longitude inputs on the left to define the search area.</p>
+
+                <div class="search-map-header">
+                    <h3>Map</h3>
+                    <div class="draw-tools">
+                        <button type="button" title="Draw a circle">Circle</button>
+                        <button type="button" title="Draw a rectangle">Rectangle</button>
+                        <button type="button" class="draw-clear" title="Clear drawing">Clear</button>
+                    </div>
+                </div>
+
+                <div class="search-map">
+                    <iframe src="/data/3d" title="CRESCENT 3D globe"></iframe>
+                </div>
+            </div>
+        </div>
+
+    </form>
+
+    <!-- RESULTS STATE -->
+    <div id="resultsState" style="display:none;">
+        <div class="results-grid">
+
+            <aside class="query-card" id="queryCard">
+                <h3>Query</h3>
+                <div id="queryLines"></div>
+                <a href="/search" class="query-refine">Refine Search</a>
+            </aside>
+
+            <div>
+                <div class="results-map-card">
+                    <div class="results-map-header">
+                        <h3 class="results-map-title">Model Footprints</h3>
+                        <button type="button" class="compare-action-btn" id="compareOpenBtn" disabled title="Open the selected models in the 3D viewer">
+                            Open in 3D viewer (<span id="compareSelectedCount">0</span>)
+                        </button>
+                    </div>
+                    <div id="resultsFootprintMap"></div>
+                    <div class="results-legend" id="resultsLegend"></div>
+                </div>
+
+                <div class="results-toolbar">
+                    <div class="results-summary-chips">
+                        <span class="results-chip">Matching models: <strong id="chipCount">0</strong></span>
+                        <span class="results-chip">Latest year: <strong id="chipLatest">-</strong></span>
+                        <span class="results-chip">Max depth: <strong id="chipDepth">-</strong> km</span>
+                        <span class="results-chip">Variables: <strong id="chipVars">-</strong></span>
+                    </div>
+                    <div class="results-controls">
+                        <span>Sort by:</span>
+                        <select id="sortBy">
+                            <option value="name">Name</option>
+                            <option value="year">Year</option>
+                            <option value="depth">Depth</option>
+                            <option value="area">Coverage area</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="results-table-wrap">
+                    <table class="results-table" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th class="col-compare" title="Select up to 8 models to compare on the map">
+                                    <input type="checkbox" id="compareSelectAll" title="Select all shown (up to 8)" />
+                                </th>
+                                <th>Name</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Depth (km)</th>
+                                <th>Variables</th>
+                                <th style="text-align:right;">Year</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody"></tbody>
+                    </table>
+                    <div id="tableEmpty" class="table-empty" style="display:none;">
+                        No models match the current filters. Widen the ranges or clear a filter.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+(function () {
+    var ALL_MODELS = [];
+    var CURRENT_MATCHES = [];
+    var COMPARE_MAX = 8;
+    var PALETTE = ['#dc2626', '#0b4a53', '#2563eb', '#eab308', '#7c3aed', '#f97316', '#16a34a', '#db2777'];
+    var footprintMap = null;
+    var footprintLayers = {}; // filename → Leaflet rectangle
+
+    function readParams() {
+        var p = new URLSearchParams(window.location.search);
+        return {
+            lat_min: numOrNull(p.get('lat_min')),
+            lat_max: numOrNull(p.get('lat_max')),
+            lon_min: numOrNull(p.get('lon_min')),
+            lon_max: numOrNull(p.get('lon_max')),
+            depth_min: numOrNull(p.get('depth_min')),
+            depth_max: numOrNull(p.get('depth_max')),
+            vars: p.getAll('var').map(function (v) { return String(v).toLowerCase(); }),
+        };
+    }
+
+    function numOrNull(v) {
+        if (v == null || v === '') return null;
+        var n = parseFloat(v);
+        return isNaN(n) ? null : n;
+    }
+
+    function hasAnyFilter(q) {
+        return q.lat_min != null || q.lat_max != null ||
+               q.lon_min != null || q.lon_max != null ||
+               q.depth_min != null || q.depth_max != null ||
+               (q.vars && q.vars.length > 0);
+    }
+
+    function filterModels(q) {
+        return ALL_MODELS.filter(function (m) {
+            if (q.lat_min != null && m.lat_max != null && m.lat_max < q.lat_min) return false;
+            if (q.lat_max != null && m.lat_min != null && m.lat_min > q.lat_max) return false;
+            if (q.lon_min != null && m.lon_max != null && m.lon_max < q.lon_min) return false;
+            if (q.lon_max != null && m.lon_min != null && m.lon_min > q.lon_max) return false;
+            if (q.depth_min != null && m.depth_max != null && m.depth_max < q.depth_min) return false;
+            if (q.depth_max != null && m.depth_min != null && m.depth_min > q.depth_max) return false;
+            if (q.vars && q.vars.length) {
+                var have = (m.data_vars || []).map(function (v) { return String(v).toLowerCase(); });
+                var ok = q.vars.every(function (v) { return have.indexOf(v) !== -1; });
+                if (!ok) return false;
+            }
+            return true;
+        });
+    }
+
+    function sortMatches(matches) {
+        var by = document.getElementById('sortBy').value;
+        var copy = matches.slice();
+        copy.sort(function (a, b) {
+            if (by === 'year') return (extractYear(b.name) || 0) - (extractYear(a.name) || 0);
+            if (by === 'depth') return (b.depth_max || 0) - (a.depth_max || 0);
+            if (by === 'area') return areaOf(b) - areaOf(a);
+            return String(a.name || '').localeCompare(String(b.name || ''));
+        });
+        return copy;
+    }
+
+    function areaOf(m) {
+        if (m.lat_min == null || m.lat_max == null || m.lon_min == null || m.lon_max == null) return 0;
+        return Math.max(0, m.lat_max - m.lat_min) * Math.max(0, m.lon_max - m.lon_min);
+    }
+
+    function extractYear(name) {
+        var m = /(19|20)\d{2}/.exec(name || '');
+        return m ? parseInt(m[0], 10) : null;
+    }
+
+    function fmt(n) {
+        if (n == null) return '-';
+        return String(Math.round(n * 100) / 100);
+    }
+
+    function fmtRange(a, b, unit) {
+        if (a == null && b == null) return '-';
+        return fmt(a) + ' to ' + fmt(b) + (unit || '');
+    }
+
+    function escapeHtml(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function updateChips(matches) {
+        document.getElementById('chipCount').textContent = matches.length;
+        var years = matches.map(function (m) { return extractYear(m.name); }).filter(function (y) { return !!y; });
+        document.getElementById('chipLatest').textContent = years.length ? Math.max.apply(null, years) : '-';
+        var depths = matches.map(function (m) { return m.depth_max; }).filter(function (d) { return d != null; });
+        document.getElementById('chipDepth').textContent = depths.length ? Math.max.apply(null, depths) : '-';
+        var vs = {};
+        matches.forEach(function (m) { (m.data_vars || []).forEach(function (v) { vs[String(v).toLowerCase()] = true; }); });
+        var vList = Object.keys(vs).sort();
+        document.getElementById('chipVars').textContent = vList.length ? vList.join(', ') : '-';
+    }
+
+    function renderTable(matches) {
+        var body = document.getElementById('resultsBody');
+        var empty = document.getElementById('tableEmpty');
+        body.innerHTML = '';
+        if (!matches.length) {
+            empty.style.display = 'block';
+            document.getElementById('resultsTable').style.display = 'none';
+            return;
+        }
+        empty.style.display = 'none';
+        document.getElementById('resultsTable').style.display = 'table';
+        matches.forEach(function (m, i) {
+            var tr = document.createElement('tr');
+            var year = extractYear(m.name);
+            var vars = (m.data_vars || []).join(', ');
+            var color = colorFor(i);
+            tr.setAttribute('data-filename', m.filename);
+            tr.innerHTML =
+                '<td class="col-compare"><input type="checkbox" class="cmp-row" data-filename="' + escapeHtml(m.filename) + '" style="accent-color:' + color + ';" /></td>' +
+                '<td class="col-name"><a href="/?model=' + encodeURIComponent(m.filename) + '" title="Open in explorer">' + escapeHtml(m.name || m.filename) + '</a></td>' +
+                '<td class="col-num">' + fmtRange(m.lat_min, m.lat_max, '&deg;N') + '</td>' +
+                '<td class="col-num">' + fmtRange(m.lon_min, m.lon_max, '&deg;E') + '</td>' +
+                '<td class="col-num">' + fmtRange(m.depth_min, m.depth_max, '') + '</td>' +
+                '<td class="col-vars">' + escapeHtml(vars || '-') + '</td>' +
+                '<td class="col-year">' + (year || '-') + '</td>';
+            body.appendChild(tr);
+        });
+        wireRowCheckboxes();
+    }
+
+    function colorFor(i) {
+        return PALETTE[i % PALETTE.length];
+    }
+
+    function ensureMap() {
+        if (footprintMap) return footprintMap;
+        footprintMap = L.map('resultsFootprintMap', {
+            zoomControl: true,
+            attributionControl: true,
+        }).setView([44, -122], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18,
+        }).addTo(footprintMap);
+        return footprintMap;
+    }
+
+    function drawFootprints(matches) {
+        var map = ensureMap();
+        // Clear old layers
+        Object.keys(footprintLayers).forEach(function (k) {
+            map.removeLayer(footprintLayers[k]);
+        });
+        footprintLayers = {};
+
+        var validBounds = [];
+        matches.forEach(function (m, i) {
+            if (m.lat_min == null || m.lat_max == null || m.lon_min == null || m.lon_max == null) return;
+            var color = colorFor(i);
+            var rect = L.rectangle(
+                [[m.lat_min, m.lon_min], [m.lat_max, m.lon_max]],
+                { color: color, weight: 2, fillColor: color, fillOpacity: 0.2 }
+            );
+            rect.bindTooltip(m.name || m.filename, { direction: 'top', sticky: true });
+            rect.addTo(map);
+            footprintLayers[m.filename] = rect;
+            validBounds.push([[m.lat_min, m.lon_min], [m.lat_max, m.lon_max]]);
+        });
+        if (validBounds.length) {
+            var group = new L.featureGroup(Object.values(footprintLayers));
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+        // Ensure Leaflet recalculates size after unhiding
+        setTimeout(function () { map.invalidateSize(); }, 50);
+    }
+
+    function renderLegend(matches) {
+        var wrap = document.getElementById('resultsLegend');
+        wrap.innerHTML = '';
+        matches.forEach(function (m, i) {
+            var chip = document.createElement('span');
+            chip.className = 'legend-chip';
+            chip.setAttribute('data-filename', m.filename);
+            chip.innerHTML =
+                '<span class="swatch" style="background:' + colorFor(i) + ';"></span>' +
+                escapeHtml(m.name || m.filename);
+            wrap.appendChild(chip);
+        });
+    }
+
+    function wireRowCheckboxes() {
+        document.querySelectorAll('#resultsBody input.cmp-row').forEach(function (cb) {
+            cb.addEventListener('change', onCompareChange);
+        });
+    }
+
+    function selectedFilenames() {
+        var out = [];
+        document.querySelectorAll('#resultsBody input.cmp-row:checked').forEach(function (cb) {
+            out.push(cb.getAttribute('data-filename'));
+        });
+        return out;
+    }
+
+    function onCompareChange(e) {
+        var selected = selectedFilenames();
+        // Enforce max: if over the cap, un-check the one just changed
+        if (selected.length > COMPARE_MAX) {
+            e.target.checked = false;
+            selected = selectedFilenames();
+        }
+        applySelectionState(selected);
+    }
+
+    function applySelectionState(selected) {
+        var count = selected.length;
+        var btn = document.getElementById('compareOpenBtn');
+        document.getElementById('compareSelectedCount').textContent = count;
+        btn.disabled = count < 2;
+
+        // If nothing selected, show all footprints fully; else fade non-selected
+        var dimAll = count > 0;
+        Object.keys(footprintLayers).forEach(function (fname) {
+            var isOn = !dimAll || selected.indexOf(fname) !== -1;
+            var layer = footprintLayers[fname];
+            layer.setStyle({ opacity: isOn ? 1 : 0.15, fillOpacity: isOn ? 0.3 : 0.05 });
+        });
+        document.querySelectorAll('.legend-chip').forEach(function (chip) {
+            var fname = chip.getAttribute('data-filename');
+            if (!dimAll || selected.indexOf(fname) !== -1) chip.classList.remove('dimmed');
+            else chip.classList.add('dimmed');
+        });
+    }
+
+    function onSelectAll(e) {
+        var checked = e.target.checked;
+        var boxes = document.querySelectorAll('#resultsBody input.cmp-row');
+        var count = 0;
+        boxes.forEach(function (cb) {
+            if (checked && count >= COMPARE_MAX) { cb.checked = false; return; }
+            cb.checked = checked;
+            if (checked) count++;
+        });
+        applySelectionState(selectedFilenames());
+    }
+
+    function onCompareOpen() {
+        var selected = selectedFilenames();
+        if (selected.length < 2) return;
+        // Stash current search query so the main viewer's "Refine Search"
+        // link can bring the user back to the same filter set.
+        try {
+            sessionStorage.setItem('cvm_last_search', window.location.search || '');
+        } catch (e) { /* ignore */ }
+        var qs = selected.map(function (f) { return 'compare=' + encodeURIComponent(f); }).join('&');
+        window.location.href = '/?' + qs;
+    }
+
+    function renderQueryCard(q, matchCount) {
+        var lines = [];
+        lines.push('<div class="query-line">Showing <strong>' + matchCount + '</strong> of <strong>' + ALL_MODELS.length + '</strong> models in the CVM catalog</div>');
+        if (q.lat_min != null || q.lat_max != null) {
+            lines.push('<div class="query-line">Latitude: <strong>' + fmt(q.lat_min) + ' to ' + fmt(q.lat_max) + ' &deg;N</strong></div>');
+        }
+        if (q.lon_min != null || q.lon_max != null) {
+            lines.push('<div class="query-line">Longitude: <strong>' + fmt(q.lon_min) + ' to ' + fmt(q.lon_max) + ' &deg;E</strong></div>');
+        }
+        if (q.depth_min != null || q.depth_max != null) {
+            lines.push('<div class="query-line">Depth: <strong>' + fmt(q.depth_min) + ' to ' + fmt(q.depth_max) + ' km</strong></div>');
+        }
+        if (q.vars && q.vars.length) {
+            lines.push('<div class="query-line">Variables: <strong>' + q.vars.join(', ') + '</strong></div>');
+        }
+        document.getElementById('queryLines').innerHTML = lines.join('');
+    }
+
+    function showFormState() {
+        document.getElementById('searchForm').style.display = 'grid';
+        document.getElementById('resultsState').style.display = 'none';
+        document.getElementById('headerLinks').style.display = 'none';
+        document.getElementById('crumbSep').style.display = 'none';
+        document.getElementById('crumbCurrent').style.display = 'none';
+        document.getElementById('crumbSearch').removeAttribute('href');
+        document.getElementById('crumbSearch').style.color = '#0b4a53';
+        document.getElementById('crumbSearch').style.cursor = 'default';
+        document.getElementById('crumbSearch').style.fontWeight = '600';
+    }
+
+    function showResultsState() {
+        document.getElementById('searchForm').style.display = 'none';
+        document.getElementById('resultsState').style.display = 'block';
+        document.getElementById('headerLinks').style.display = 'flex';
+        document.getElementById('crumbSep').style.display = 'inline';
+        document.getElementById('crumbCurrent').style.display = 'inline';
+        var cs = document.getElementById('crumbSearch');
+        cs.setAttribute('href', '/search');
+        cs.style.color = '#0b4a53';
+        cs.style.cursor = 'pointer';
+        cs.style.fontWeight = 'normal';
+    }
+
+    function runResults() {
+        var q = readParams();
+        var matches = sortMatches(filterModels(q));
+        CURRENT_MATCHES = matches;
+        updateChips(matches);
+        renderTable(matches);
+        renderQueryCard(q, matches.length);
+        drawFootprints(matches);
+        renderLegend(matches);
+        document.getElementById('compareSelectAll').checked = false;
+        applySelectionState([]);
+    }
+
+    function clearForm() {
+        ['lat_min', 'lat_max', 'lon_min', 'lon_max', 'depth_min', 'depth_max'].forEach(function (id) {
+            document.getElementById(id).value = '';
+        });
+        document.querySelectorAll('#variableCheckboxes input[type="checkbox"]').forEach(function (cb) { cb.checked = false; });
+    }
+
+    // On submit, only include non-empty fields in the URL so it stays clean
+    function onSubmit(e) {
+        e.preventDefault();
+        var params = new URLSearchParams();
+        ['lat_min', 'lat_max', 'lon_min', 'lon_max', 'depth_min', 'depth_max'].forEach(function (id) {
+            var v = document.getElementById(id).value.trim();
+            if (v !== '') params.append(id, v);
+        });
+        document.querySelectorAll('#variableCheckboxes input[type="checkbox"]:checked').forEach(function (cb) {
+            params.append('var', cb.value);
+        });
+        var qs = params.toString();
+        window.location.href = '/search' + (qs ? ('?' + qs) : '');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('searchForm').addEventListener('submit', onSubmit);
+        document.getElementById('clearFilterBtn').addEventListener('click', clearForm);
+
+        var q = readParams();
+        if (hasAnyFilter(q)) {
+            showResultsState();
+            document.getElementById('compareSelectAll').addEventListener('change', onSelectAll);
+            document.getElementById('compareOpenBtn').addEventListener('click', onCompareOpen);
+            fetch('/data/models_catalog', { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (payload) {
+                    ALL_MODELS = Array.isArray(payload.models) ? payload.models : [];
+                    document.getElementById('sortBy').addEventListener('change', runResults);
+                    runResults();
+                });
+        } else {
+            showFormState();
+        }
+    });
+})();
+</script>
+{% endblock %}
