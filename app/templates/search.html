@@ -3,10 +3,8 @@
 {% block style %}
 <link rel="stylesheet" href="/static/css/cvm.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-fullscreen/1.0.2/leaflet.fullscreen.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-fullscreen/1.0.2/Leaflet.fullscreen.min.js"></script>
 <style>
     /* Page shell */
     .search-page {
@@ -200,6 +198,18 @@
     }
     /* Move cursor when hovering the drawn shape body itself. */
     .search-drawn-shape { cursor: move !important; }
+
+    /* Custom fullscreen button — self-contained inline SVG, no external asset. */
+    .leaflet-control-cvm-fullscreen a {
+        display: flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px;
+        background: #ffffff; color: #0b4a53;
+        text-decoration: none;
+    }
+    .leaflet-control-cvm-fullscreen a:hover { background: #f1f5f9; color: #0f5e69; }
+    /* Grow the map container when the browser is in fullscreen so it fills the screen. */
+    .leaflet-container:fullscreen,
+    .leaflet-container:-webkit-full-screen { width: 100% !important; height: 100% !important; }
 
     /* Actions row (Search / Clear) */
     .search-actions {
@@ -741,6 +751,50 @@
         return PALETTE[i % PALETTE.length];
     }
 
+    // Custom fullscreen control. Uses the browser Fullscreen API on the
+    // map container so we don't depend on any external plugin/CSS/icon file.
+    var CvmFullscreenControl = L.Control.extend({
+        options: { position: 'topright' },
+        onAdd: function (map) {
+            var container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-cvm-fullscreen');
+            var link = L.DomUtil.create('a', '', container);
+            link.href = '#';
+            link.title = 'Enter fullscreen';
+            link.setAttribute('role', 'button');
+            link.setAttribute('aria-label', 'Enter fullscreen');
+            var enterIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+            var exitIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/></svg>';
+            link.innerHTML = enterIcon;
+            L.DomEvent.on(link, 'click', function (e) {
+                L.DomEvent.stop(e);
+                var el = map.getContainer();
+                var req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+                var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+                var current = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+                if (!current) {
+                    if (req) req.call(el);
+                } else {
+                    if (exit) exit.call(document);
+                }
+            });
+            L.DomEvent.disableClickPropagation(container);
+
+            var onChange = function () {
+                var current = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+                var isFs = current === map.getContainer();
+                link.innerHTML = isFs ? exitIcon : enterIcon;
+                link.title = isFs ? 'Exit fullscreen' : 'Enter fullscreen';
+                link.setAttribute('aria-label', link.title);
+                setTimeout(function () { map.invalidateSize(); }, 60);
+            };
+            document.addEventListener('fullscreenchange', onChange);
+            document.addEventListener('webkitfullscreenchange', onChange);
+            document.addEventListener('msfullscreenchange', onChange);
+
+            return container;
+        },
+    });
+
     function buildBasemapLayers() {
         return {
             'Streets': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -764,14 +818,10 @@
         footprintMap = L.map('resultsFootprintMap', {
             zoomControl: true,
             attributionControl: true,
-            fullscreenControl: true,
-            fullscreenControlOptions: { position: 'topright', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' },
             layers: [basemaps.Streets],
         }).setView([44, -122], 5);
         L.control.layers(basemaps, {}, { position: 'topright', collapsed: true }).addTo(footprintMap);
-        footprintMap.on('fullscreenchange', function () {
-            setTimeout(function () { footprintMap.invalidateSize(); }, 50);
-        });
+        new CvmFullscreenControl().addTo(footprintMap);
         return footprintMap;
     }
 
@@ -976,14 +1026,10 @@
         var basemaps = buildBasemapLayers();
         formMap = L.map('searchFormMap', {
             zoomControl: true,
-            fullscreenControl: true,
-            fullscreenControlOptions: { position: 'topright', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' },
             layers: [basemaps.Streets],
         }).setView([44, -122], 5);
         L.control.layers(basemaps, {}, { position: 'topright', collapsed: true }).addTo(formMap);
-        formMap.on('fullscreenchange', function () {
-            setTimeout(function () { formMap.invalidateSize(); }, 50);
-        });
+        new CvmFullscreenControl().addTo(formMap);
 
         // Ensure Leaflet recalculates size once the container is laid out.
         setTimeout(function () { formMap.invalidateSize(); }, 50);
