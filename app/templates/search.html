@@ -968,8 +968,7 @@
             populateFromLayer(drawnLayer);
             clearActiveDrawState();
 
-            // Enable in-place editing so the shape has move/resize handles
-            // and users can drag or drag-corners after the initial draw.
+            // Enable in-place editing so the shape has resize handles.
             if (drawnLayer.editing) {
                 drawnLayer.editing.enable();
             }
@@ -980,8 +979,14 @@
                 if (svgEl) svgEl.classList.add('search-drawn-shape');
             } catch (err) { /* ignore */ }
 
-            // Any time the shape is dragged or resized, refresh the inputs.
+            // Any time the shape is resized via corner handles, refresh the inputs.
             drawnLayer.on('edit', function () { populateFromLayer(drawnLayer); });
+
+            // Wire body-drag so users can grab anywhere INSIDE the shape and
+            // move the whole thing. Leaflet.draw's built-in edit mode only
+            // exposes a small center marker for moving; grabbing the body
+            // otherwise would pan the map, which surprises users.
+            enableBodyDrag(drawnLayer);
         });
         return formMap;
     }
@@ -1012,6 +1017,65 @@
         setNum('lat_max', ne.lat);
         setNum('lon_min', sw.lng);
         setNum('lon_max', ne.lng);
+    }
+
+    // Body-drag support: press-and-hold anywhere inside the shape and move
+    // the whole thing. Refreshes the inputs live during the drag. Rectangles
+    // translate their SW/NE corners; circles just move their center latlng.
+    function enableBodyDrag(layer) {
+        var isDragging = false;
+        var lastLatLng = null;
+        var origBounds = null;
+        var origCenter = null;
+
+        layer.on('mousedown', function (evt) {
+            // Only start dragging on plain left-click on the shape body,
+            // not on the editing handles (they sit above in their own pane).
+            if (evt.originalEvent && evt.originalEvent.button !== 0) return;
+            isDragging = true;
+            lastLatLng = evt.latlng;
+            origBounds = layer.getBounds ? layer.getBounds() : null;
+            origCenter = layer.getLatLng ? layer.getLatLng() : null;
+            formMap.dragging.disable();
+            L.DomEvent.stopPropagation(evt);
+            if (evt.originalEvent && evt.originalEvent.preventDefault) evt.originalEvent.preventDefault();
+        });
+
+        formMap.on('mousemove', function (evt) {
+            if (!isDragging) return;
+            var dLat = evt.latlng.lat - lastLatLng.lat;
+            var dLng = evt.latlng.lng - lastLatLng.lng;
+            lastLatLng = evt.latlng;
+
+            if (layer.setBounds && origBounds) {
+                var b = layer.getBounds();
+                var sw = b.getSouthWest(), ne = b.getNorthEast();
+                layer.setBounds(L.latLngBounds(
+                    [sw.lat + dLat, sw.lng + dLng],
+                    [ne.lat + dLat, ne.lng + dLng]
+                ));
+            } else if (layer.setLatLng) {
+                var c = layer.getLatLng();
+                layer.setLatLng(L.latLng(c.lat + dLat, c.lng + dLng));
+            }
+
+            populateFromLayer(layer);
+            // Refresh the edit handles so they follow the shape after the move.
+            if (layer.editing && layer.editing.updateMarkers) {
+                try { layer.editing.updateMarkers(); } catch (e) { /* ignore */ }
+            }
+        });
+
+        formMap.on('mouseup', function () {
+            if (!isDragging) return;
+            isDragging = false;
+            formMap.dragging.enable();
+            // Last-resort handle re-sync: disable + re-enable editing so the
+            // resize handles are guaranteed to be in the right spots.
+            if (layer.editing) {
+                try { layer.editing.disable(); layer.editing.enable(); } catch (e) { /* ignore */ }
+            }
+        });
     }
 
     function setNum(id, val) {
