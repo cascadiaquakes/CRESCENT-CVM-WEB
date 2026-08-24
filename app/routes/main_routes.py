@@ -468,6 +468,11 @@ async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@router.get("/search", response_class=HTMLResponse)
+async def search_models(request: Request):
+    return templates.TemplateResponse("search.html", {"request": request})
+
+
 # Route to create html for model dropdown. A simple drop-down of the file names and model variables.
 @router.get("/models_drop_down", response_class=HTMLResponse)
 def models_drop_down(required_variable: Optional[str] = None):

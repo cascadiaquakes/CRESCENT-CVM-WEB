@@ -878,6 +878,51 @@ async def read_page1(request: Request):
     return templates.TemplateResponse("x-section-data.html", {"request": request})
 
 
+@router.get("/models_catalog")
+def models_catalog():
+    """
+    JSON catalog of all CVM models in S3. Powers the /search page so filtering
+    can happen client-side without parsing HTML tables.
+    """
+    bucket_name = BUCKET_NAME[ACTIVE_ENVIRONMENT]
+    json_prefix = PREFIX["json"]
+
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=json_prefix)
+    if "Contents" not in response:
+        return {"models": []}
+
+    models = []
+    for obj in response["Contents"]:
+        key = obj["Key"]
+        if not key.endswith(".json"):
+            continue
+        try:
+            file_obj = s3_client.get_object(Bucket=bucket_name, Key=key)
+            data = json.load(file_obj["Body"])
+        except Exception:
+            continue
+
+        filename = key.split("/")[-1]
+        nc_filename = filename.rsplit(".", 1)[0] + ".nc"
+
+        models.append({
+            "name": data.get("model", filename),
+            "filename": nc_filename,
+            "summary": data.get("summary", ""),
+            "lat_min": data.get("geospatial_lat_min"),
+            "lat_max": data.get("geospatial_lat_max"),
+            "lon_min": data.get("geospatial_lon_min"),
+            "lon_max": data.get("geospatial_lon_max"),
+            "depth_min": data.get("geospatial_vertical_min"),
+            "depth_max": data.get("geospatial_vertical_max"),
+            "data_vars": data.get("data_vars", []),
+            "size_kb": data.get("size_kb"),
+        })
+
+    models.sort(key=lambda m: (m.get("name") or "").lower())
+    return {"models": models}
+
+
 @router.get("/list_json_files_s3/{selected_model}", response_class=HTMLResponse)
 def list_json_files_s3(request: Request, selected_model: str):
     # AWS S3 configurations (you already have these)
