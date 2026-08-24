@@ -168,6 +168,36 @@
     .draw-tools button.active {
         background: #0b4a53; color: #fff; border-color: #0b4a53;
     }
+    /* Bigger, higher-contrast resize/move handles so they're easy to grab. */
+    .leaflet-container .leaflet-editing-icon {
+        width: 14px !important;
+        height: 14px !important;
+        margin-left: -7px !important;
+        margin-top: -7px !important;
+        background-color: #ffffff;
+        border: 2px solid #0b4a53;
+        border-radius: 3px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+        cursor: nwse-resize;
+    }
+    .leaflet-container .leaflet-editing-icon:hover {
+        background-color: #0b4a53;
+    }
+    /* The center move handle (rectangles + circles) — differentiate with a
+       filled teal fill so users notice it's the "grab to move" affordance. */
+    .leaflet-container .leaflet-edit-move,
+    .leaflet-container .leaflet-editing-icon.leaflet-edit-move {
+        background-color: #0b4a53;
+        border-color: #ffffff;
+        cursor: move;
+        width: 16px !important;
+        height: 16px !important;
+        margin-left: -8px !important;
+        margin-top: -8px !important;
+        border-radius: 50%;
+    }
+    /* Move cursor when hovering the drawn shape body itself. */
+    .search-drawn-shape { cursor: move !important; }
 
     /* Actions row (Search / Clear) */
     .search-actions {
@@ -943,6 +973,13 @@
             if (drawnLayer.editing) {
                 drawnLayer.editing.enable();
             }
+            // Add a class to the shape's SVG element so the CSS `.search-drawn-shape`
+            // rule kicks in and users get a `move` cursor when hovering the body.
+            try {
+                var svgEl = drawnLayer.getElement && drawnLayer.getElement();
+                if (svgEl) svgEl.classList.add('search-drawn-shape');
+            } catch (err) { /* ignore */ }
+
             // Any time the shape is dragged or resized, refresh the inputs.
             drawnLayer.on('edit', function () { populateFromLayer(drawnLayer); });
         });
