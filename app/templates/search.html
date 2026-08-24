@@ -3,8 +3,10 @@
 {% block style %}
 <link rel="stylesheet" href="/static/css/cvm.css" />
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-fullscreen/1.0.2/leaflet.fullscreen.css" />
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-fullscreen/1.0.2/Leaflet.fullscreen.min.js"></script>
 <style>
     /* Page shell */
     .search-page {
@@ -744,11 +746,16 @@
         footprintMap = L.map('resultsFootprintMap', {
             zoomControl: true,
             attributionControl: true,
+            fullscreenControl: true,
+            fullscreenControlOptions: { position: 'topright', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' },
         }).setView([44, -122], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 18,
         }).addTo(footprintMap);
+        footprintMap.on('fullscreenchange', function () {
+            setTimeout(function () { footprintMap.invalidateSize(); }, 50);
+        });
         return footprintMap;
     }
 
@@ -952,11 +959,16 @@
         if (formMap) return formMap;
         formMap = L.map('searchFormMap', {
             zoomControl: true,
+            fullscreenControl: true,
+            fullscreenControlOptions: { position: 'topright', title: 'Enter fullscreen', titleCancel: 'Exit fullscreen' },
         }).setView([44, -122], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
             maxZoom: 18,
         }).addTo(formMap);
+        formMap.on('fullscreenchange', function () {
+            setTimeout(function () { formMap.invalidateSize(); }, 50);
+        });
 
         // Ensure Leaflet recalculates size once the container is laid out.
         setTimeout(function () { formMap.invalidateSize(); }, 50);
