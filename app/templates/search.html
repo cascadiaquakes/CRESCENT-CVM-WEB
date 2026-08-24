@@ -935,25 +935,37 @@
             clearDrawing();
             drawnLayer = e.layer;
             formMap.addLayer(drawnLayer);
-            var bounds = drawnLayer.getBounds ? drawnLayer.getBounds() : null;
-            // Circles don't expose getBounds() the same way; compute from center + radius
-            if (!bounds && drawnLayer.getLatLng && drawnLayer.getRadius) {
-                var c = drawnLayer.getLatLng();
-                var rMeters = drawnLayer.getRadius();
-                // Approx conversion: 1 deg lat ≈ 111 km. Longitude scales by cos(lat).
-                var dLat = (rMeters / 1000) / 111;
-                var dLon = (rMeters / 1000) / (111 * Math.max(0.001, Math.cos(c.lat * Math.PI / 180)));
-                bounds = L.latLngBounds(
-                    [c.lat - dLat, c.lng - dLon],
-                    [c.lat + dLat, c.lng + dLon]
-                );
+            populateFromLayer(drawnLayer);
+            clearActiveDrawState();
+
+            // Enable in-place editing so the shape has move/resize handles
+            // and users can drag or drag-corners after the initial draw.
+            if (drawnLayer.editing) {
+                drawnLayer.editing.enable();
             }
-            if (bounds) {
-                populateInputsFromBounds(bounds);
-                clearActiveDrawState();
-            }
+            // Any time the shape is dragged or resized, refresh the inputs.
+            drawnLayer.on('edit', function () { populateFromLayer(drawnLayer); });
         });
         return formMap;
+    }
+
+    function populateFromLayer(layer) {
+        var bounds = null;
+        if (layer.getBounds) {
+            bounds = layer.getBounds();
+        } else if (layer.getLatLng && layer.getRadius) {
+            // Circle: approximate bounding box from center + radius. 1 deg lat ≈ 111 km,
+            // longitude scales by cos(lat).
+            var c = layer.getLatLng();
+            var rMeters = layer.getRadius();
+            var dLat = (rMeters / 1000) / 111;
+            var dLon = (rMeters / 1000) / (111 * Math.max(0.001, Math.cos(c.lat * Math.PI / 180)));
+            bounds = L.latLngBounds(
+                [c.lat - dLat, c.lng - dLon],
+                [c.lat + dLat, c.lng + dLon]
+            );
+        }
+        if (bounds) populateInputsFromBounds(bounds);
     }
 
     function populateInputsFromBounds(bounds) {
@@ -972,6 +984,9 @@
 
     function clearDrawing() {
         if (drawnLayer && formMap) {
+            if (drawnLayer.editing && drawnLayer.editing.disable) {
+                try { drawnLayer.editing.disable(); } catch (e) { /* ignore */ }
+            }
             formMap.removeLayer(drawnLayer);
             drawnLayer = null;
         }
