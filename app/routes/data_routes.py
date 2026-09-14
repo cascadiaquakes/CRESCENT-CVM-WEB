@@ -905,6 +905,9 @@ def models_catalog():
         filename = key.split("/")[-1]
         nc_filename = filename.rsplit(".", 1)[0] + ".nc"
 
+        if nc_filename in _EXCLUDED_MODELS:
+            continue
+
         models.append({
             "name": data.get("model", filename),
             "filename": nc_filename,
@@ -967,6 +970,11 @@ def list_json_files_s3(request: Request, selected_model: str):
 
         filename = key.split("/")[-1]
         filename_no_extension = filename.rsplit(".", 1)[0]
+
+        # Hide models that are temporarily excluded from the public listing.
+        # Flipping a model back on later is a one-line change to _EXCLUDED_MODELS.
+        if f"{filename_no_extension}.nc" in _EXCLUDED_MODELS:
+            continue
 
         # Parse fields from JSON
         lon_min = data.get("geospatial_lon_min", "-")
@@ -1507,6 +1515,13 @@ _JBOOK_RAW_URL = (
     "https://raw.githubusercontent.com/cascadiaquakes/cvm-tools-book/main/3Dmodels/{slug}.md"
 )
 
+# netCDF filenames excluded from all public listings. Kept as a small set at
+# the top of the module so re-enabling a model is a one-line change.
+_EXCLUDED_MODELS = {
+    "CRESCENT_CVM0_He2026.r0.0.nc",
+    "WUS324-Casc-CVM.r0.0-n4.nc",
+}
+
 # netCDF filename → JBook 3Dmodels/*.md slug. The two Delph netCDFs both point
 # at the same paper until the second one is confirmed as a distinct publication.
 _NETCDF_TO_JBOOK = {
@@ -1516,7 +1531,6 @@ _NETCDF_TO_JBOOK = {
     "Janiszewski2019_phasevelocities.r0.1.nc": "janiszewski_gji_2019",
     "PNW10-S_CVM.r0.1.nc": "porritt_epsl_2011",
     "SVI_EQTOMO_Savard2018.r0.1.nc": "savard_g3_2018",
-    "WUS324-Casc-CVM.r0.0-n4.nc": "rodgers_grl_2024",
     "casc1.6-velmdl.r1.0-n4.nc": "stephenson_ofr_2019",
 }
 
@@ -1527,12 +1541,10 @@ _NETCDF_TO_JBOOK = {
 _MODEL_DISPLAY_NAMES = {
     "Cascadia-ANT+RF-Delph2018.r0.1.nc": "Delph et al. (2018) — ANT+RF (Vs)",
     "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "Delph et al. (2018) — Rayleigh (Vs)",
-    "CRESCENT_CVM0_He2026.r0.0.nc": "He et al. (2026) — CRESCENT CVM Gen 0 (Vp/Vs/ρ)",
     "Cascadia_highRes_Vp_Ashraf2025.r0.0.nc": "Ashraf et al. (2025) — Vp",
     "Janiszewski2019_phasevelocities.r0.1.nc": "Janiszewski et al. (2019) — Vp",
     "PNW10-S_CVM.r0.1.nc": "Porritt et al. (2011) — Vs",
     "SVI_EQTOMO_Savard2018.r0.1.nc": "Savard et al. (2018) — Vp/Vs/ρ",
-    "WUS324-Casc-CVM.r0.0-n4.nc": "Rodgers et al. (2024) — Vp/Vs/ρ",
     "casc1.6-velmdl.r1.0-n4.nc": "Stephenson et al. (2019) — Vp/Vs",
 }
 
@@ -1811,6 +1823,9 @@ def models_drop_down_s3(required_variable: Optional[str] = None):
                 )
                 continue
 
+            if nc_filename in _EXCLUDED_MODELS:
+                continue
+
             # Read JSON data from S3
             json_object = s3_client.get_object(Bucket=bucket_name, Key=json_file)
             json_data = json.loads(json_object["Body"].read().decode("utf-8"))
@@ -1895,6 +1910,9 @@ def models_drop_down_coverage_s3(required_variable: Optional[str] = None):
                 logger.warning(
                     f"NetCDF file {nc_filename} not found in S3 {bucket_name}, with key {nc_s3_key}. Skipping."
                 )
+                continue
+
+            if nc_filename in _EXCLUDED_MODELS:
                 continue
 
             # Read JSON data from S3
