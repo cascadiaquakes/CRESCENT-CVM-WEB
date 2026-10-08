@@ -1048,7 +1048,7 @@ def get_netcdf_download_link(filename: str):
     try:
         # Get file size
         head_obj = s3_client.head_object(Bucket=bucket_name, Key=s3_key)
-        file_size_kb = round(head_obj["ContentLength"] / 1024, 2)
+        size_bytes = head_obj["ContentLength"]
     except s3_client.exceptions.NoSuchKey:
         return HTMLResponse(
             content=f"<span style='color:red;'>File not found: {filename}</span>",
@@ -1062,8 +1062,17 @@ def get_netcdf_download_link(filename: str):
     # Construct download URL using your internal route
     download_url = f"/data/download-netcdf-s3/?{urlencode({'filename': filename})}"
 
+    # The full model is always the stored netCDF file; the Format dropdown only
+    # applies to custom extracts, so say so next to the size.
+    if size_bytes >= 1024**3:
+        size_text = f"{size_bytes / 1024**3:,.2f} GB"
+    elif size_bytes >= 1024**2:
+        size_text = f"{size_bytes / 1024**2:,.1f} MB"
+    else:
+        size_text = f"{size_bytes / 1024:,.0f} KB"
     html_snippet = f"""
-    <a href="{download_url}" download>Download</a> <span style="font-size: 9pt;">({file_size_kb:,} KB)</span>
+    <a href="{download_url}" download>Download netCDF</a> <span style="font-size: 9pt;">({size_text})</span>
+    <div style="font-size: 9pt; color: #64748b; margin-top: 4px;">The full model is provided as netCDF. The Format setting above applies to custom extracts.</div>
     """
 
     return HTMLResponse(content=html_snippet)
