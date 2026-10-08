@@ -161,6 +161,26 @@ function setLegendSymbol(el, color, shape) {
     }
 }
 
+// "Satellite imagery" and "Hide below ground" checkboxes. Occlusion needs the terrain
+// surface, which only renders while the globe is shown, so it is off and disabled until
+// imagery is on. The scene only redraws on request, so ask for a frame after each change.
+function wireImageryToggles(viewer) {
+    const globeBox = document.getElementById('toggleGlobeCheckbox');
+    const occlusion = document.getElementById('toggleTerrainOcclusionCheckbox');
+    function sync() {
+        viewer.scene.globe.show = globeBox.checked;
+        occlusion.disabled = !globeBox.checked;
+        viewer.scene.globe.depthTestAgainstTerrain = globeBox.checked && occlusion.checked;
+        occlusion.parentElement.title = globeBox.checked
+            ? 'Hide anything below the terrain surface'
+            : 'Turn on Satellite imagery to use this';
+        viewer.scene.requestRender();
+    }
+    globeBox.addEventListener('change', sync);
+    occlusion.addEventListener('change', sync);
+    sync();
+}
+
 // Function to update the legend
 function updateLegend() {
     const dropdown = document.getElementById('select2dSurface');
