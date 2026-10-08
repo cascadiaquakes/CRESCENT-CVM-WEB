@@ -70,6 +70,10 @@
             <input type="text" id="centerCoordinates" style="width:70px;" value="-123.0,45.5" />
             <button id="homeViewButton">Tilted View</button>
         </div>
+        <div id="distanceControl">
+            <label><input type="checkbox" id="clearCheckbox"> Measure Distance</label>
+            <div id="distanceDisplay">Click distances will appear here</div>
+        </div>
         <div>
             <hr style="border-top: 1px solid #0000FF" />
         </div>
@@ -132,10 +136,6 @@
         <b><i>Color Legend:</i></b>
         <div id="legendContainer"></div>
         <div id="auxLegendContainer"></div>
-        <div id="distanceControl">
-            <label><input type="checkbox" id="clearCheckbox"> Measure Distance</label>
-            <div id="distanceDisplay">Click distances will appear here</div>
-        </div>
     </div>
 
     <!-- Live lat/lon readout under the legend pill. -->
@@ -433,6 +433,8 @@
                         w, n, e, n, e, s, w, s
                     ])),
                     material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]),
+                    // Sits at sea level: with "Hide below ground" on it only flickers through along the coast.
+                    show: new Cesium.CallbackProperty(function () { return !viewer.scene.globe.depthTestAgainstTerrain; }, false),
                     perPositionHeight: true,
                     outline: true,
                     outlineColor: cvmAreaOutlineColor[0]
@@ -624,6 +626,8 @@
                     polygon: {
                         hierarchy: new Cesium.PolygonHierarchy(positions),
                         material: cvmFaceColor.withAlpha(alpha),
+                        // Underground volume: with "Hide below ground" on only slivers would poke through, so hide it.
+                        show: new Cesium.CallbackProperty(function () { return !viewer.scene.globe.depthTestAgainstTerrain; }, false),
                         perPositionHeight: true,
                         outline: true,
                         outlineColor: cvmOutlineColor,
@@ -889,6 +893,7 @@
         });
 
         wireImageryToggles(viewer);
+        makeDraggable(document.getElementById('northArrow'));
 
         // Handling the Geojson data.
         document.addEventListener('DOMContentLoaded', function () {

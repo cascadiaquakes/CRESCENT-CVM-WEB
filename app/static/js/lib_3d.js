@@ -181,6 +181,36 @@ function wireImageryToggles(viewer) {
     sync();
 }
 
+// Let users drag an overlay (the north arrow) off whatever it covers.
+function makeDraggable(el) {
+    let offsetX = 0, offsetY = 0;
+    el.title = 'Drag to move';
+    el.style.pointerEvents = 'auto';
+    el.style.cursor = 'grab';
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', function (e) {
+        // offsetLeft/Top ignore the heading rotation, so the arrow doesn't jump on grab.
+        offsetX = e.clientX - el.offsetLeft;
+        offsetY = e.clientY - el.offsetTop;
+        el.setPointerCapture(e.pointerId);
+        el.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+    el.addEventListener('pointermove', function (e) {
+        if (!el.hasPointerCapture(e.pointerId)) return;
+        el.style.left = Math.min(Math.max(0, e.clientX - offsetX), window.innerWidth - el.offsetWidth) + 'px';
+        el.style.top = Math.min(Math.max(0, e.clientY - offsetY), window.innerHeight - el.offsetHeight) + 'px';
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+    });
+    function endDrag(e) {
+        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+        el.style.cursor = 'grab';
+    }
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+}
+
 // Function to update the legend
 function updateLegend() {
     const dropdown = document.getElementById('select2dSurface');

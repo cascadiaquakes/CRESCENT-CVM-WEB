@@ -392,7 +392,9 @@
             name: "study area",
             polygon: {
                 hierarchy: new Cesium.PolygonHierarchy(positions),
-                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]), // Cyan color with 50% transparency
+                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]),
+                // Sits at sea level: with "Hide below ground" on it only flickers through along the coast.
+                show: new Cesium.CallbackProperty(function () { return !viewer.scene.globe.depthTestAgainstTerrain; }, false), // Cyan color with 50% transparency
                 perPositionHeight: true, // Allow different heights for each vertex
                 outline: true,
                 outlineColor: cvmAreaOutlineColor[0]
@@ -1060,6 +1062,7 @@
 
 
         wireImageryToggles(viewer);
+        makeDraggable(document.getElementById('northArrow'));
 
         // Handling the 2D Geojson data.
         document.addEventListener('DOMContentLoaded', function () {
