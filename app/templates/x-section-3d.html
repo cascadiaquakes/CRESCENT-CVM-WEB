@@ -681,7 +681,7 @@
 
             var legendColor = document.createElement('div');
             legendColor.classList.add('legendColor');
-            legendColor.style.backgroundColor = dataColor[i].toCssColorString();
+            setLegendSymbol(legendColor, dataColor[i], primaryLegendShape[i]);
 
             var legendLabel = document.createElement('span');
             legendLabel.textContent = labelText;
@@ -698,7 +698,7 @@
 
             var legendColor = document.createElement('div');
             legendColor.classList.add('legendColor');
-            legendColor.style.backgroundColor = color.toCssColorString();
+            setLegendSymbol(legendColor, color, auxLegendShape[i]);
 
             var legendLabel = document.createElement('span');
             legendLabel.textContent = auxLegendLabel[i];

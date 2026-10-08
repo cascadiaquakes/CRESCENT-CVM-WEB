@@ -142,6 +142,25 @@ function enforceSelectionLimit() {
     }
 }
 
+// Draw a legend symbol that matches how the layer appears on the map:
+// 'fill' (default square), 'outline' (faint box with a border), 'circle' or 'line'.
+function setLegendSymbol(el, color, shape) {
+    const css = color.toCssColorString();
+    el.style.backgroundColor = css;
+    if (shape === 'circle') {
+        el.style.borderRadius = '50%';
+    } else if (shape === 'line') {
+        el.style.width = '14px';
+        el.style.height = '3px';
+        el.style.border = 'none';
+        el.style.borderRadius = '1px';
+    } else if (shape === 'outline') {
+        el.style.backgroundColor = color.withAlpha(0.15).toCssColorString();
+        el.style.border = '2px solid ' + css;
+        el.style.boxSizing = 'border-box';
+    }
+}
+
 // Function to update the legend
 function updateLegend() {
     const dropdown = document.getElementById('select2dSurface');

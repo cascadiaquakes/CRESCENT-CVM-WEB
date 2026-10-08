@@ -86,6 +86,9 @@ var primaryLegendLabel = cfmLabel.concat(cfmTraceLabel);
 var primaryLegendColor = cfmColor.concat(cfmTraceColor);
 var auxLegendLabel = cvmAreaLabel.concat(cvmLabel).concat(eqLabel).concat(boundaryLabel);
 var auxLegendColor = cvmAreaOutlineColor.concat(cvmColor).concat(eqColor).concat(boundaryColor);
+// Legend symbol per entry, matching how each layer is drawn on the map (see setLegendSymbol).
+var primaryLegendShape = ['fill', 'line'];
+var auxLegendShape = ['outline', 'fill', 'circle', 'line', 'line'];
 
 // Legacy support.
 var data = cfmData.concat(cfmTraceData)
