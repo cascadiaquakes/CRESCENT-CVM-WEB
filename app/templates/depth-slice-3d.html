@@ -7,6 +7,7 @@
     <title>Depth Slice 3D</title>
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Cesium.js"></script>
     <script src="/static/js/lib_3d.js"></script>
+    <script src="/static/js/map_tools.js"></script>
     <script src="/static/config/project.js"></script>
     <script src="/static/config/repository_config.js"></script>
     <link rel="stylesheet" href="/static/css/depth-slice-3d.css" />
@@ -181,6 +182,10 @@
 
         viewer.scene.requestRenderMode = true;
         viewer.scene.maximumRenderTimeChange = Infinity;
+
+        // Zoom buttons, keyboard navigation, scale bar and keyboard help (shared with the CFM viewer).
+        // Zoom-out is capped so the camera stays around Cascadia instead of drifting to the whole globe.
+        CfmMapTools.init(viewer, { scalePosition: 'bottom-right', zoomBottom: '100px', zoomRight: '12px', coords: false, maxZoomOut: 6000000 });
 
         function disposeViewer() {
             if (viewer && !viewer.isDestroyed()) {
