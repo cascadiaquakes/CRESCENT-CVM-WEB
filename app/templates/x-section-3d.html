@@ -587,12 +587,11 @@
                         }
                         var description = '';
                         var properties = entity.properties;
-                        for (var propertyName in properties) {
-                            if (properties.hasOwnProperty(propertyName) && typeof properties[propertyName] !== 'function') {
-                                var propNameWithoutUnderscore = propertyName.replace(/^_/, '');
-                                description += propNameWithoutUnderscore + ': ' + properties[propertyName] + '<br />';
-                            }
-                        }
+                        // Only the GeoJSON properties; iterating the PropertyBag also lists Cesium's
+                        // own propertyNames/definitionChanged fields.
+                        properties.propertyNames.forEach(function (propertyName) {
+                            description += propertyName + ': ' + properties[propertyName].getValue() + '<br />';
+                        });
                         entity.description = description;
                     });
 

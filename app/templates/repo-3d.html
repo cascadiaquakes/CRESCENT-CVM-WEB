@@ -70,10 +70,6 @@
             <input type="text" id="centerCoordinates" style="width:70px;" value="-123.0,45.5" />
             <button id="homeViewButton">Tilted View</button>
         </div>
-        <div id="distanceControl">
-            <label><input type="checkbox" id="clearCheckbox"> Measure Distance</label>
-            <div id="distanceDisplay">Click distances will appear here</div>
-        </div>
         <div>
             <hr style="border-top: 1px solid #0000FF" />
         </div>
@@ -136,6 +132,10 @@
         <b><i>Color Legend:</i></b>
         <div id="legendContainer"></div>
         <div id="auxLegendContainer"></div>
+        <div id="distanceControl">
+            <label><input type="checkbox" id="clearCheckbox"> Measure Distance</label>
+            <div id="distanceDisplay">Click distances will appear here</div>
+        </div>
     </div>
 
     <!-- Live lat/lon readout under the legend pill. -->
@@ -977,12 +977,11 @@
                         }
                         var description = '';
                         var properties = entity.properties;
-                        for (var propertyName in properties) {
-                            if (properties.hasOwnProperty(propertyName) && typeof properties[propertyName] !== 'function') {
-                                var propNameWithoutUnderscore = propertyName.replace(/^_/, '');
-                                description += propNameWithoutUnderscore + ': ' + properties[propertyName] + '<br />';
-                            }
-                        }
+                        // Only the GeoJSON properties; iterating the PropertyBag also lists Cesium's
+                        // own propertyNames/definitionChanged fields.
+                        properties.propertyNames.forEach(function (propertyName) {
+                            description += propertyName + ': ' + properties[propertyName].getValue() + '<br />';
+                        });
                         entity.description = description;
                     });
 
@@ -1017,12 +1016,11 @@
                         }
                         var description = '';
                         var properties = entity.properties;
-                        for (var propertyName in properties) {
-                            if (properties.hasOwnProperty(propertyName) && typeof properties[propertyName] !== 'function') {
-                                var propNameWithoutUnderscore = propertyName.replace(/^_/, '');
-                                description += propNameWithoutUnderscore + ': ' + properties[propertyName] + '<br />';
-                            }
-                        }
+                        // Only the GeoJSON properties; iterating the PropertyBag also lists Cesium's
+                        // own propertyNames/definitionChanged fields.
+                        properties.propertyNames.forEach(function (propertyName) {
+                            description += propertyName + ': ' + properties[propertyName].getValue() + '<br />';
+                        });
                         entity.description = description;
                     });
 
