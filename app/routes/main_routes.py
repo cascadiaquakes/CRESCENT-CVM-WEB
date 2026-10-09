@@ -1107,7 +1107,7 @@ async def visualize_depth_profiles_s3(request: Request):
 
     # Convert xarray dataset to CSV (for simplicity in this example)
     csv_buf = BytesIO()
-    plot_data[plot_var].to_dataframe().to_csv(csv_buf)
+    plot_data[plot_var].to_dataframe().to_csv(csv_buf, na_rep="NaN")
     csv_buf.seek(0)
     base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
@@ -1485,7 +1485,7 @@ async def visualize_xsection_3d_s3(request: Request):
     # Convert xarray dataset to CSV (for simplicity in this example)
     # You can also consider other formats like NetCDF for more complex data
     csv_buf = BytesIO()
-    plot_data[plot_var].to_dataframe().to_csv(csv_buf)
+    plot_data[plot_var].to_dataframe().to_csv(csv_buf, na_rep="NaN")
     csv_buf.seek(0)
     base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
@@ -2070,7 +2070,7 @@ async def visualize_depth_slice_s3(request: Request):
             # Convert xarray dataset to CSV (for simplicity in this example)
             # You can also consider other formats like NetCDF for more complex data
             csv_buf = BytesIO()
-            plot_data.to_dataframe().to_csv(csv_buf)
+            plot_data.to_dataframe().to_csv(csv_buf, na_rep="NaN")
             csv_buf.seek(0)
             base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
@@ -2309,7 +2309,7 @@ async def visualize_depth_slice_s3(request: Request):
     # You can also consider other formats like NetCDF for more complex data
     """
     csv_buf = BytesIO()
-    plot_data.to_dataframe().to_csv(csv_buf)
+    plot_data.to_dataframe().to_csv(csv_buf, na_rep="NaN")
     csv_buf.seek(0)
     base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
     content = {"image": base64_plot, "csv_data": base64_csv}
@@ -2321,7 +2321,7 @@ async def visualize_depth_slice_s3(request: Request):
 
         # Convert data to DataFrame and then to CSV
         csv_buf = BytesIO()
-        plot_data.to_dataframe().to_csv(csv_buf)
+        plot_data.to_dataframe().to_csv(csv_buf, na_rep="NaN")
         csv_buf.seek(0)
         base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 

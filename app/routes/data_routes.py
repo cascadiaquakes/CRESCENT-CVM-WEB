@@ -351,7 +351,7 @@ def save_data(data_to_return, output_format, output_file_prefix):
             # Convert the data to a DataFrame and round to 3 decimal places
             df = data_to_return.to_dataframe().reset_index().round(3)
             csv_path = f"/tmp/{output_file_prefix}{unique_id}.csv"
-            df.to_csv(csv_path, sep=delimiter, index=False)
+            df.to_csv(csv_path, sep=delimiter, index=False, na_rep="NaN")
             return FileResponse(
                 path=csv_path,
                 filename=f"{output_file_prefix}{unique_id}.csv",
@@ -381,7 +381,7 @@ def save_data(data_to_return, output_format, output_file_prefix):
             with open(geocsv_path, "w") as fp:
                 init = f"# dataset: GeoCSV 2.0\n# delimiter: {delimiter}"
                 fp.write(f"{init}\n{metadata}")
-            df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a")
+            df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a", na_rep="NaN")
             return FileResponse(
                 path=geocsv_path,
                 filename=f"{output_file_prefix}{unique_id}.geocsv",
@@ -427,7 +427,7 @@ def save_data_large(data_to_return, output_format, output_file_prefix):
             df = data_to_return.to_dataframe().reset_index().round(3)
             if output_format == "csv":
                 csv_path = f"/tmp/{output_file_prefix}{unique_id}.csv"
-                df.to_csv(csv_path, sep=delimiter, index=False)
+                df.to_csv(csv_path, sep=delimiter, index=False, na_rep="NaN")
                 return FileResponse(
                     path=csv_path,
                     filename=f"{output_file_prefix}{unique_id}.csv",
@@ -442,7 +442,7 @@ def save_data_large(data_to_return, output_format, output_file_prefix):
                 with open(geocsv_path, "w") as fp:
                     init = f"# dataset: GeoCSV 2.0\n# delimiter: {delimiter}"
                     fp.write(f"{init}\n{metadata}")
-                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a")
+                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a", na_rep="NaN")
                 return FileResponse(
                     path=geocsv_path,
                     filename=f"{output_file_prefix}{unique_id}.geocsv",
@@ -543,7 +543,7 @@ def save_data_large_all(data_to_return, output_format, output_file_prefix):
             df = data_to_return.to_dataframe().reset_index().round(3)
             if output_format == "csv":
                 csv_path = f"/tmp/{output_file_prefix}{unique_id}.csv"
-                df.to_csv(csv_path, sep=delimiter, index=False)
+                df.to_csv(csv_path, sep=delimiter, index=False, na_rep="NaN")
                 return FileResponse(
                     path=csv_path,
                     filename=f"{output_file_prefix}{unique_id}.csv",
@@ -558,7 +558,7 @@ def save_data_large_all(data_to_return, output_format, output_file_prefix):
                 with open(geocsv_path, "w") as fp:
                     init = f"# dataset: GeoCSV 2.0\n# delimiter: {delimiter}"
                     fp.write(f"{init}\n{metadata}")
-                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a")
+                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a", na_rep="NaN")
                 return FileResponse(
                     path=geocsv_path,
                     filename=f"{output_file_prefix}{unique_id}.geocsv",
@@ -2167,7 +2167,7 @@ async def extract_slice_data(
                 )
                 plt.clf()
                 csv_buf = BytesIO()
-                selected_data_vars.to_dataframe().to_csv(csv_buf)
+                selected_data_vars.to_dataframe().to_csv(csv_buf, na_rep="NaN")
                 csv_buf.seek(0)
                 base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
                 content = {"image": base64_plot, "csv_data": base64_csv}
