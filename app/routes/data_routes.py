@@ -351,7 +351,7 @@ def save_data(data_to_return, output_format, output_file_prefix):
             # Convert the data to a DataFrame and round to 3 decimal places
             df = data_to_return.to_dataframe().reset_index().round(3)
             csv_path = f"/tmp/{output_file_prefix}{unique_id}.csv"
-            df.to_csv(csv_path, sep=delimiter, index=False)
+            df.to_csv(csv_path, sep=delimiter, index=False, na_rep="NaN")
             return FileResponse(
                 path=csv_path,
                 filename=f"{output_file_prefix}{unique_id}.csv",
@@ -381,7 +381,7 @@ def save_data(data_to_return, output_format, output_file_prefix):
             with open(geocsv_path, "w") as fp:
                 init = f"# dataset: GeoCSV 2.0\n# delimiter: {delimiter}"
                 fp.write(f"{init}\n{metadata}")
-            df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a")
+            df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a", na_rep="NaN")
             return FileResponse(
                 path=geocsv_path,
                 filename=f"{output_file_prefix}{unique_id}.geocsv",
@@ -427,7 +427,7 @@ def save_data_large(data_to_return, output_format, output_file_prefix):
             df = data_to_return.to_dataframe().reset_index().round(3)
             if output_format == "csv":
                 csv_path = f"/tmp/{output_file_prefix}{unique_id}.csv"
-                df.to_csv(csv_path, sep=delimiter, index=False)
+                df.to_csv(csv_path, sep=delimiter, index=False, na_rep="NaN")
                 return FileResponse(
                     path=csv_path,
                     filename=f"{output_file_prefix}{unique_id}.csv",
@@ -442,7 +442,7 @@ def save_data_large(data_to_return, output_format, output_file_prefix):
                 with open(geocsv_path, "w") as fp:
                     init = f"# dataset: GeoCSV 2.0\n# delimiter: {delimiter}"
                     fp.write(f"{init}\n{metadata}")
-                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a")
+                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a", na_rep="NaN")
                 return FileResponse(
                     path=geocsv_path,
                     filename=f"{output_file_prefix}{unique_id}.geocsv",
@@ -543,7 +543,7 @@ def save_data_large_all(data_to_return, output_format, output_file_prefix):
             df = data_to_return.to_dataframe().reset_index().round(3)
             if output_format == "csv":
                 csv_path = f"/tmp/{output_file_prefix}{unique_id}.csv"
-                df.to_csv(csv_path, sep=delimiter, index=False)
+                df.to_csv(csv_path, sep=delimiter, index=False, na_rep="NaN")
                 return FileResponse(
                     path=csv_path,
                     filename=f"{output_file_prefix}{unique_id}.csv",
@@ -558,7 +558,7 @@ def save_data_large_all(data_to_return, output_format, output_file_prefix):
                 with open(geocsv_path, "w") as fp:
                     init = f"# dataset: GeoCSV 2.0\n# delimiter: {delimiter}"
                     fp.write(f"{init}\n{metadata}")
-                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a")
+                df.to_csv(geocsv_path, sep=delimiter, index=False, mode="a", na_rep="NaN")
                 return FileResponse(
                     path=geocsv_path,
                     filename=f"{output_file_prefix}{unique_id}.geocsv",
@@ -1048,7 +1048,7 @@ def get_netcdf_download_link(filename: str):
     try:
         # Get file size
         head_obj = s3_client.head_object(Bucket=bucket_name, Key=s3_key)
-        file_size_kb = round(head_obj["ContentLength"] / 1024, 2)
+        size_bytes = head_obj["ContentLength"]
     except s3_client.exceptions.NoSuchKey:
         return HTMLResponse(
             content=f"<span style='color:red;'>File not found: {filename}</span>",
@@ -1062,8 +1062,17 @@ def get_netcdf_download_link(filename: str):
     # Construct download URL using your internal route
     download_url = f"/data/download-netcdf-s3/?{urlencode({'filename': filename})}"
 
+    # The full model is always the stored netCDF file; the Format dropdown only
+    # applies to custom extracts, so say so next to the size.
+    if size_bytes >= 1024**3:
+        size_text = f"{size_bytes / 1024**3:,.2f} GB"
+    elif size_bytes >= 1024**2:
+        size_text = f"{size_bytes / 1024**2:,.1f} MB"
+    else:
+        size_text = f"{size_bytes / 1024:,.0f} KB"
     html_snippet = f"""
-    <a href="{download_url}" download>Download</a> <span style="font-size: 9pt;">({file_size_kb:,} KB)</span>
+    <a href="{download_url}" download>Download netCDF</a> <span style="font-size: 9pt;">({size_text})</span>
+    <div style="font-size: 9pt; color: #64748b; margin-top: 4px;">The full model is provided as netCDF. The Format setting above applies to custom extracts.</div>
     """
 
     return HTMLResponse(content=html_snippet)
@@ -2158,7 +2167,7 @@ async def extract_slice_data(
                 )
                 plt.clf()
                 csv_buf = BytesIO()
-                selected_data_vars.to_dataframe().to_csv(csv_buf)
+                selected_data_vars.to_dataframe().to_csv(csv_buf, na_rep="NaN")
                 csv_buf.seek(0)
                 base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
                 content = {"image": base64_plot, "csv_data": base64_csv}

@@ -142,6 +142,75 @@ function enforceSelectionLimit() {
     }
 }
 
+// Draw a legend symbol that matches how the layer appears on the map:
+// 'fill' (default square), 'outline' (faint box with a border), 'circle' or 'line'.
+function setLegendSymbol(el, color, shape) {
+    const css = color.toCssColorString();
+    el.style.backgroundColor = css;
+    if (shape === 'circle') {
+        el.style.borderRadius = '50%';
+    } else if (shape === 'line') {
+        el.style.width = '14px';
+        el.style.height = '3px';
+        el.style.border = 'none';
+        el.style.borderRadius = '1px';
+    } else if (shape === 'outline') {
+        el.style.backgroundColor = color.withAlpha(0.15).toCssColorString();
+        el.style.border = '2px solid ' + css;
+        el.style.boxSizing = 'border-box';
+    }
+}
+
+// "Satellite imagery" and "Hide below ground" checkboxes. Occlusion needs the terrain
+// surface, which only renders while the globe is shown, so it is off and disabled until
+// imagery is on. The scene only redraws on request, so ask for a frame after each change.
+function wireImageryToggles(viewer) {
+    const globeBox = document.getElementById('toggleGlobeCheckbox');
+    const occlusion = document.getElementById('toggleTerrainOcclusionCheckbox');
+    function sync() {
+        viewer.scene.globe.show = globeBox.checked;
+        occlusion.disabled = !globeBox.checked;
+        viewer.scene.globe.depthTestAgainstTerrain = globeBox.checked && occlusion.checked;
+        occlusion.parentElement.title = globeBox.checked
+            ? 'Hide anything below the terrain surface'
+            : 'Turn on Satellite imagery to use this';
+        viewer.scene.requestRender();
+    }
+    globeBox.addEventListener('change', sync);
+    occlusion.addEventListener('change', sync);
+    sync();
+}
+
+// Let users drag an overlay (the north arrow) off whatever it covers.
+function makeDraggable(el) {
+    let offsetX = 0, offsetY = 0;
+    el.title = 'Drag to move';
+    el.style.pointerEvents = 'auto';
+    el.style.cursor = 'grab';
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', function (e) {
+        // offsetLeft/Top ignore the heading rotation, so the arrow doesn't jump on grab.
+        offsetX = e.clientX - el.offsetLeft;
+        offsetY = e.clientY - el.offsetTop;
+        el.setPointerCapture(e.pointerId);
+        el.style.cursor = 'grabbing';
+        e.preventDefault();
+    });
+    el.addEventListener('pointermove', function (e) {
+        if (!el.hasPointerCapture(e.pointerId)) return;
+        el.style.left = Math.min(Math.max(0, e.clientX - offsetX), window.innerWidth - el.offsetWidth) + 'px';
+        el.style.top = Math.min(Math.max(0, e.clientY - offsetY), window.innerHeight - el.offsetHeight) + 'px';
+        el.style.right = 'auto';
+        el.style.bottom = 'auto';
+    });
+    function endDrag(e) {
+        if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+        el.style.cursor = 'grab';
+    }
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+}
+
 // Function to update the legend
 function updateLegend() {
     const dropdown = document.getElementById('select2dSurface');

@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="/static/css/x-section-3d.css">
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.140/Build/Cesium/Cesium.js"></script>
     <script src="/static/js/lib_3d.js"></script>
+    <script src="/static/js/map_tools.js"></script>
     <script src="/static/config/project.js"></script>
     <script src="/static/config/repository_config.js"></script>
 
@@ -26,10 +27,10 @@
     <div id="controlContainer">
         <div id="toggleGlobeContainer">
             <label>
-                <input type="checkbox" id="toggleGlobeCheckbox">Imagery layer
+                <input type="checkbox" id="toggleGlobeCheckbox"> Satellite imagery
             </label>
             <label>
-                <input type="checkbox" id="toggleTerrainOcclusionCheckbox" checked> Terrain Occlusion
+                <input type="checkbox" id="toggleTerrainOcclusionCheckbox" disabled> Hide below ground
             </label>
         </div>
 
@@ -56,7 +57,7 @@
 
         <div id="toggleBoundaryInterface">
             <label>
-                <input type="checkbox" id="toggleBoundaryCheckbox" checked> US &amp; Canada
+                <input type="checkbox" id="toggleBoundaryCheckbox" checked> Political boundary lines
             </label>
         </div>
 
@@ -176,7 +177,6 @@
         });
 
         var viewer = new Cesium.Viewer('cesiumContainer', {
-            imageryProvider: new Cesium.IonImageryProvider({ assetId: 3954 }),
             depthPlaneEllipsoidOffset: 10000,
             nearToFarRatio: 1e6,
             farToNearRatio: 1e-6,
@@ -185,7 +185,9 @@
             skyAtmosphere: false, // Disable sky atmosphere
             enableCollisionDetection: false,
             navigationInstructionsInitiallyVisible: true,
-            baseLayer: Cesium.ImageryLayer.fromProviderAsync(Cesium.IonImageryProvider.fromAssetId(3954)),
+            // Sentinel-2 (3954) isn't in our Cesium ion account; fall back to Bing Maps Aerial (2).
+            baseLayer: Cesium.ImageryLayer.fromProviderAsync(Cesium.IonImageryProvider.fromAssetId(3954)
+                .catch(function () { return Cesium.IonImageryProvider.fromAssetId(2); })),
             globe: new Cesium.Globe(Cesium.Ellipsoid.WGS84, {
                 minimumZoomDistance: 0.0
             })
@@ -193,6 +195,10 @@
 
         viewer.scene.requestRenderMode = true;
         viewer.scene.maximumRenderTimeChange = Infinity;
+
+        // Zoom buttons, keyboard navigation, scale bar and keyboard help (shared with the CFM viewer).
+        // Zoom-out is capped so the camera stays around Cascadia instead of drifting to the whole globe.
+        CfmMapTools.init(viewer, { scalePosition: 'bottom-right', zoomBottom: '100px', zoomRight: '12px', coords: false, maxZoomOut: 6000000 });
 
         function disposeViewer() {
             if (viewer && !viewer.isDestroyed()) {
@@ -335,7 +341,9 @@
             name: "study area",
             polygon: {
                 hierarchy: new Cesium.PolygonHierarchy(positions),
-                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]), // Cyan color with 50% transparency
+                material: cvmAreaFaceColor[0].withAlpha(cvmAreaFillOpacity[0]),
+                // Sits at sea level: with "Hide below ground" on it only flickers through along the coast.
+                show: new Cesium.CallbackProperty(function () { return !viewer.scene.globe.depthTestAgainstTerrain; }, false), // Cyan color with 50% transparency
                 perPositionHeight: true, // Allow different heights for each vertex
                 outline: true,
                 outlineColor: cvmAreaOutlineColor[0]
@@ -376,13 +384,11 @@
         viewer.scene.fog.enabled = false;
         viewer.scene.globe.showGroundAtmosphere = false;
 
-        const toggleTerrainOcclusionCheckbox = document.getElementById('toggleTerrainOcclusionCheckbox');
-        viewer.scene.globe.depthTestAgainstTerrain = toggleTerrainOcclusionCheckbox.checked;
-        toggleTerrainOcclusionCheckbox.addEventListener('change', function () {
-            viewer.scene.globe.depthTestAgainstTerrain = toggleTerrainOcclusionCheckbox.checked;
-        });
 
-        viewer.scene.setTerrain(new Cesium.Terrain(Cesium.CesiumTerrainProvider.fromIonAssetId(2426648)));
+        viewer.scene.setTerrain(new Cesium.Terrain(
+            Cesium.CesiumTerrainProvider.fromIonAssetId(2426648)
+                .catch(function () { return Cesium.CesiumTerrainProvider.fromIonAssetId(1); })
+        ));
         const scene = viewer.scene;
         const globe = scene.globe;
         const camera = scene.camera;
@@ -665,7 +671,7 @@
 
             var legendColor = document.createElement('div');
             legendColor.classList.add('legendColor');
-            legendColor.style.backgroundColor = dataColor[i].toCssColorString();
+            setLegendSymbol(legendColor, dataColor[i], primaryLegendShape[i]);
 
             var legendLabel = document.createElement('span');
             legendLabel.textContent = labelText;
@@ -682,7 +688,7 @@
 
             var legendColor = document.createElement('div');
             legendColor.classList.add('legendColor');
-            legendColor.style.backgroundColor = color.toCssColorString();
+            setLegendSymbol(legendColor, color, auxLegendShape[i]);
 
             var legendLabel = document.createElement('span');
             legendLabel.textContent = auxLegendLabel[i];
@@ -1057,9 +1063,8 @@
         });
 
 
-        document.getElementById('toggleGlobeCheckbox').addEventListener('change', function () {
-            viewer.scene.globe.show = this.checked;
-        });
+        wireImageryToggles(viewer);
+        makeDraggable(document.getElementById('northArrow'));
 
         // Handling the 2D Geojson data.
         document.addEventListener('DOMContentLoaded', function () {

@@ -126,19 +126,11 @@ body {
 }
 
 /* Distance measure control: top-right small card. */
+/* Lives in the controls panel under the view buttons. */
 #distanceControl {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.95);
-    border-radius: 8px;
-    padding: 8px 12px;
+    margin-top: 8px;
     font-size: 11px;
     color: #334155;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
 }
 
 #distanceControl label {
@@ -263,7 +255,7 @@ body {
 #northArrow {
     position: absolute;
     top: 12px;
-    right: 220px;
+    right: 100px;
     width: 40px;
     height: 40px;
     background-image: url('/static/images/north_white.png');
@@ -273,8 +265,18 @@ body {
     z-index: 50;
 }
 
-/* Hide Cesium's default top-right toolbar (home, layers, etc.) -- our
-   controls live in #controlContainer and the floating sidebar above. */
-.cesium-viewer-toolbar {
+/* Cesium's top-right toolbar: keep only Home (back to the centered view) and
+   the "?" navigation help; the rest of our controls live in #controlContainer. */
+.cesium-viewer-toolbar > :not(.cesium-home-button):not(.cesium-navigationHelpButton-wrapper) {
     display: none !important;
+}
+
+/* The help panel opens on load; keep it above the measure card and north arrow until it closes. */
+.cesium-viewer-toolbar {
+    z-index: 60;
+}
+
+.cesium-navigation-help,
+.cesium-navigation-help-instructions {
+    background-color: rgb(38, 38, 38);
 }

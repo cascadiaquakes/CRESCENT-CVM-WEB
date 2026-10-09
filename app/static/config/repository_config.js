@@ -48,13 +48,13 @@ const auxDefaultColor = [Cesium.Color.OLIVE.withAlpha(0.7), Cesium.Color.SIENNA.
 
 // Boundary data.
 const boundaryData = [
-    '/static/boundary_geojson/us-states.json',
-    '/static/boundary_geojson/georef-canada-province-public.geojson'
+    '/static/boundary_geojson/ne10m-us-states.geojson',
+    '/static/boundary_geojson/ne10m-canada-provinces.geojson'
 ];
 const boundaryLabel = ['US', 'Canada'];
 const boundaryColor = [Cesium.Color.GRAY, Cesium.Color.DIMGRAY];
 const boundaryFillOpacity = [0.0, 0.0];
-const boundaryLineWidth = [2, 0.5];
+const boundaryLineWidth = [1, 1];
 const boundaryMarker = ["line"];
 
 
@@ -84,8 +84,11 @@ const dataSourceCheckboxMapping = {
 // Legends
 var primaryLegendLabel = cfmLabel.concat(cfmTraceLabel);
 var primaryLegendColor = cfmColor.concat(cfmTraceColor);
-var auxLegendLabel = cvmAreaLabel.concat(cvmLabel).concat(eqLabel).concat(boundaryLabel);
-var auxLegendColor = cvmAreaOutlineColor.concat(cvmColor).concat(eqColor).concat(boundaryColor);
+var auxLegendLabel = cvmAreaLabel.concat(cvmLabel).concat(eqLabel).concat(['Political boundary lines']);
+var auxLegendColor = cvmAreaOutlineColor.concat(cvmColor).concat(eqColor).concat([boundaryColor[0]]);
+// Legend symbol per entry, matching how each layer is drawn on the map (see setLegendSymbol).
+var primaryLegendShape = ['fill', 'line'];
+var auxLegendShape = ['outline', 'fill', 'circle', 'line'];
 
 // Legacy support.
 var data = cfmData.concat(cfmTraceData)
