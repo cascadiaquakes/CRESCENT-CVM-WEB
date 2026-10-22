@@ -194,6 +194,22 @@ function wireImageryToggles(viewer) {
     sync();
 }
 
+// requestRenderMode only repaints on camera moves, so layer toggles and layers that
+// finish loading in the background don't show until the map is touched. Repaint on
+// any control change, and keep repainting while entity geometry is still being built.
+function redrawOnChanges(viewer) {
+    const scene = viewer.scene;
+    const redraw = () => scene.requestRender();
+    document.addEventListener('change', redraw, true);
+    document.addEventListener('input', redraw, true);
+    viewer.entities.collectionChanged.addEventListener(redraw);
+    viewer.dataSources.dataSourceAdded.addEventListener(redraw);
+    viewer.dataSources.dataSourceRemoved.addEventListener(redraw);
+    viewer.clock.onTick.addEventListener(function () {
+        if (!viewer.dataSourceDisplay.ready) redraw();
+    });
+}
+
 // Rotate the view so north points up, keeping the same spot centered and the same tilt.
 function snapNorthUp() {
     const scene = viewer.scene;
