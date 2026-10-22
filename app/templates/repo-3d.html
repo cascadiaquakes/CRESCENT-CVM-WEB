@@ -118,6 +118,7 @@
             <span id="alphaValue" style="font-size: smaller;">0.3</span>
         </div>
         <hr style="border-top: 1px solid #0000FF" />
+        <div><label><input type="checkbox" id="showGridCheckbox" checked> Grid lines</label></div>
         <div class="sliderContainer">
             <label class="sliderLabel" style="font-weight: bold;font-size: smaller;">Grid Opacity:
                 <input type="range" id="gridTransparencySlider" min="0" max="1" step="0.1" value="0.3">
@@ -478,6 +479,9 @@
         addGridLines(west, east, south, north);
         gridTransparencySlider.value = gridTransparency;
         gridTransparencyValue.textContent = gridTransparency;
+        document.getElementById('showGridCheckbox').addEventListener('change', function () {
+            setGridVisible(this.checked);
+        });
 
         drawStudyArea(west, east, south, north);
 
@@ -893,7 +897,7 @@
         });
 
         wireImageryToggles(viewer);
-        makeDraggable(document.getElementById('northArrow'));
+        makeDraggable(document.getElementById('northArrow'), snapNorthUp);
 
         // Handling the Geojson data.
         document.addEventListener('DOMContentLoaded', function () {

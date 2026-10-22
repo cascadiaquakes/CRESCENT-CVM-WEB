@@ -1,5 +1,6 @@
 // Add grid lines to the study area.
 let gridTransparency = 0.1; // Initial grid transparency value
+let gridVisible = true;
 
 function addGridLines(west, east, south, north) {
     const gridLineWidth = 0.5; // Line width for grid lines
@@ -19,6 +20,7 @@ function addGridLines(west, east, south, north) {
         ]);
         viewer.entities.add({
             name: "gridLine",
+            show: gridVisible,
             polyline: {
                 positions: lonPositions,
                 width: gridLineWidth,
@@ -35,6 +37,7 @@ function addGridLines(west, east, south, north) {
         ]);
         viewer.entities.add({
             name: "gridLine",
+            show: gridVisible,
             polyline: {
                 positions: latPositions,
                 width: gridLineWidth,
@@ -42,6 +45,16 @@ function addGridLines(west, east, south, north) {
             }
         });
     }
+}
+
+// Show or hide the grid lines without redrawing them.
+function setGridVisible(show) {
+    gridVisible = show;
+    viewer.entities.values.forEach(entity => {
+        if (entity.name === "gridLine") {
+            entity.show = show;
+        }
+    });
 }
 
 // GeoJSON data via local storage
@@ -181,10 +194,36 @@ function wireImageryToggles(viewer) {
     sync();
 }
 
+// Rotate the view so north points up, keeping the same spot centered and the same tilt.
+function snapNorthUp() {
+    const scene = viewer.scene;
+    const camera = viewer.camera;
+    const center = new Cesium.Cartesian2(scene.canvas.clientWidth / 2, scene.canvas.clientHeight / 2);
+    const target = camera.pickEllipsoid(center, scene.globe.ellipsoid);
+    if (!target) {
+        camera.flyTo({
+            destination: camera.positionWC,
+            orientation: { heading: 0.0, pitch: camera.pitch, roll: 0.0 },
+            duration: 0.5
+        });
+        return;
+    }
+    // Measure the tilt at the target, not the camera, so repeat clicks don't add tilt.
+    const toCamera = Cesium.Cartesian3.subtract(camera.positionWC, target, new Cesium.Cartesian3());
+    const range = Cesium.Cartesian3.magnitude(toCamera);
+    const up = scene.globe.ellipsoid.geodeticSurfaceNormal(target, new Cesium.Cartesian3());
+    const pitch = -Math.asin(Cesium.Cartesian3.dot(Cesium.Cartesian3.normalize(toCamera, toCamera), up));
+    camera.flyToBoundingSphere(new Cesium.BoundingSphere(target, 0.0), {
+        offset: new Cesium.HeadingPitchRange(0.0, pitch, range),
+        duration: 0.5
+    });
+}
+
 // Let users drag an overlay (the north arrow) off whatever it covers.
-function makeDraggable(el) {
-    let offsetX = 0, offsetY = 0;
-    el.title = 'Drag to move';
+// A click without a drag calls onClick, if given.
+function makeDraggable(el, onClick) {
+    let offsetX = 0, offsetY = 0, startX = 0, startY = 0;
+    el.title = onClick ? 'Click to face north, drag to move' : 'Drag to move';
     el.style.pointerEvents = 'auto';
     el.style.cursor = 'grab';
     el.style.touchAction = 'none';
@@ -192,6 +231,8 @@ function makeDraggable(el) {
         // offsetLeft/Top ignore the heading rotation, so the arrow doesn't jump on grab.
         offsetX = e.clientX - el.offsetLeft;
         offsetY = e.clientY - el.offsetTop;
+        startX = e.clientX;
+        startY = e.clientY;
         el.setPointerCapture(e.pointerId);
         el.style.cursor = 'grabbing';
         e.preventDefault();
@@ -207,7 +248,10 @@ function makeDraggable(el) {
         if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
         el.style.cursor = 'grab';
     }
-    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointerup', function (e) {
+        endDrag(e);
+        if (onClick && Math.hypot(e.clientX - startX, e.clientY - startY) < 4) onClick();
+    });
     el.addEventListener('pointercancel', endDrag);
 }
 
