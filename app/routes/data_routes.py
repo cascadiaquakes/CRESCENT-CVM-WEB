@@ -1527,13 +1527,13 @@ _JBOOK_RAW_URL = (
 # netCDF filenames excluded from all public listings. Kept as a small set at
 # the top of the module so re-enabling a model is a one-line change.
 _EXCLUDED_MODELS = {
-    "CRESCENT_CVM0_He2026.r0.0.nc",
     "WUS324-Casc-CVM.r0.0-n4.nc",
 }
 
 # netCDF filename → JBook 3Dmodels/*.md slug. The two Delph netCDFs both point
 # at the same paper until the second one is confirmed as a distinct publication.
 _NETCDF_TO_JBOOK = {
+    "CRESCENT_CVM0_He2026.r0.0.nc": "he_jgr_2026",
     "Cascadia-ANT+RF-Delph2018.r0.1.nc": "delph_epsl_2018",
     "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "delph_epsl_2018",
     "Cascadia_highRes_Vp_Ashraf2025.r0.0.nc": "ashraf_jgr_2025",
@@ -1548,6 +1548,7 @@ _NETCDF_TO_JBOOK = {
 # sidebar level so users can tell them apart even though they map to the same
 # JBook page for now.
 _MODEL_DISPLAY_NAMES = {
+    "CRESCENT_CVM0_He2026.r0.0.nc": "He et al. (2026) — CRESCENT CVM0 Vp/Vs/ρ",
     "Cascadia-ANT+RF-Delph2018.r0.1.nc": "Delph et al. (2018) — ANT+RF (Vs)",
     "Cascadia_ANTRayleighpv_Delph2018.r0.1.nc": "Delph et al. (2018) — Rayleigh (Vs)",
     "Cascadia_highRes_Vp_Ashraf2025.r0.0.nc": "Ashraf et al. (2025) — Vp",
