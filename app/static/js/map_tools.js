@@ -54,16 +54,47 @@
         });
     }
 
-    // Add the keyboard shortcuts to the mouse tab of Cesium's "?" help panel.
-    function addKeyboardHelp(viewer) {
-        const table = viewer.container.querySelector('.cesium-navigation-help-instructions table');
-        if (!table) return;
+    // Shift + drag tilts and rotates. Cesium's defaults (middle drag, Ctrl + drag)
+    // don't work on a Mac trackpad, where Ctrl + click is a right click. This
+    // replaces Cesium's Shift + drag free-look, which mostly just disorients.
+    function addShiftTilt(viewer) {
+        const ssc = viewer.scene.screenSpaceCameraController;
+        ssc.lookEventTypes = undefined;
+        const tilt = ssc.tiltEventTypes;
+        ssc.tiltEventTypes = (Array.isArray(tilt) ? tilt : [tilt]).concat([
+            { eventType: Cesium.CameraEventType.LEFT_DRAG, modifier: Cesium.KeyboardEventModifier.SHIFT },
+        ]);
+    }
+
+    function helpRow(icon, title, lines) {
         const row = document.createElement('tr');
-        row.innerHTML = '<td class="map-keyboard-help__icon" aria-hidden="true">&#9000;</td>' +
-            '<td><div class="map-keyboard-help__title">Keyboard</div>' +
-            '<div class="cesium-navigation-help-details">+ / &minus; to zoom</div>' +
-            '<div class="cesium-navigation-help-details">Arrow keys to pan</div></td>';
-        (table.tBodies[0] || table).appendChild(row);
+        row.innerHTML = '<td class="map-keyboard-help__icon" aria-hidden="true">' + icon + '</td>' +
+            '<td><div class="map-keyboard-help__title">' + title + '</div>' +
+            lines.map(function (l) { return '<div class="cesium-navigation-help-details">' + l + '</div>'; }).join('') +
+            '</td>';
+        return row;
+    }
+
+    // Add trackpad and keyboard controls to the mouse tab of Cesium's "?" help
+    // panel, and say the touch tab is for touchscreens only.
+    function addKeyboardHelp(viewer) {
+        const table = viewer.container.querySelector('.cesium-click-navigation-help table');
+        if (table) {
+            const body = table.tBodies[0] || table;
+            body.appendChild(helpRow('&#9635;', 'Trackpad', [
+                'Click + drag to pan',
+                'Two-finger scroll to zoom',
+                'Shift + drag to tilt and rotate',
+            ]));
+            body.appendChild(helpRow('&#9000;', 'Keyboard', ['+ / &minus; to zoom', 'Arrow keys to pan']));
+        }
+        const touch = viewer.container.querySelector('.cesium-touch-navigation-help');
+        if (touch) {
+            const note = document.createElement('div');
+            note.className = 'map-touch-help__note';
+            note.textContent = 'For touchscreens. On a laptop trackpad, see the Mouse tab.';
+            touch.insertBefore(note, touch.firstChild);
+        }
     }
 
     function niceDistance(maxMeters) {
@@ -151,6 +182,7 @@
             .map-coords__sep { color: rgba(255, 255, 255, 0.7); }
             .map-keyboard-help__icon { font-size: 26px; text-align: center; color: #fff; padding: 0 4px; }
             .map-keyboard-help__title { color: #f472b6; font-weight: bold; }
+            .map-touch-help__note { color: #fff; font-style: italic; padding: 4px 6px 8px; }
         `;
         const style = document.createElement('style');
         style.id = 'cfm-map-tools-style';
@@ -170,6 +202,7 @@
             addStyles();
             addZoomButtons(viewer, options.zoomBottom || '90px', options.zoomRight || '12px');
             addKeyboardNavigation(viewer);
+            addShiftTilt(viewer);
             addKeyboardHelp(viewer);
             addScaleBar(viewer, options.scalePosition);
             if (options.coords !== false) addCoordinateReadout(viewer, options.coordsBottom || '14px');
