@@ -138,6 +138,7 @@
                 </div>
                 <div class="section-plain-body">
                     <select id="secondaryModelSelect" class="primary-model-select"></select>
+                    <div id="secondaryModelLinks" class="aux-model-links" hidden></div>
                     <div id="auxTableContainer" hidden aria-hidden="true"></div>
                 </div>
             </div>
@@ -1904,10 +1905,38 @@
                     const row = auxTable.querySelectorAll('tbody tr')[Number(idx)];
                     const cell = row && row.cells && row.cells[0];
                     if (cell && cell.onclick) cell.onclick();
+                    showAuxModelLinks(Number(idx));
                 });
                 sel.dataset.wired = '1';
             }
         }
+    }
+
+    // Download and reference links for the selected 2D model, under its dropdown.
+    function showAuxModelLinks(index) {
+        const box = document.getElementById('secondaryModelLinks');
+        if (!box) return;
+        box.innerHTML = '';
+        const fileName = auxData && auxData[index];
+        if (!fileName) { box.hidden = true; return; }
+
+        const dl = document.createElement('a');
+        dl.href = `/data/fetch_json_s3?file_name=${encodeURIComponent(fileName)}&prefix_key=geojson`;
+        dl.download = fileName;
+        dl.textContent = 'Download GeoJSON';
+        box.appendChild(dl);
+
+        const cite = auxCitation && auxCitation[index];
+        if (cite && cite[1]) {
+            const ref = document.createElement('a');
+            ref.href = cite[1];
+            ref.target = '_blank';
+            ref.rel = 'noopener';
+            ref.textContent = 'Reference';
+            ref.title = cite[0] || '';
+            box.appendChild(ref);
+        }
+        box.hidden = false;
     }
 
     // Sidebar toggle (mobile)
