@@ -761,6 +761,22 @@ body:has(#viewer2dWrapper) {
     font-family: inherit;
 }
 
+.aux-model-links {
+    display: flex;
+    gap: 14px;
+    margin-top: 6px;
+    font-size: 11px;
+}
+
+.aux-model-links[hidden] {
+    display: none;
+}
+
+.aux-model-links a {
+    color: #004F59;
+    text-decoration: underline;
+}
+
 .model-filter-badge {
     font-size: 10px;
     font-weight: 700;
