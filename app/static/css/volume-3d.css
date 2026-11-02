@@ -177,3 +177,8 @@ cesium-selection-wrapper {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     z-index: 10000;
 }
+/* Cesium's top-right toolbar: keep only Home and the "?" navigation help,
+   same as the main viewer. The imagery picker showed as an empty box. */
+.cesium-viewer-toolbar > :not(.cesium-home-button):not(.cesium-navigationHelpButton-wrapper) {
+    display: none !important;
+}
