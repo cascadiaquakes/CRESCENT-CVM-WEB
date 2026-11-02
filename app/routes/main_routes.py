@@ -242,6 +242,7 @@ def extract_values(
     grid_ref="latitude_longitude",
     utm_zone=None,
     ellipsoid=None,
+    depth_step=None,
 ):
     """
     Extract values from an xarray dataset for a given latitude, longitude, and depth range
@@ -254,6 +255,8 @@ def extract_values(
     - depth_range: Tuple (min_depth, max_depth) specifying the depth range.
     - interpolation_method: Method of interpolation (e.g., 'linear', 'nearest', 'cubic').
                             Default is 'linear'.
+    - depth_step: Optional spacing for the output depths, in the dataset's depth units.
+                  None or 0 keeps the model's own depth levels.
 
     Returns:
     - interpolated_values: Extracted and interpolated values at the specified lat/lon and within the depth range.
@@ -280,7 +283,40 @@ def extract_values(
         interpolated_values = dataset.interp(x=x, y=y, method=interpolation_method)
         logger.debug(f"\n\n\n{grid_ref}>>>>>>>>>{interpolated_values}")
 
+    if depth_step:
+        interpolated_values = resample_depth(
+            interpolated_values, depth_range, depth_step, interpolation_method
+        )
+
     return interpolated_values
+
+
+# Most depth samples a profile may ask for; a tiny step on a deep range is capped to this.
+MAX_PROFILE_DEPTHS = 2000
+
+
+def parse_depth_step(value):
+    """Depth step from the form: a positive number, or None for the model's own levels."""
+    try:
+        step = float(value)
+    except (TypeError, ValueError):
+        return None
+    return step if np.isfinite(step) and step > 0 else None
+
+
+def resample_depth(ds, depth_range, depth_step, interpolation_method="linear"):
+    """Sample ds at a fixed depth spacing, within depth_range and the model's own depth extent."""
+    depths = ds["depth"].values
+    if depths.size < 2:
+        return ds
+    lo = max(min(depth_range), float(np.nanmin(depths)))
+    hi = min(max(depth_range), float(np.nanmax(depths)))
+    if hi <= lo:
+        return ds
+    step = max(depth_step, (hi - lo) / MAX_PROFILE_DEPTHS)
+    levels = np.arange(lo, hi + step * 1e-6, step)
+    method = interpolation_method if interpolation_method in ("linear", "nearest") else "linear"
+    return ds.interp(depth=levels, method=method)
 
 
 def interpolate_path(
@@ -884,6 +920,8 @@ async def visualize_depth_profiles_s3(request: Request):
 
     # Cross-section interpolation type.
     interp_type = items_dict["interpolation_method"]
+    # Optional fixed depth spacing; blank keeps the model's own depth levels.
+    depth_step = parse_depth_step(items_dict.get("depth_step"))
 
     try:
         plot_data = extract_values(
@@ -895,6 +933,7 @@ async def visualize_depth_profiles_s3(request: Request):
             interpolation_method=interp_type,
             utm_zone=meta.get("utm_zone", 10),
             ellipsoid=meta.get("ellipsoid", "WGS84"),
+            depth_step=depth_step,
         )
     except Exception as ex:
         message = f"[ERR] cross_section failed: {ex}\n{traceback.format_exc()}"
@@ -1010,6 +1049,7 @@ async def visualize_depth_profiles_s3(request: Request):
                         interpolation_method=interp_type,
                         utm_zone=cf_meta.get("utm_zone", 10),
                         ellipsoid=cf_meta.get("ellipsoid", "WGS84"),
+                        depth_step=depth_step,
                     )
                     cf_to_plot = cf_extracted[plot_var]
                     cf_to_plot["depth"] = cf_to_plot["depth"] * cf_down_factor
