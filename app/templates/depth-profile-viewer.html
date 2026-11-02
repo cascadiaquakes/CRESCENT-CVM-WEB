@@ -162,6 +162,9 @@
         <li><strong>Units:</strong> Select the units for display (km, kg, sec or m, g, sec combinations).</li>
         <li><strong>Interpolation:</strong> Choose the interpolation method used to plot data (linear, nearest).
         </li>
+        <li><strong>Step:</strong> Depth spacing between samples, in the same units as Min. and Max. Leave it blank
+            to plot at the model's own depth levels. A step finer than the model's levels interpolates between them;
+            it does not add detail.</li>
         <li><strong>Plot Color:</strong> Choose the lot color</a>.
         </li>
         <li><strong>Plot Size:</strong> Set the plot width and height in inches.</li>
@@ -231,6 +234,10 @@
                                 <option value="nearest">Nearest neighbor</option>
                                 <option value="linear">Linear</option>
                             </select>
+                        </div>
+                        <div class="form-input">
+                            <label for="depth-step" title="Spacing between depth samples. Leave blank to use the model's own depth levels.">Step</label>
+                            <input type="number" id="depth-step" name="depth_step" min="0" step="any" placeholder="model">
                         </div>
                         <div class="form-input lock-row">
                             <label for="lock">Lock bounds</label>
