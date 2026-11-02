@@ -213,7 +213,7 @@
                             </select>
                         </div>
                         <div class="form-input">
-                            <label for="num-points">N samples</label>
+                            <label for="num-points" title="Number of points sampled along the section line. Depth uses the model's own levels.">Points along line</label>
                             <input type="text" id="num-points" name="num_points" value="100">
                         </div>
                         <div class="form-input lock-row">
@@ -309,7 +309,30 @@
         </div>
         </form>
     </div>
-    <p class="form-footnote">Tip: increase N&nbsp;samples for a smoother cross-section.</p>
+    <p class="form-footnote">Points along line set the horizontal spacing<span id="spacing-km"></span>. Depth uses the model's own levels. More points give a smoother cross-section.</p>
+    <script>
+        // Show the horizontal spacing between section points, from the
+        // great-circle length of the line. Polls because the map sets the
+        // endpoint fields without firing input events.
+        (function () {
+            const out = document.getElementById('spacing-km');
+            const val = id => parseFloat((document.getElementById(id) || {}).value);
+            function update() {
+                const la1 = val('start-lat'), lo1 = val('start-lng'), la2 = val('end-lat'), lo2 = val('end-lng');
+                const n = parseInt((document.getElementById('num-points') || {}).value, 10);
+                if (![la1, lo1, la2, lo2].every(Number.isFinite) || !(n > 1)) { out.textContent = ''; return; }
+                const r = Math.PI / 180;
+                const a = Math.sin((la2 - la1) * r / 2) ** 2 +
+                    Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin((lo2 - lo1) * r / 2) ** 2;
+                const km = 2 * 6371 * Math.asin(Math.sqrt(a));
+                const step = km / (n - 1);
+                out.textContent = ' (about ' + (step < 10 ? step.toFixed(1) : Math.round(step)) +
+                    ' km apart over ' + Math.round(km) + ' km)';
+            }
+            update();
+            setInterval(update, 500);
+        })();
+    </script>
     <!-- Display loading message and results dynamically 
     <div id="loadingMessage">Working...</div>-->
     <div id="jsonContent"></div>
