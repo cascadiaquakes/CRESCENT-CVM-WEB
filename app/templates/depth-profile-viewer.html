@@ -315,6 +315,12 @@
         <button id="downloadPlotButton"
             style="display:none; width:20%;background-color: #004F59;color: white;;border-radius: 15px;font-size: 9pt;">Download
             Plot</button>
+        <select id="plotFormatSelect" class="plot-format-select" title="Plot file format" aria-label="Plot file format"
+            style="display:none; font-size: 9pt; border-radius: 10px; padding: 2px 4px;">
+            <option value="png">PNG</option>
+            <option value="pdf">PDF</option>
+            <option value="svg">SVG</option>
+        </select>
         <br>
         <button id="downloadDataButton"
             style="display:none; width:20%;background-color: #004F59; color: white;;border-radius: 15px;font-size: 9pt;">Download
@@ -332,7 +338,7 @@
 </div>
 {%endblock%}
 {%block scripts %}
-<script src="/static/js/shared.js?v=5"></script>
+<script src="/static/js/shared.js?v=6"></script>
 <script src="/static/config/project.js"></script>
 
 
@@ -543,7 +549,9 @@
         if (label) formData.set('title', label);
         const response = await fetch(form.action, { method: 'POST', body: formData });
         if (!response.ok) throw new Error('HTTP ' + response.status);
-        return response.json();
+        const data = await response.json();
+        CvmPlotDownload.remember(data.image, form.action, formData);
+        return data;
     }
 
     async function syncCompareModels() {
@@ -667,7 +675,10 @@
         const fsBtn = document.getElementById('viewPlotFullscreenButton');
         if (dlBtn) {
             dlBtn.style.display = 'inline';
-            dlBtn.onclick = () => downloadBase64(result.image, (result.model || 'model') + '_depth_profile.png', 'image/png');
+            const fmtSel = document.getElementById('plotFormatSelect');
+            if (fmtSel) fmtSel.style.display = 'inline';
+            dlBtn.onclick = () => CvmPlotDownload.download(result.image, (result.model || 'model') + '_depth_profile',
+                CvmPlotDownload.selectedFormat(fmtSel), dlBtn);
         }
         if (dlData && result.csv_data) {
             dlData.style.display = 'inline';
@@ -731,9 +742,12 @@
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'button-copy';
-                btn.textContent = 'Download PNG';
-                btn.addEventListener('click', () => downloadBase64(r.image, r.model + '_depth_profile.png', 'image/png'));
+                btn.textContent = 'Download';
+                const fmt = CvmPlotDownload.picker();
+                btn.addEventListener('click', () => CvmPlotDownload.download(r.image, r.model + '_depth_profile',
+                    CvmPlotDownload.selectedFormat(fmt), btn));
                 titleRow.appendChild(btn);
+                titleRow.appendChild(fmt);
             }
             card.appendChild(titleRow);
             if (r.image) {
@@ -792,6 +806,7 @@
             const response = await fetch(form.action, { method: 'POST', body: formData });
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const data = await response.json();
+            CvmPlotDownload.remember(data.image, form.action, formData);
 
             const compareContainer = ensureCompareContainer();
             compareContainer.innerHTML = '';
@@ -1110,7 +1125,7 @@
         }
         // Wipe every visible bit of the previous plot so the panel matches
         // its first-open state: primary image, compare stack, downloads.
-        ['dynamicPlot', 'viewPlotFullscreenButton', 'downloadPlotButton', 'downloadDataButton', 'colorRangeToolbar']
+        ['dynamicPlot', 'viewPlotFullscreenButton', 'downloadPlotButton', 'plotFormatSelect', 'downloadDataButton', 'colorRangeToolbar']
             .forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.style.display = 'none';
