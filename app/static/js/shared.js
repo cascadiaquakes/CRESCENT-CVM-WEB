@@ -341,3 +341,78 @@ function showColorRangeControl() {
     const t = document.getElementById('colorRangeToolbar');
     if (t) t.style.display = 'block';
 }
+
+// Plot downloads as PNG, PDF or SVG. The plot shown on the page is a PNG; for
+// PDF or SVG we resend the request that made it with image_format set, so the
+// figure is identical (same range, colormap and title), just vector.
+const CvmPlotDownload = (function () {
+    const MIME = { png: 'image/png', pdf: 'application/pdf', svg: 'image/svg+xml' };
+    const requests = new Map(); // PNG base64 -> { url, formData }
+
+    function remember(image, url, formData) {
+        if (!image) return;
+        const copy = new FormData();
+        formData.forEach((v, k) => copy.append(k, v));
+        requests.set(image, { url, formData: copy });
+        // Keep only the last few plots (a compare run makes one per model).
+        while (requests.size > 20) requests.delete(requests.keys().next().value);
+    }
+
+    function save(b64, filename, mime) {
+        const a = document.createElement('a');
+        a.href = `data:${mime};base64,${b64}`;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function selectedFormat(select) {
+        const fmt = select && select.value;
+        return MIME[fmt] ? fmt : 'png';
+    }
+
+    async function download(image, baseName, format, button) {
+        format = MIME[format] ? format : 'png';
+        if (format === 'png') return save(image, baseName + '.png', MIME.png);
+        const req = requests.get(image);
+        if (!req) {
+            alert('Plot again to download it as ' + format.toUpperCase() + '.');
+            return;
+        }
+        const label = button ? button.textContent : '';
+        if (button) { button.disabled = true; button.textContent = 'Preparing…'; }
+        try {
+            const body = new FormData();
+            req.formData.forEach((v, k) => body.append(k, v));
+            body.set('image_format', format);
+            const response = await fetch(req.url, { method: 'POST', body });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const data = await response.json();
+            if (!data.image || data.image_format !== format) throw new Error('no ' + format + ' returned');
+            save(data.image, baseName + '.' + format, MIME[format]);
+        } catch (e) {
+            console.error('[plot download]', e);
+            alert('Could not make the ' + format.toUpperCase() + ' file. Try again or download the PNG.');
+        } finally {
+            if (button) { button.disabled = false; button.textContent = label; }
+        }
+    }
+
+    // A small PNG / PDF / SVG dropdown for the per-model cards in compare mode.
+    function picker() {
+        const select = document.createElement('select');
+        select.className = 'plot-format-select';
+        select.title = 'Plot file format';
+        select.setAttribute('aria-label', 'Plot file format');
+        ['png', 'pdf', 'svg'].forEach(f => {
+            const o = document.createElement('option');
+            o.value = f;
+            o.textContent = f.toUpperCase();
+            select.appendChild(o);
+        });
+        return select;
+    }
+
+    return { remember, download, picker, selectedFormat };
+})();

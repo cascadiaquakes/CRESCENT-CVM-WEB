@@ -407,6 +407,12 @@ def closest(lst, value):
     ]
 
 
+def plot_image_format(items_dict):
+    """Plot file format the user asked for (png, pdf or svg); png by default."""
+    fmt = str(items_dict.get("image_format", "png")).strip().lower()
+    return fmt if fmt in ("png", "pdf", "svg") else "png"
+
+
 def create_error_image(message: str) -> BytesIO:
     """Generate an image with an error message."""
     # Create an image with white background
@@ -1100,7 +1106,8 @@ async def visualize_depth_profiles_s3(request: Request):
 
     # Save plot to BytesIO buffer and encode in Base64
     plot_buf = BytesIO()
-    plt.savefig(plot_buf, format="png", bbox_inches="tight")
+    image_format = plot_image_format(items_dict)
+    plt.savefig(plot_buf, format=image_format, bbox_inches="tight")
     plot_buf.seek(0)
     base64_plot = base64.b64encode(plot_buf.getvalue()).decode("utf-8")
     plt.close(fig)  # Properly close the figure to free memory
@@ -1113,6 +1120,7 @@ async def visualize_depth_profiles_s3(request: Request):
 
     content = {
         "image": base64_plot,
+        "image_format": image_format,
         "csv_data": base64_csv,
         "skipped_models": skipped_models,
         "overlay_count": overlay_count,
@@ -1477,7 +1485,8 @@ async def visualize_xsection_3d_s3(request: Request):
 
     # Save plot to BytesIO buffer and encode in Base64
     plot_buf = BytesIO()
-    plt.savefig(plot_buf, format="png", bbox_inches="tight")
+    image_format = plot_image_format(items_dict)
+    plt.savefig(plot_buf, format=image_format, bbox_inches="tight")
     plot_buf.seek(0)
     base64_plot = base64.b64encode(plot_buf.getvalue()).decode("utf-8")
     plt.clf()
@@ -1489,7 +1498,7 @@ async def visualize_xsection_3d_s3(request: Request):
     csv_buf.seek(0)
     base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
-    content = {"image": base64_plot, "csv_data": base64_csv}
+    content = {"image": base64_plot, "image_format": image_format, "csv_data": base64_csv}
 
     plot_data.close()
     del plot_data
@@ -2074,7 +2083,7 @@ async def visualize_depth_slice_s3(request: Request):
             csv_buf.seek(0)
             base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
-            content = {"image": base64_plot, "csv_data": base64_csv}
+            content = {"image": base64_plot, "image_format": "png", "csv_data": base64_csv}
 
             plot_data.close()
             del plot_data
@@ -2301,7 +2310,8 @@ async def visualize_depth_slice_s3(request: Request):
 
     # Save plot to BytesIO buffer and encode in Base64
     plot_buf = BytesIO()
-    plt.savefig(plot_buf, format="png", bbox_inches="tight")
+    image_format = plot_image_format(items_dict)
+    plt.savefig(plot_buf, format=image_format, bbox_inches="tight")
     plot_buf.seek(0)
     base64_plot = base64.b64encode(plot_buf.getvalue()).decode("utf-8")
     plt.clf()
@@ -2312,7 +2322,7 @@ async def visualize_depth_slice_s3(request: Request):
     plot_data.to_dataframe().to_csv(csv_buf, na_rep="NaN")
     csv_buf.seek(0)
     base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
-    content = {"image": base64_plot, "csv_data": base64_csv}
+    content = {"image": base64_plot, "image_format": image_format, "csv_data": base64_csv}
     """
     try:
         # Check if data is too large, for example by number of elements
@@ -2342,7 +2352,7 @@ async def visualize_depth_slice_s3(request: Request):
         base64_csv = base64.b64encode(csv_buf.getvalue()).decode("utf-8")
 
     # Package the content
-    content = {"image": base64_plot, "csv_data": base64_csv}
+    content = {"image": base64_plot, "image_format": image_format, "csv_data": base64_csv}
 
     plot_data.close()
     del plot_data
