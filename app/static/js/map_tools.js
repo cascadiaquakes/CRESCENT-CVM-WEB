@@ -88,6 +88,8 @@
             ]));
             body.appendChild(helpRow('&#9000;', 'Keyboard', ['+ / &minus; to zoom', 'Arrow keys to pan']));
         }
+        const touchTab = viewer.container.querySelector('.cesium-navigation-button-right');
+        if (touchTab && touchTab.lastChild) touchTab.lastChild.textContent = 'Touchscreen';
         const touch = viewer.container.querySelector('.cesium-touch-navigation-help');
         if (touch) {
             const note = document.createElement('div');
