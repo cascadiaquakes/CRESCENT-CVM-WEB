@@ -1,0 +1,93 @@
+{
+  "title": "The Cascadia Region Earthquake Science Center (CRESCENT) Community Velocity Model viewer",
+  "description": "The CRESCENT Community Velocity Model (CVM) Viewer is a web-based platform for visualizing and exploring 3D models of seismic wave velocities and densities in the Earth. The viewer contains multiple published models of seismic wave velocities and will in future contain accompanying density models, relevant metadata, and supports filtering models by latitude, longitude, and depth. The viewer also contains interactive tools that allow the user to make model cross sections, depth profiles, and horizontal slices. The viewer displays the 3D spatial extent of the chosen velocity model, 2D surfaces such as subduction zone interface geometries, other regional crustal faults, terrain, geographic information, and seismicity providing spatial context for model analysis. The platform ensures seamless data integration by adhering to netCDF and HDF5 standards, with tools for data extraction, format conversion, and compliance checks. Users can download model data in multiple formats including CSV, geoCSV, netCDF, and HDF5.",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "BSD-3-Clause",
+  "version": "2.0.0",
+  "creators": [
+    {
+      "name": "Marfo, William",
+      "orcid": "0009-0003-0631-2750",
+      "affiliation": "Cascadia Region Earthquake Science Center, University of California, Davis"
+    },
+    {
+      "name": "Thomas, Amanda M.",
+      "orcid": "0000-0001-6997-3140",
+      "affiliation": "Department of Earth and Planetary Sciences, University of California, Davis"
+    },
+    {
+      "name": "Ajala, Rasheed",
+      "orcid": "0000-0001-5650-8362",
+      "affiliation": "Lamont-Doherty Earth Observatory, Columbia University"
+    },
+    {
+      "name": "Delph, Jonathan",
+      "orcid": "0000-0002-3256-9301",
+      "affiliation": "Purdue University"
+    },
+    {
+      "name": "Bachelot, Loïc",
+      "orcid": "0000-0003-0711-8581",
+      "affiliation": "Cascadia Region Earthquake Science Center, University of Oregon"
+    },
+    {
+      "name": "Gupta, Aakash",
+      "orcid": "0000-0002-2776-6431",
+      "affiliation": "University of Oregon"
+    },
+    {
+      "name": "Bahavar, Manochehr",
+      "orcid": "0000-0001-8128-4890",
+      "affiliation": "EarthScope Consortium"
+    },
+    {
+      "name": "Ashraf, Asif",
+      "orcid": "0000-0003-1495-860X",
+      "affiliation": "University of Oregon"
+    },
+    {
+      "name": "Share, Pieter-Ewald",
+      "orcid": "0000-0001-6674-1491",
+      "affiliation": "Oregon State University"
+    },
+    {
+      "name": "Sahakian, Valerie",
+      "orcid": "0000-0002-3278-4458",
+      "affiliation": "University of Oregon"
+    },
+    {
+      "name": "Hooft, Emilie",
+      "orcid": "0000-0002-1606-1057",
+      "affiliation": "University of Oregon"
+    },
+    {
+      "name": "CRESCENT CVM Working Group"
+    }
+  ],
+  "keywords": [
+    "community velocity model",
+    "seismic velocity",
+    "Cascadia Subduction Zone",
+    "CRESCENT",
+    "cyberinfrastructure",
+    "geospatial visualization"
+  ],
+  "grants": [
+    {
+      "id": "10.13039/100000001::2225286"
+    }
+  ],
+  "related_identifiers": [
+    {
+      "relation": "isSupplementTo",
+      "identifier": "https://github.com/cascadiaquakes/CRESCENT-CVM-WEB",
+      "resource_type": "software"
+    },
+    {
+      "relation": "isDocumentedBy",
+      "identifier": "https://cascadiaquakes.github.io/cvm-tools-book/",
+      "resource_type": "publication-book"
+    }
+  ]
+}
