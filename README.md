@@ -1,5 +1,6 @@
 # CRESCENT CVM-Web
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24178508.svg)](https://doi.org/10.5281/zenodo.24178508)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](LICENSE)
 
 **CVM-Web** is a web-based application for previewing, visualizing, and extracting data from the Community Velocity Model (CVM) compiled by the Cascadia Region Earthquake Science Center ([CRESCENT](https://cascadiaquakes.org/about-crescent/)). The CVM is a curated collection of seismic velocity models covering the Cascadia Subduction Zone and surrounding region. This platform provides an interactive interface, powered by [CesiumJS](https://cesium.com/platform/cesiumjs/) 3D maps and the [FastAPI](https://fastapi.tiangolo.com/) web framework, for exploring model metadata, comparing model coverage, generating slice/cross-section/depth-profile previews, and downloading subsets of model data. The models are compatible with the Python tooling provided by the companion [CVM-Tools](https://cascadiaquakes.github.io/cvm-tools-book/) project, and are also overlaid with current [Community Fault Model (CFM)](https://github.com/cascadiaquakes/crescent-cfm) traces and surfaces.
