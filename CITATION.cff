@@ -3,6 +3,8 @@ message: "If you use this software, please cite it as below."
 title: "The Cascadia Region Earthquake Science Center (CRESCENT) Community Velocity Model viewer"
 type: software
 version: "2.0.0"
+doi: 10.5281/zenodo.24178508
+date-released: 2026-11-12
 authors:
   - family-names: Marfo
     given-names: William
