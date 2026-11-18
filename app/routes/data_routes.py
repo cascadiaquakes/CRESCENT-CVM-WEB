@@ -1511,8 +1511,8 @@ def generate_geojson_download_url_s3(file_name: str = Query(...)):
         raise HTTPException(status_code=500, detail="Failed to generate download URL")
 
 
-@lru_cache(maxsize=64)
 def _load_model_manifest_body(bucket: str, key: str) -> str:
+    # Not cached: a model's metadata can be replaced in S3 while the app runs.
     obj = s3_client.get_object(Bucket=bucket, Key=key)
     return obj["Body"].read().decode("utf-8")
 
