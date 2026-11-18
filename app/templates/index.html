@@ -648,6 +648,11 @@
     // Populated once from /data/model_display_names; maps netCDF filename
     // and raw model id to the human-readable label (e.g. "Delph et al. (2018)").
     const _displayNames = {};
+    // Model shown first; keep in sync with DEFAULT_MODEL in data_routes.py.
+    const DEFAULT_MODEL = 'CRESCENT_CVM0_He2026';
+    function _defaultModel(names) {
+        return names.includes(DEFAULT_MODEL) ? DEFAULT_MODEL : names[0];
+    }
     function _loadDisplayNames() {
         return fetch('/data/model_display_names')
             .then(r => r.ok ? r.json() : {})
@@ -690,7 +695,7 @@
             sel.appendChild(opt);
         });
         if (names.length === 0) return;
-        sel.value = names.includes(previous) ? previous : names[0];
+        sel.value = names.includes(previous) ? previous : _defaultModel(names);
         if (!sel.dataset.wired) {
             sel.addEventListener('change', () => {
                 const row = _tableRowByModel(sel.value);
@@ -1475,8 +1480,10 @@
             if (panel) panel.hidden = true;
         }
         const primary = document.getElementById('primaryModelSelect');
-        if (primary && primary.options.length > 0 && primary.selectedIndex !== 0) {
-            primary.selectedIndex = 0;
+        const home = primary && primary.options.length > 0
+            ? _defaultModel(Array.from(primary.options).map(o => o.value)) : null;
+        if (home && primary.value !== home) {
+            primary.value = home;
             primary.dispatchEvent(new Event('change'));
         }
         const secondary = document.getElementById('secondaryModelSelect');
@@ -1590,13 +1597,16 @@
                 syncPrimaryModelSelect();
                 syncCompareModelsPanel();
 
-                const firstRow = fileTable.querySelector('tr:nth-child(2)');
+                // Start on the model the dropdown shows, not the first table row.
+                const primarySel = document.getElementById('primaryModelSelect');
+                const firstRow = (primarySel && _tableRowByModel(primarySel.value))
+                    || fileTable.querySelector('tr:nth-child(2)');
                 if (!firstRow) {
                     console.warn("No data rows in fileTable");
                     return;
                 }
 
-                const radio = fileTable.querySelector('input[type="radio"]');
+                const radio = firstRow.querySelector('input[type="radio"]');
                 if (radio) {
                     radio.checked = true;
                     hideAllRadioButtonsExceptChecked();

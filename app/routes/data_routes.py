@@ -1543,6 +1543,14 @@ _NETCDF_TO_JBOOK = {
     "casc1.6-velmdl.r1.0-n4.nc": "stephenson_ofr_2019",
 }
 
+# Model id selected first in every dropdown; keep in sync with DEFAULT_MODEL in index.html.
+DEFAULT_MODEL = "CRESCENT_CVM0_He2026"
+
+
+def _default_index(model_list):
+    return model_list.index(DEFAULT_MODEL) if DEFAULT_MODEL in model_list else 0
+
+
 # Human-readable dropdown labels. Falls back to the JBook H1 when a filename
 # is absent here; the two Delph entries differentiate the netCDFs at the
 # sidebar level so users can tell them apart even though they map to the same
@@ -1860,8 +1868,9 @@ def models_drop_down_s3(required_variable: Optional[str] = None):
 
     # Prepare the HTML for the dropdown
     dropdown_html = ""
+    first = _default_index(model_list)
     for i, filename in enumerate(file_list):
-        selected = "selected" if i == 0 else ""
+        selected = "selected" if i == first else ""
         dropdown_html += (
             f'<option value="{filename}" {selected}>{model_list[i]}</option>'
         )
@@ -1976,8 +1985,9 @@ def models_drop_down_coverage_s3(required_variable: Optional[str] = None):
 
     # Prepare the HTML for the dropdown
     dropdown_html = f'<option value="">None</option>'
+    first = _default_index(model_list)
     for i, filename in enumerate(model_list):
-        selected = " selected" if i == 0 else ""
+        selected = " selected" if i == first else ""
         dropdown_html += (
             f'<option value="{coords_list[i]}"{selected}>{model_list[i]}</option>'
         )
